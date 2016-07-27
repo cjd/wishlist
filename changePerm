@@ -1,4 +1,4 @@
 chmod -R 770 *.php;
 chmod -R 775 *.js *.css images/*;
 find -name ".htaccess" -print0 | xargs -0 chmod 0775;
-find -type d ! -name "CVS" -print0 | xargs -0 chmod 2771;
+find -type d -print0 | xargs -0 chmod 2771;
