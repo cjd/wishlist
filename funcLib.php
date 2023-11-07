@@ -118,7 +118,7 @@ print "</td></tr></table>";
 }
 
 function getFullPath($url) {
-  $fp = "http://";
+  $fp = "https://";
   $fp .= $_SERVER["HTTP_HOST"];
   $dir = dirname($_SERVER["PHP_SELF"]);
   if ($dir != "/")
@@ -133,14 +133,20 @@ function getFullPath($url) {
  * All dates should be passed through this function before display
  */
 function parseDate($date, $shortMonth=0, $clientLoc = 3){
+  $date = date_create($date);
+  if($shortMonth) {
+    return date_format($date, "M d, Y g:ia");
+  }
+  else{
+    return date_format($date, "F d, Y g:ia");
+  }
   $serverLoc = -16; // timezone difference between server and clients
 
   preg_match("/([0-9]{4})-([0-9]{1,2})-([0-9]{1,2}) ([0-9]{2}):([0-9]{2}):([0-9]{2})/", $date, $regs);
 
   // now we need to localize the time.  This would be much better if we knew the time
   // zone of the user and then added/subtracted the approiate amount dynamically
-  $dateCon = mktime ($regs[4] + ($clientLoc - $serverLoc),
-                     $regs[5],$regs[6],$regs[2],$regs[3],$regs[1]);
+  $dateCon = date_create(mktime ($regs[4] + ($clientLoc - $serverLoc), $regs[5],$regs[6],$regs[2],$regs[3],$regs[1]));
 
   if($shortMonth){
     return strftime("%b %d, %Y at %I:%M%p", $dateCon);
