@@ -15,6 +15,12 @@
 
 include "../funcLib.php";
 
+if($_SESSION['admin'] == 1){
+  if(isset($_REQUEST['userid'])) {
+    $userid=$_REQUEST['userid'];
+  }
+}
+
 ?>
 
 <HTML>
@@ -238,7 +244,7 @@ function hash(form) {
 </script>
 
 <?php
-createNavBar("../home.php:Home|updateAccount.php:Update Account|:Change Password", false, "password");
+createNavBar("../home.php:Home|updateAccount.php:Update Account|:Change Password for " . $userid, false, "password");
 ?>
 
 <?php
@@ -261,7 +267,7 @@ createNavBar("../home.php:Home|updateAccount.php:Update Account|:Change Password
 <input type=hidden name="passwordMD5" value="">
 
 
-<table width="70%"><tr><td><b>The password you submit will be converted into an encrypted string (using MD5) before it is sent out over the internet.  The encrypted string cannot be unencrypted (even by me).  Therefore you can use any default password you might normally use.  It is of course better to use unique passwords for different sites, but who can remember them all?</b></td</tr></table><p>
+<table width="70%"><tr><td><b>The password you submit will be converted into an encrypted string (using MD5) before it is sent out over the internet.  The encrypted string cannot be unencrypted (even by me).</b></td</tr></table><p>
 
 <table style="border-collapse: collapse;" id="AutoNumber1" border="0" bordercolor="#111111" cellpadding="2" cellspacing="0" bgcolor=lightYellow>
 <tr><td colspan="2" align="center" bgcolor="#6702cc">

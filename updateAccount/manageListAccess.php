@@ -17,6 +17,9 @@ include "../funcLib.php";
 
 $message = "<h2>&nbsp;</h2>";
 
+if (!isset($_REQUEST["action"])) {
+   $_REQUEST["action"] = "";
+}
 $action = $_REQUEST["action"];
 
 if($action == "stopViewOther"){
@@ -48,7 +51,7 @@ elseif ($action == "startViewOther"){
   }
   else{
     // need to add new field
-    $query = "insert into viewList (viewContactInfo, readOnly, allowEdit, pid, viewer) values (0, 1, 0, '" . $adduserid . "', '" . $userid . "')";
+    $query = "insert into viewList (viewContactInfo, readOnly, allowEdit, pid, viewer,lastViewDate) values (0, 1, 0, '" . $adduserid . "', '" . $userid . "', NOW())";
     
     $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
     $message = "<h2>Send this person an email if you want to view their contact information and to remove your read only status</h2>";
@@ -65,8 +68,8 @@ elseif ($action == "startViewMine"){
   }
   else{
     // need to add new field
-    $query = "insert into viewList (viewContactInfo, readOnly, allowEdit, pid, viewer) " .
-      "values (0, 1, 0, '" . $userid . "', '" . $adduserid . "')";
+    $query = "insert into viewList (viewContactInfo, readOnly, allowEdit, pid, viewer, lastViewDate) " .
+      "values (0, 1, 0, '" . $userid . "', '" . $adduserid . "', now())";
     
     $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
     $message = "<h2>Person added</h2>";
@@ -211,6 +214,8 @@ $query = "select viewer, firstname, lastname, suffix, userid, viewContactInfo, r
 
 $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
 
+$list = "";
+
 while($row = mysqli_fetch_assoc($result)){
   $list .= $row["userid"] . ",";
  
@@ -265,7 +270,7 @@ if($_REQUEST["action"] == "addUser"){
 
   $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
   while ($row = mysqli_fetch_assoc($result)){
-    print "<a class='menuLink' href=\"manageListAccess.php?action=startViewMine&userid=" . $row[userid] . "\">[Add]</a> " . $row["firstname"] . " " . $row["lastname"] . ' ' . $row["suffix"] . "<br>";
+    print "<a class='menuLink' href=\"manageListAccess.php?action=startViewMine&userid=" . $row["userid"] . "\">[Add]</a> " . $row["firstname"] . " " . $row["lastname"] . ' ' . $row["suffix"] . "<br>";
   }
     
 }
@@ -364,7 +369,7 @@ if($_REQUEST["action"] == "findUser"){
   $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
 
   while ($row = mysqli_fetch_assoc($result)){
-    print "<a href=\"manageListAccess.php?action=startViewOther&userid=" . $row[userid] . "\">[Add]</a> " . $row["firstname"] . " " . $row["lastname"] . ' ' . $row["suffix"] . "<br>";
+    print "<a href=\"manageListAccess.php?action=startViewOther&userid=" . $row["userid"] . "\">[Add]</a> " . $row["firstname"] . " " . $row["lastname"] . ' ' . $row["suffix"] . "<br>";
   }
     
 }
