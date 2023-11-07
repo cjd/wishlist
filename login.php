@@ -78,7 +78,7 @@ if (!empty($_REQUEST["userid"])) {
     }
   }
   
-  if($userValidate == 1 and passValidate == 0){
+  if($userValidate == 1 and $passValidate == 0){
     $errorMessage = "Password Error! Please Try Again";
   }
   else{
