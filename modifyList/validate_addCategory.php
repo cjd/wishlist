@@ -24,7 +24,7 @@ $catSubDescription = convertString($_REQUEST["catSubDescription"]);
 // Note our use of ===.  Simply == would not work as expected
 // because the position of "http" is at the front of a url
 if($linkurl != "" && strpos($linkurl, "http") === false){
-    $linkurl = "http://" . $linkurl;
+    $linkurl = "https://" . $linkurl;
 }                
 
 $query = "select max(catSortOrder) as cso from categories where userid='" . $userid . "'";
