@@ -26,29 +26,31 @@ $message = "<font color=indianred><b>" . $_SESSION["fullname"] .
 reset ($_REQUEST);
 $ar = array();
 
-while(list($iid, $value) = each ($_REQUEST)){
-  $iid = substr($iid,3);
+foreach($_REQUEST as $iid => $value){
+  $$iid = $value;
+  if(substr($iid,0,3) != "wp-") {
+    $iid = substr($iid,3);
   
-  if($value == "on"){
+    if($value == "on"){
     
-    array_push($ar, $iid . "=1");
-    $query = "insert into purchaseHistory (iid, userid, quantity, boughtDate) values (" .
-      $iid . ", '" . $userid . "', 1, NOW())";
-    
-    $rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
-    
-  }
-  elseif (is_numeric($value)) {
-    $bought = $value;
-    
-    if($bought > 0){
-      array_push($ar, $iid . "=" . $bought);
-      $query = "insert into purchaseHistory (iid, userid, quantity, boughtDate) values (" . 
-        $iid . ", '" . $userid . "', " . $bought . ", NOW())";
+      array_push($ar, $iid . "=1");
+      $query = "insert into purchaseHistory (iid, userid, quantity, boughtDate) values (" .
+        $iid . ", '" . $userid . "', 1, NOW())";
+      
       $rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
-    }         
+      
+    }
+    elseif (is_numeric($value)) {
+      $bought = $value;
+      
+      if($bought > 0){
+        array_push($ar, $iid . "=" . $bought);
+        $query = "insert into purchaseHistory (iid, userid, quantity, boughtDate) values (" . 
+          $iid . ", '" . $userid . "', " . $bought . ", NOW())";
+        $rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+      }         
+    }
   }
-  
 }
 
 foreach($ar as $i){
