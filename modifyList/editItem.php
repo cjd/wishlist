@@ -19,9 +19,6 @@ $iid = $_REQUEST["iid"];
 $iso = $_REQUEST["iso"];
 $cid =  $_REQUEST["cid"];
 $cname = $_REQUEST["cname"];
-if (get_magic_quotes_gpc()==1) {
-   $cname = stripslashes($cname);
-}
 ?>
 <HTML>
 <head><meta name="viewport" content="width=device-width, initial-scale=1.0" /></head>

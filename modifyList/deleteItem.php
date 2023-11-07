@@ -19,9 +19,6 @@ $iid = $_REQUEST["iid"];
 $cid = $_REQUEST["cid"];
 $iso = $_REQUEST["iso"];
 $cname = $_REQUEST["cname"];
-if (get_magic_quotes_gpc()==1) {
-   $cname = stripslashes($cname);
-}
 $referrer = $_REQUEST["referrer"];
 if (array_key_exists("confirm", $_REQUEST)) {
     $confirm = $_REQUEST["confirm"];

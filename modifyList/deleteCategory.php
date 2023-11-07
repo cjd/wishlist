@@ -17,9 +17,6 @@ include "../funcLib.php";
 
 $cid = mysqli_escape_string($link,$_REQUEST["cid"]);
 $cname = $_REQUEST["cname"];
-if (get_magic_quotes_gpc()==1) {
-   $cname = stripslashes($cname);
-}
 $confirm = mysqli_escape_string($link,$_REQUEST["confirm"]);
 $cso = mysqli_escape_string($link,$_REQUEST["cso"]);
 $referrer = mysqli_escape_string($link,$_REQUEST["referrer"]);

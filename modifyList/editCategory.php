@@ -30,9 +30,6 @@ include "../funcLib.php";
 <?php
 $cid = $_REQUEST["cid"];
 $cname = $_REQUEST["cname"];
-if (get_magic_quotes_gpc()==1) {
-   $cname = stripslashes($cname);
-}
 ?>
 
 <?php
