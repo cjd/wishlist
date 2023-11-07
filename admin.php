@@ -27,6 +27,10 @@ if($_SESSION['admin'] != 1){
   print "Shame on you";
   exit;
 }
+
+if(!isset($_REQUEST["action"])) {
+  $_REQUEST["action"]="";
+}
                       
 $message = "<h2>Admin Page</h2>";
 
@@ -109,13 +113,13 @@ elseif($_REQUEST["action"] == "commitAdd"){
       $i++;
     }
     
-    $query = "insert into people (userid, firstname, lastname, suffix, email, password) value (" .
+    $query = "insert into people (userid, firstname, lastname, suffix, email, password, lastLoginDate, lastModDate) value (" .
       "'" . $desiredUserid . "'," .
       "'" . $fname . "', " .
       "'" . $lname . "', " .
       "'" . $suffix . "', " .
       "'" . $email . "', " .
-      "'" . md5($password) . "')";
+      "'" . md5($password) . "', now(), now())";
     
     // first add them to the people table
     $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
@@ -277,7 +281,7 @@ $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($
 
 while($row = mysqli_fetch_assoc($result)){
   print "<tr>";
-  print "<td><a href=\"admin.php?action=edit&userid=" . $row["userid"] . "\">[edit]</a> <a href=\"admin.php?action=delete&userid=" . $row["userid"] . "\">[del]</a> " . $row["userid"] . "</td>";
+  print "<td><a href=\"admin.php?action=edit&userid=" . $row["userid"] . "\">[edit]</a> <a href=\"admin.php?action=delete&userid=" . $row["userid"] . "\">[del]</a> <a href=\"./updateAccount/changePassword.php?userid=" . $row["userid"] . "\">[pwd]</a> " . $row["userid"] . "</td>";
   print "<td>" . $row["firstname"] . ' ' . $row["lastname"] . ' ' . $row["suffix"] . "</td>";
   print "<td><font face=Courier>" . parseDate($row["lastLoginDate"], 1) . "</font></td>";
   print "<td align=center><input type=checkbox name=grantAdmin[] value=" . $row["userid"] . " " . ($row["admin"] == 1 ? "checked" : "") . "></td>";
@@ -435,7 +439,7 @@ if($error){
 
 <tr>
 <td align=right>* Base URL</td>
-<td bgcolor=white><input type=text name=base_url value="<?php echo $new_base_dir != '' ? $new_base_url : "http://" . $_SERVER['HTTP_HOST']; ?>" size=50></td>
+<td bgcolor=white><input type=text name=base_url value="<?php echo $new_base_dir != '' ? $new_base_url : "https://" . $_SERVER['HTTP_HOST']; ?>" size=50></td>
 </tr>
 
 <tr><td colspan=2>&nbsp;</td></tr>
