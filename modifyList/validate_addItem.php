@@ -54,7 +54,7 @@ if (array_key_exists("addStar",$_REQUEST)) {
 // Note our use of ===.  Simply == would not work as expected
 // because the position of "http" is at the front of a url
 if($link1url != "" && strpos($link1url, "http") === false){
-    $link1url = "http://" . $link1url;
+    $link1url = "https://" . $link1url;
 }                
 if($link1url != "") {
     $link1 = preg_replace("#^h.*://(.*?)/.*$#","$1",$link1url);
@@ -103,7 +103,7 @@ $rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link
 
 if (isset($_FILES['image']) && ($_FILES['image']['error']==0)) {
     $uploadDir = $base_dir.'/uploads/';
-    $id = mysqli_insert_id();
+    $id = mysqli_insert_id($link);
     $uploadFile = "image-" . $id.".jpg";
     $result = process_image_upload('image',$uploadDir.$uploadFile);
     if ($result) {

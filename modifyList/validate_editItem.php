@@ -53,7 +53,7 @@ if (isset($_REQUEST["addStar"])) {
 // Note our use of ===.  Simply == would not work as expected
 // because the position of "http" is at the front of a url
 if($link1url != "" && strpos($link1url, "http") === false){
-    $link1url = "http://" . $link1url;
+    $link1url = "https://" . $link1url;
 }                
 
 if($allowCheck == "")
