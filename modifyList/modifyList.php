@@ -61,7 +61,7 @@ createNavBar("../home.php:Home|:Modify WishList");
   $mrow = mysqli_fetch_assoc($mrs);
 
 print "<table border=0 cellpadding=2 cellspacing=0 width=100%><tr>";
-if($mrow["catSubDescription"] != ""){
+if(isset($mrow["catSubDescription"]) && $mrow["catSubDescription"] != ""){
 
   print "<td NOWRAP bgcolor=#99ff99><a class=menuLink
 href='editListComment.php'>[edit]</a><img width=26px height=13px
