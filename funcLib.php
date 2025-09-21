@@ -703,7 +703,7 @@ function printItem($row2, $pretty, $name, $quantity, $bought){
  * If $iid has been bought and the item is deleted 20 before $userid's bday
  * or christmas, an email will be sent to the buyer
  */
-function deleteItem($iid, $userid, $fullname){
+function deleteItem($iid, $userid, $fullname, $base_dir){
   global $link;
   $sendMail = 0;
   
@@ -726,7 +726,7 @@ function deleteItem($iid, $userid, $fullname){
   
   // delete image
   if ($item_row['image'] != "") {
-    $uploadDir = $base_dir.'/uploads/';
+    $uploadDir = $base_dir . '/uploads/';
     $uploadFile = $uploadDir.$item_row['image'];
     if (is_file($uploadFile)) {
       unlink($uploadFile);

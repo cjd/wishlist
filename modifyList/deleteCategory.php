@@ -29,7 +29,7 @@ if($confirm == "yes"){
 
   while($row = mysqli_fetch_assoc($result)){ 
     // individually delete each item in the category
-    $exit = deleteItem($row["iid"], $userid, $_SESSION["fullname"]);
+    $exit = deleteItem($row["iid"], $userid, $_SESSION["fullname"], $base_dir);
 
     if($exit != "Success"){
       print "An item in this category doesn't belong to you!";

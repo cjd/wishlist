@@ -30,7 +30,7 @@ if (array_key_exists("confirm", $_REQUEST)) {
 
 if($confirm == "yes"){
 
-  $result = deleteItem($iid, $userid, $_SESSION["fullname"]);
+  $result = deleteItem($iid, $userid, $_SESSION["fullname"], $base_dir);
   
   if($result != "Success"){
     print $result;

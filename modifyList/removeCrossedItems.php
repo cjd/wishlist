@@ -25,7 +25,7 @@ if($confirm == "yes"){
   $query="SELECT items.iid as iid FROM items,categories,purchaseHistory WHERE categories.userid='".$userid."' and categories.cid=items.cid and purchaseHistory.iid=items.iid";
   $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
   while ($row = mysqli_fetch_assoc($result)) {
-    deleteItem($row["iid"], $userid, $_SESSION["fullname"]);
+    deleteItem($row["iid"], $userid, $_SESSION["fullname"], $base_dir);
   }
   header("Location: " . getFullPath("modifyList.php"));
 }
