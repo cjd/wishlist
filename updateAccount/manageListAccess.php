@@ -77,15 +77,20 @@ elseif ($action == "startViewMine"){
 }
 elseif ($action == "hideContactInfo"){
   
-  if($_REQUEST["admin"] != ""){
+  if(isset($_REQUEST["admin"]) && $_REQUEST["admin"] != ""){
+    $t = "";
+    $s = "";
     foreach($_REQUEST["admin"] as $admin){
+      if (!empty($t)) {
+        $t .= " or ";
+      }
       $t .= "viewer='" . $admin . "' ";
+      if (!empty($s)) {
+        $s .= " or ";
+      }
       $s .= "viewer!='" . $admin . "' ";
     }
     
-    $t = str_replace (' ', " or ", trim($t));
-    $s = str_replace (' ', " and ", trim($s));
-
     $query1 = "update viewList set viewContactInfo='1' where (" . $t . ") and pid='" . $userid . "'";
 
     $result = mysqli_query($link,$query1) or die("Could not query: " . mysqli_error($link));
@@ -125,21 +130,27 @@ elseif ($action == "hideContactInfo"){
   }
 
   if($_REQUEST["allowEdit"] != ""){
+    $s = "";
+    $t = "";
     foreach($_REQUEST["allowEdit"] as $rOnly){
-
+      if (!empty($rOnly)) {
+      if (!empty($t)) {
+        $t .= " or ";
+      }
       $t .= "viewer='" . $rOnly . "' ";
+
+      if (!empty($s)) {
+        $s .= " and ";
+      }
+
       $s .= "viewer!='" . $rOnly . "' ";
-        
+        }
     }
     
-    $t = str_replace (' ', " or ", trim($t));
-    $s = str_replace (' ', " and ", trim($s));
-
     $query1 = "update viewList set allowEdit='1' where (" . $t . ") and pid='" . $userid . "'";
-
     $result = mysqli_query($link,$query1) or die("Could not query: " . mysqli_error($link));
-    $query2 = "update viewList set allowEdit='0' where (" . $s . ") and pid='" . $userid . "'";
 
+    $query2 = "update viewList set allowEdit='0' where (" . $s . ") and pid='" . $userid . "'";
     $result = mysqli_query($link,$query2) or die("Could not query: " . mysqli_error($link));
   }
   else{

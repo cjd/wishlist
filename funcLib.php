@@ -435,8 +435,12 @@ function printCategory($row, $name, $pretty, $displayPurchases, $readOnly, $modi
     $text .= $row["description"] . ' ';
   }
   
-  if($row["linkname"] != ""){
-    $text .= " - <a href='" . $row["linkurl"] . "'>" . $row["linkname"] . "</a>";
+  if($row["linkurl"] != ""){
+    if ($row["linkname"] != "" ) {
+      $text .= " - <a href='" . $row["linkurl"] . "'>" . $row["linkname"] . "</a>";
+    } else {
+      $text .= " - <a href='" . $row["linkurl"] . "'>" . $row["linkurl"] . "</a>";
+    }
   }
   $len = strlen($text);
 
@@ -569,7 +573,6 @@ function printCategory($row, $name, $pretty, $displayPurchases, $readOnly, $modi
           $titley = "title=\"Click here if you purchased this item\"";
 
         print "<input $titley type='checkbox' name='chk" . $iid . "' " . $val  . ">";
-        //print "</td><td onclick=\"wishlist.chk".$iid.".checked=true;this.innerHTML='<s>'+this.innerHTML+'</s>';\">";
         print "</td><td>";
       }
     }
@@ -643,10 +646,14 @@ function printItem($row2, $pretty, $name, $quantity, $bought){
     $dash = 1;
   }
   
-  if($row2["link1"] != ""){
+  if($row2["link1url"] != ""){
     if($dash)
       $text .= " - ";
-    $text .= "<a target='_blank' href='" . $row2["link1url"] . "'>" . $row2["link1"] . "</a>";
+    if ($row2["link1"] != "") {
+      $text .= "<a target='_blank' href='" . $row2["link1url"] . "'>" . $row2["link1"] . "</a>";
+    } else {
+      $text .= "<a target='_blank' href='" . $row2["link1url"] . "'>Link</a>";
+    }
   }
 
   print $text;  
@@ -726,7 +733,7 @@ function deleteItem($iid, $userid, $fullname, $base_dir){
   
   // delete image
   if ($item_row['image'] != "") {
-    $uploadDir = $base_dir . '/uploads/';
+    $uploadDir = $base_dir.'/uploads/';
     $uploadFile = $uploadDir.$item_row['image'];
     if (is_file($uploadFile)) {
       unlink($uploadFile);
