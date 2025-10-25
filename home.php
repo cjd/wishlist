@@ -34,7 +34,7 @@ $num_rows = mysqli_num_rows($result);
 
 <link rel=stylesheet href=style.css type=text/css>
 
-<script src="js/jquery-1.7.1.min.js"></script>
+<script src="js/jquery-3.7.1.min.js"></script>
 <script language="JavaScript">
 <!-- Begin JavaScript
 function showfamily(lastname) {
