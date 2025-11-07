@@ -94,13 +94,27 @@ createNavBar("../home.php:Home|:View List - " . $_REQUEST["name"], false, "viewO
 
 <?php
 
-if($recip == $_SESSION["userid"] and $confirm != "Yes"){
+  $canEdit = false;
+  $query = "select allowEdit from viewList where pid = '" . $recip . "' and viewer = '" . $_SESSION["userid"] . "'";
+  $rs_edit = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+  if($row_edit = mysqli_fetch_assoc($rs_edit)){
+    if($row_edit["allowEdit"] == '1'){
+      $canEdit = true;
+    }
+  }
+
+if(($recip == $_SESSION["userid"] || $canEdit) and $confirm == "Edit Instead"){
+  print "<meta http-equiv=\"refresh\" content=\"0;url=../modifyList/modifyList.php\">";
+  print "</body></html>";
+  return;
+}
+if(($recip == $_SESSION["userid"] || $canEdit) and $confirm != "Yes"){
 
   print "<center><p>&nbsp;<form method=post>";
   print "<b>Are you sure you want to view this list?<br>You will be able to see any purchases that may have been made!  This could ruin the surprise</b>";
-  print "<p><input type=submit name=confirm value=Yes class=\"buttonstyle\"> <input type=submit name=confirm value=No class=\"buttonstyle\">";
+  print "<p><input type=submit name=confirm value=Yes class=\"buttonstyle\"> <input type=submit name=confirm value=No class=\"buttonstyle\"> <input type=submit name=confirm value=\"Edit Instead\" class=\"buttonstyle\">";
   print "</form>\n";
-  print "<p>&nbsp;<p><b>Perhaps you wanted to <a href=\"../modifyList/modifyList.php\">Modify</a> your list instead?</b></center>";
+  print "</center>";
   print "</td></tr></table></body></html>";
   return;
 }
