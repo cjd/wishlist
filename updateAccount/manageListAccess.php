@@ -106,7 +106,7 @@ elseif ($action == "hideContactInfo"){
   $t = "";
   $s = "";
 
-  if($_REQUEST["readOnly"] != ""){
+  if(isset($_REQUEST["readOnly"]) && $_REQUEST["readOnly"] != "") {
     foreach($_REQUEST["readOnly"] as $rOnly){
 
       $t .= "viewer='" . $rOnly . "' ";
@@ -129,7 +129,7 @@ elseif ($action == "hideContactInfo"){
     $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
   }
 
-  if($_REQUEST["allowEdit"] != ""){
+  if(isset($_REQUEST["allowEdit"]) && $_REQUEST["allowEdit"] != ""){
     $s = "";
     $t = "";
     foreach($_REQUEST["allowEdit"] as $rOnly){
