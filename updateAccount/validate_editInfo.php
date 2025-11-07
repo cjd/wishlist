@@ -15,6 +15,13 @@
 
 include "../funcLib.php";
 
+$actual_userid = $_SESSION["userid"];
+if (isset($_REQUEST["target_userid"])) {
+    $actual_userid = $_REQUEST["target_userid"];
+} else if (isset($_SESSION["euserid"])) {
+    $actual_userid = $_SESSION["euserid"];
+}
+
 $firstname= convertString($_REQUEST["firstname"]);
 $lastname= convertString($_REQUEST["lastname"]);
 $suffix= convertString($_REQUEST["suffix"]);
@@ -48,9 +55,9 @@ $query = "update people set firstname = '" . $firstname . "', " .
        "url = '" . $url . "', " .
        "bmonth = '" . $bmonth . "', " .
        "bday = " . $bday . " " .
-       "where userid = '" . $userid . "'";
+       "where userid = '" . $actual_userid . "'";
 
 $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
 
-header("Location: " . getFullPath("updateAccount.php"));
+header("Location: " . getFullPath("updateAccount.php?target_userid=" . $actual_userid));
 ?>

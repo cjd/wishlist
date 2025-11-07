@@ -21,7 +21,7 @@ if (isset ($_REQUEST["lastname"])) {
 }
 unset($_SESSION["euserid"]);
 
-$query = "select * from people, viewList where pid = people.userid and viewer='" . $userid . "' order by lastname, firstname";
+$query = "select people.*, viewList.allowEdit from people, viewList where pid = people.userid and viewer='" . $userid . "' order by lastname, firstname";
 
 $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
 
@@ -147,8 +147,15 @@ while($row = mysqli_fetch_assoc($result)){
     $div_last .= "<div id='".$row['lastname']."' style='display:none;'>";
   }
 
-  $name =  $row['firstname'] . ' ' . $row['lastname'];
-  $div_last.= "<button class='lightbutton' style='width:100%;' onclick='window.location=\"viewList/viewList.php?recip=" . $row['userid']. "&name=" . $name . "\"' onmouseover='show_record(this, theForm.contact, \"" . $row['userid']. "\")'>".$name."</button><br>\n";
+    $name =  $row['firstname'] . ' ' . $row['lastname'];
+
+    $div_last.= "<button class='lightbutton' style='width:100%;' onclick='window.location=\"viewList/viewList.php?recip=" . $row['userid']. "&name=" . $name . "\"' onmouseover='show_record(this, theForm.contact, \"" . $row['userid']. "\")'>" . $name . "</button><br>\n";
+
+    if ($row['allowEdit']) {
+
+      $div_last.= "<button class='lightbutton' style='width:100%;' onclick='window.location=\"updateAccount/updateAccount.php?target_userid=" . $row['userid'] . "\"' >Update " . $row['firstname'] . "'s Account</button><br>\n";
+
+    }
 }
 $div_last .= "</div>\n</div>\n";
 

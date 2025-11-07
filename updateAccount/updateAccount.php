@@ -17,6 +17,45 @@ include "../funcLib.php";
 
 $message = "<h2>&nbsp;</h2>";
 
+$target_userid = $_SESSION["userid"];
+
+if (isset($_REQUEST["target_userid"])) {
+    $requested_userid = $_REQUEST["target_userid"];
+    // Check if the logged-in user has edit access to the requested user's list
+    $query_check_access = "SELECT allowEdit FROM viewList WHERE pid = '" . $requested_userid . "' AND viewer = '" . $_SESSION["userid"] . "'";
+    $result_check_access = mysqli_query($link, $query_check_access) or die("Could not query: " . mysqli_error($link));
+    
+    if ($row_check_access = mysqli_fetch_assoc($result_check_access)) {
+        if ($row_check_access["allowEdit"] == '1') {
+            $target_userid = $requested_userid;
+            $_SESSION["euserid"] = $target_userid; // Store in session for other pages
+        } else {
+            // No edit access, redirect to own account or show error
+            header("Location: updateAccount.php");
+            exit;
+        }
+    } else {
+        // No entry in viewList, redirect to own account or show error
+        header("Location: updateAccount.php");
+        exit;
+    }
+} else if (isset($_SESSION["euserid"])) {
+    // If no target_userid is specified, but euserid is set, use euserid
+    $target_userid = $_SESSION["euserid"];
+    // Re-check access in case session was manipulated or permissions changed
+    $query_check_access = "SELECT allowEdit FROM viewList WHERE pid = '" . $target_userid . "' AND viewer = '" . $_SESSION["userid"] . "'";
+    $result_check_access = mysqli_query($link, $query_check_access) or die("Could not query: " . mysqli_error($link));
+    if (!($row_check_access = mysqli_fetch_assoc($result_check_access)) || $row_check_access["allowEdit"] != '1') {
+        unset($_SESSION["euserid"]);
+        $target_userid = $_SESSION["userid"];
+    }
+} else {
+    unset($_SESSION["euserid"]);
+}
+
+// Use $target_userid for all subsequent operations
+$userid = $target_userid;
+
 if (!isset($_REQUEST["action"])) {
    $_REQUEST["action"] = "";
 }

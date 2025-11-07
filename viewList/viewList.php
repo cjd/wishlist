@@ -134,7 +134,7 @@ if(($recip == $_SESSION["userid"] || $canEdit) and $confirm != "Yes"){
 <input type="submit" value="Save Changes" class="buttonstyle">
 <input type="reset" value="Undo Changes" class="buttonstyle" onclick="history.go(0)">
 <?php if ($allowEdit==1) { ?>
-<input type="button" value="Edit" class="buttonstyle" onclick="location.href='../modifyList/modifyList.php?recip=<?php echo $recip ?>'">
+<input type="button" value="Edit User" class="buttonstyle" onclick="location.href='../updateAccount/updateAccount.php?target_userid=<?php echo $recip ?>'">
 <?php } ?>
 <input type="button" value="Go Home" class="buttonstyle" onclick="location.href='../home.php'">
 </form>
