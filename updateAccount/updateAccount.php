@@ -209,7 +209,7 @@ $row = mysqli_fetch_assoc($result);
 <?php echo $row["email"] ?>
 </td></tr>
 <tr><td align="right">
-<b>BirthDay</b>
+<b>Birthday</b>
 </td><td bgcolor=white>
 <?php echo $row["bmonth"] . " " . $row["bday"] ?>
 </td></tr>

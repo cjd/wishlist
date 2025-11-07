@@ -120,7 +120,7 @@ Information on File</font>
 </td></tr>
 
 <tr><td class="lightYellow" align="right">
-<b>BirthDay</b>
+<b>Birthday</b>
 </td><td bgcolor="#eeeeee">
    <select name="bmonth" size="1">
 <?php
