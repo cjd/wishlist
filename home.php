@@ -151,9 +151,9 @@ while($row = mysqli_fetch_assoc($result)){
 
     $div_last.= "<button class='lightbutton' style='width:100%;' onclick='window.location=\"viewList/viewList.php?recip=" . $row['userid']. "&name=" . $name . "\"' onmouseover='show_record(this, theForm.contact, \"" . $row['userid']. "\")'>" . $name . "</button><br>\n";
 
-    if ($row['allowEdit']) {
+    if ($row['allowEdit'] and $row['userid'] != $_SESSION['userid']) {
 
-      $div_last.= "<button class='lightbutton' style='width:100%;' onclick='window.location=\"updateAccount/updateAccount.php?target_userid=" . $row['userid'] . "\"' >Update " . $row['firstname'] . "'s Account</button><br>\n";
+    $div_last.= "<button class='lightbutton-red' style='width:100%;' onclick='window.location=\"updateAccount/updateAccount.php?target_userid=" . $row['userid'] . "\"' >Update " . $row['firstname'] . "'s Account</button><br>\n";
 
     }
 }
