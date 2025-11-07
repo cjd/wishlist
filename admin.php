@@ -281,7 +281,7 @@ $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($
 
 while($row = mysqli_fetch_assoc($result)){
   print "<tr>";
-  print "<td><a href=\"admin.php?action=edit&userid=" . $row["userid"] . "\">[edit]</a> <a href=\"admin.php?action=delete&userid=" . $row["userid"] . "\">[del]</a> <a href=\"./updateAccount/changePassword.php?userid=" . $row["userid"] . "\">[pwd]</a> " . $row["userid"] . "</td>";
+  print "<td><a href=\"admin.php?action=edit&userid=" . $row["userid"] . "\">[edit]</a> <a href=\"admin.php?action=delete&userid=" . $row["userid"] . "\">[del]</a> <a href=\"./updateAccount/changePassword.php?userid=" . $row["userid"] . "\">[pwd]</a> <a href=\"./updateAccount/updateAccount.php?target_userid=" . $row["userid"] . "\">[account]</a> " . $row["userid"] . "</td>";
   print "<td>" . $row["firstname"] . ' ' . $row["lastname"] . ' ' . $row["suffix"] . "</td>";
   print "<td><font face=Courier>" . parseDate($row["lastLoginDate"], 1) . "</font></td>";
   print "<td align=center><input type=checkbox name=grantAdmin[] value=" . $row["userid"] . " " . ($row["admin"] == 1 ? "checked" : "") . "></td>";

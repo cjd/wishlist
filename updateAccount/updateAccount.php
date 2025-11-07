@@ -21,7 +21,11 @@ $target_userid = $_SESSION["userid"];
 
 if (isset($_REQUEST["target_userid"])) {
     $requested_userid = $_REQUEST["target_userid"];
-    // Check if the logged-in user has edit access to the requested user's list
+    if ($_SESSION["admin"] == 1) {
+        $target_userid = $requested_userid;
+        $_SESSION["euserid"] = $target_userid;
+    } else {
+        // Check if the logged-in user has edit access to the requested user's list
     $query_check_access = "SELECT allowEdit FROM viewList WHERE pid = '" . $requested_userid . "' AND viewer = '" . $_SESSION["userid"] . "'";
     $result_check_access = mysqli_query($link, $query_check_access) or die("Could not query: " . mysqli_error($link));
     
@@ -37,10 +41,10 @@ if (isset($_REQUEST["target_userid"])) {
     } else {
         // No entry in viewList, redirect to own account or show error
         header("Location: updateAccount.php");
-        exit;
-    }
-} else if (isset($_SESSION["euserid"])) {
-    // If no target_userid is specified, but euserid is set, use euserid
+                exit;
+            }
+        }
+    } else if (isset($_SESSION["euserid"])) {    // If no target_userid is specified, but euserid is set, use euserid
     $target_userid = $_SESSION["euserid"];
     // Re-check access in case session was manipulated or permissions changed
     $query_check_access = "SELECT allowEdit FROM viewList WHERE pid = '" . $target_userid . "' AND viewer = '" . $_SESSION["userid"] . "'";
@@ -116,85 +120,39 @@ elseif ($action == "startViewMine"){
 }
 elseif ($action == "hideContactInfo"){
   
-  if(isset($_REQUEST["admin"]) && $_REQUEST["admin"] != ""){
-    $t = "";
-    $s = "";
+  // First, set all viewContactInfo to 0 for the current user
+  $query_reset_contact = "update viewList set viewContactInfo='0' where pid='" . $userid . "'";
+  mysqli_query($link, $query_reset_contact) or die("Could not query: " . mysqli_error($link));
+
+  if(isset($_REQUEST["admin"]) && $_REQUEST["admin"] != ""){    
     foreach($_REQUEST["admin"] as $admin){
-      if (!empty($t)) {
-        $t .= " or ";
-      }
-      $t .= "viewer='" . $admin . "' ";
-      if (!empty($s)) {
-        $s .= " or ";
-      }
-      $s .= "viewer!='" . $admin . "' ";
+      $query_set_contact = "update viewList set viewContactInfo='1' where viewer='" . $admin . "' and pid='" . $userid . "'";
+      mysqli_query($link, $query_set_contact) or die("Could not query: " . mysqli_error($link));
     }
-    
-    $query1 = "update viewList set viewContactInfo='1' where (" . $t . ") and pid='" . $userid . "'";
-
-    $result = mysqli_query($link,$query1) or die("Could not query: " . mysqli_error($link));
-    $query2 = "update viewList set viewContactInfo='0' where (" . $s . ") and pid='" . $userid . "'";
-
-    $result = mysqli_query($link,$query2) or die("Could not query: " . mysqli_error($link));
-  }
-  else{
-    $query = "update viewList set viewContactInfo='0' where pid='" . $userid . "'";
-    $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
   }
 
-  $t = "";
-  $s = "";
+  // First, set all readOnly to 0 for the current user
+  $query_reset_readOnly = "update viewList set readOnly='0' where pid='" . $userid . "'";
+  mysqli_query($link, $query_reset_readOnly) or die("Could not query: " . mysqli_error($link));
 
   if(isset($_REQUEST["readOnly"]) && $_REQUEST["readOnly"] != "") {
     foreach($_REQUEST["readOnly"] as $rOnly){
-
-      $t .= "viewer='" . $rOnly . "' ";
-      $s .= "viewer!='" . $rOnly . "' ";
-        
+      $query_set_readOnly = "update viewList set readOnly='1' where viewer='" . $rOnly . "' and pid='" . $userid . "'";
+      mysqli_query($link, $query_set_readOnly) or die("Could not query: " . mysqli_error($link));
     }
-    
-    $t = str_replace (' ', " or ", trim($t));
-    $s = str_replace (' ', " and ", trim($s));
-
-    $query1 = "update viewList set readOnly='1' where (" . $t . ") and pid='" . $userid . "'";
-
-    $result = mysqli_query($link,$query1) or die("Could not query: " . mysqli_error($link));
-    $query2 = "update viewList set readOnly='0' where (" . $s . ") and pid='" . $userid . "'";
-
-    $result = mysqli_query($link,$query2) or die("Could not query: " . mysqli_error($link));
-  }
-  else{
-    $query = "update viewList set readOnly='0' where pid='" . $userid . "'";
-    $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
   }
 
-  if(isset($_REQUEST["allowEdit"]) && $_REQUEST["allowEdit"] != ""){
-    $s = "";
-    $t = "";
+  // First, set all allowEdit to 0 for the current user
+  $query_reset_allowEdit = "update viewList set allowEdit='0' where pid='" . $userid . "'";
+  mysqli_query($link, $query_reset_allowEdit) or die("Could not query: " . mysqli_error($link));
+
+  if(isset($_REQUEST["allowEdit"]) && $_REQUEST["allowEdit"] != ""){    
     foreach($_REQUEST["allowEdit"] as $rOnly){
       if (!empty($rOnly)) {
-      if (!empty($t)) {
-        $t .= " or ";
+        $query_set_allowEdit = "update viewList set allowEdit='1' where viewer='" . $rOnly . "' and pid='" . $userid . "'";
+        mysqli_query($link, $query_set_allowEdit) or die("Could not query: " . mysqli_error($link));
       }
-      $t .= "viewer='" . $rOnly . "' ";
-
-      if (!empty($s)) {
-        $s .= " and ";
-      }
-
-      $s .= "viewer!='" . $rOnly . "' ";
-        }
     }
-    
-    $query1 = "update viewList set allowEdit='1' where (" . $t . ") and pid='" . $userid . "'";
-    $result = mysqli_query($link,$query1) or die("Could not query: " . mysqli_error($link));
-
-    $query2 = "update viewList set allowEdit='0' where (" . $s . ") and pid='" . $userid . "'";
-    $result = mysqli_query($link,$query2) or die("Could not query: " . mysqli_error($link));
-  }
-  else{
-    $query = "update viewList set allowEdit='0' where pid='" . $userid . "'";
-    $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
   }
   $message = "<h2>Privileges changed</h2>";
   
@@ -278,6 +236,7 @@ $row = mysqli_fetch_assoc($result);
 
 <form action="updateAccount.php" method=post>
 <input type=hidden name=action value="hideContactInfo">
+<input type=hidden name=target_userid value="<?php echo $userid; ?>">
 
 
 
@@ -318,7 +277,7 @@ $list = "";
 while($row = mysqli_fetch_assoc($result)){
   $list .= $row["userid"] . ",";
  
-  print "<tr><td><a class=\"menuLink\" href=updateAccount.php?action=stopViewMine&userid=" . $row["userid"] . ">[Remove]</a></td><td>&nbsp;</td><td>" . $row["firstname"] . " " . $row["lastname"] . ' ' . $row["suffix"] . "</td><td align=center><input name=admin[] value=" . $row["userid"] . " type='checkbox' ";
+  print "<tr><td><a class=\"menuLink\" href=updateAccount.php?action=stopViewMine&userid=" . $row["userid"] . ($userid != $_SESSION["userid"] ? "&target_userid=" . $userid : "") . ">[Remove]</a></td><td>&nbsp;</td><td>" . $row["firstname"] . " " . $row["lastname"] . ' ' . $row["suffix"] . "</td><td align=center><input name=admin[] value=" . $row["userid"] . " type='checkbox' ";
   print $row["viewContactInfo"] ? "checked" : "";
   print "></td>";
   print "<td align=center><input name=readOnly[] type=checkbox value=" . $row["userid"];
@@ -369,7 +328,7 @@ if($_REQUEST["action"] == "addUser"){
 
   $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
   while ($row = mysqli_fetch_assoc($result)){
-    print "<a class='menuLink' href=\"updateAccount.php?action=startViewMine&userid=" . $row["userid"] . "\">[Add]</a> " . $row["firstname"] . " " . $row["lastname"] . ' ' . $row["suffix"] . "<br>";
+    print "<a class='menuLink' href=\"updateAccount.php?action=startViewMine&userid=" . $row["userid"] . ($userid != $_SESSION["userid"] ? "&target_userid=" . $userid : "") . "\">[Add]</a> " . $row["firstname"] . " " . $row["lastname"] . ' ' . $row["suffix"] . "<br>";
   }
     
 }
@@ -426,7 +385,7 @@ $query = "select viewer, firstname, lastname, suffix, userid from viewList, peop
 $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
 
 while($row = mysqli_fetch_assoc($result)){
-  print "<tr><td><a class=\"menuLink\" href=updateAccount.php?action=stopViewOther&userid=" . $row["userid"] . ">[Remove]</a></td><td>" . $row["firstname"] . " " . $row["lastname"] . ' ' . $row["suffix"] . "</td></tr>";
+  print "<tr><td><a class=\"menuLink\" href=updateAccount.php?action=stopViewOther&userid=" . $row["userid"] . ($userid != $_SESSION["userid"] ? "&target_userid=" . $userid : "") . ">[Remove]</a></td><td>" . $row["firstname"] . " " . $row["lastname"] . ' ' . $row["suffix"] . "</td></tr>";
 }
 ?>
 </table>
@@ -468,7 +427,7 @@ if($_REQUEST["action"] == "findUser"){
   $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
 
   while ($row = mysqli_fetch_assoc($result)){
-    print "<a href=\"updateAccount.php?action=startViewOther&userid=" . $row["userid"] . "\">[Add]</a> " . $row["firstname"] . " " . $row["lastname"] . ' ' . $row["suffix"] . "<br>";
+    print "<a href=\"updateAccount.php?action=startViewOther&userid=" . $row["userid"] . ($userid != $_SESSION["userid"] ? "&target_userid=" . $userid : "") . "\">[Add]</a> " . $row["firstname"] . " " . $row["lastname"] . ' ' . $row["suffix"] . "<br>";
   }
     
 }
