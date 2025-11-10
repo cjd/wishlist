@@ -53,7 +53,7 @@ $(document).ready(function() {
 
 <?php 
    while($row = mysqli_fetch_assoc($result)){
-           $allowView = $row["viewContactInfo"];
+           $allowView = $row["viewContactInfo"] ?? false;
            $new_userid = $row["userid"];
            $name = $row["firstname"] . ' ' . $row["lastname"] . ' ' .$row["suffix"];
            $email = $row["email"];
