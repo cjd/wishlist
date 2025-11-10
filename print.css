@@ -1,0 +1,18 @@
+body {
+    background-color: white !important;
+}
+
+table.pagetable {
+    background-color: white !important;
+    background: none !important;
+}
+
+/* Ensure no other elements inherit or set background colors */
+td {
+    background-color: transparent !important;
+}
+
+/* If there are other specific classes that might set background, add them here */
+td.goldenRod {
+    background-color: transparent !important;
+}

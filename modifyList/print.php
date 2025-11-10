@@ -24,7 +24,7 @@ $name = $_SESSION["fullname"];
 
 <head><meta name="viewport" content="width=device-width, initial-scale=1.0" /></head>
 
-<link rel=stylesheet href=../style.css type=text/css>
+<link rel=stylesheet href=../print.css type=text/css>
 
 <title><?php echo $name ?>'s WishList</title>
 <BODY>
