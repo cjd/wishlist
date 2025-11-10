@@ -28,6 +28,13 @@ if(isset($_REQUEST["update"]) && ($_REQUEST["update"] != "")){
  header("Location: " . getFullPath("modifyList.php"));
 }
 
+if(isset($_REQUEST["add"]) && ($_REQUEST["add"] != "")){
+  $catSubDescription = convertString($_REQUEST["catSubDescription"]);
+  $query = "INSERT INTO categories (userid, catSortOrder, catSubDescription) VALUES ('" . $_SESSION["userid"] . "', -1000, '" . $catSubDescription . "')";
+  mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+  header("Location: " . getFullPath("modifyList.php"));
+}
+
 ?>
 <HTML>
 <head><meta name="viewport" content="width=device-width, initial-scale=1.0" /></head>
@@ -90,6 +97,28 @@ if($row = mysqli_fetch_assoc($rs)){
 </form>
 </table>
 
+<?php
+} else {
+?>
+<form method="post" action="editListComment.php">
+
+<tr><td align="right">
+<b>List Comment</b>
+</td>
+<td bgcolor="#eeeeee">
+<textarea name="catSubDescription" cols="75" rows="5"></textarea>
+</td></tr>
+
+<tr><td colspan="2" bgcolor="#c0c0c0">
+    <table width="100%">
+    <tr><td align=center valign="center">
+    <input type="submit" name="add" value="Add List Comment" style="font-weight:bold">
+  </td></tr>
+  </table>
+
+</td></tr>
+</form>
+</table>
 <?php
 }
 ?>
