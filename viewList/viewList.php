@@ -90,7 +90,7 @@ createNavBar("../home.php:Home|:View List - " . $_REQUEST["name"], false, "viewO
 <br>
 
 
-<font size="2">
+<font size="4">
 
 <?php
 

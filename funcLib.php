@@ -389,7 +389,7 @@ function printCategory($row, $name, $pretty, $displayPurchases, $readOnly, $modi
     print "<td valign=top class=\"goldenRod\">";
   }
   else{
-    print "<td valign=top>";
+    print "<td valign=top class=\"categoryHeader\">";
   }
 
   print "\n<table cellpadding=0 cellspacing=0>";
