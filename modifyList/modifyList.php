@@ -63,13 +63,11 @@ createNavBar("../home.php:Home|:Modify WishList");
 print "<table border=0 cellpadding=2 cellspacing=0 width=100%><tr>";
 if(isset($mrow["catSubDescription"]) && $mrow["catSubDescription"] != ""){
 
-  print "<td NOWRAP bgcolor=#99ff99><a class=menuLink
-href='editListComment.php'>[edit]</a><img width=26px height=13px
+  print "<td NOWRAP bgcolor=#99ff99><form method=\"post\" action=\"editListComment.php\"><input type=\"submit\" value=\"✏️\" class=\"actionButton\"></form><img width=26px height=13px
 src=\"../images/space.GIF\"></td><td width=99% bgcolor=#ffffcc> "
 . $mrow["catSubDescription"];
 
-} else{ print "<td NOWRAP bgcolor=#99ff99><a class=menuLink
-href='editListComment.php'>[add]</a><img width=26px height=13px
+} else{ print "<td NOWRAP width=\"100px\" bgcolor=#99ff99><form method=\"post\" action=\"editListComment.php\"><input type=\"submit\" value=\"➕\" class=\"actionButton\"></form><img width=26px height=13px
 src=\"../images/space.GIF\"></td><td width=99% bgcolor=#ffffcc> Click
 the link to the left to add a comment to the top of your list for
 others to see"; }

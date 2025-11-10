@@ -398,8 +398,19 @@ function printCategory($row, $name, $pretty, $displayPurchases, $readOnly, $modi
   if($modifyList and $row["catSortOrder"] != -10000){
   ?>
  <td NOWRAP class=goldenRod valign=top>
- <a class="menuLink" href="editCategory.php?cso=<?php echo $row["catSortOrder"] ?>&cid=<?php echo $row["cid"] ?>&cname=<?php echo $row["name"] ?>">[edit]</a>
- <a class="menuLinkRed" title="Click this to delete the category" href="deleteCategory.php?cso=<?php echo $row["catSortOrder"] ?>&cid=<?php echo $row["cid"] ?>&cname=<?php echo $row["name"] ?>&referrer=modifyList.php">[del]</a>
+ <form method="post" action="editCategory.php" style="display:inline-block;">
+ <input type="hidden" name="cso" value="<?php echo $row["catSortOrder"] ?>">
+ <input type="hidden" name="cid" value="<?php echo $row["cid"] ?>">
+ <input type="hidden" name="cname" value="<?php echo $row["name"] ?>">
+ <input type="submit" value="✏️" class="actionButton">
+ </form>
+ <form method="post" action="deleteCategory.php" style="display:inline-block;">
+ <input type="hidden" name="cso" value="<?php echo $row["catSortOrder"] ?>">
+ <input type="hidden" name="cid" value="<?php echo $row["cid"] ?>">
+ <input type="hidden" name="cname" value="<?php echo $row["name"] ?>">
+ <input type="hidden" name="referrer" value="modifyList.php">
+ <input type="submit" value="🗑️" class="actionButtonRed" title="Click this to delete the category">
+ </form>
 <?php 
     if ($last == 1){
       print "<img width=26px height=26px src=\"../images/space.GIF\">";
@@ -481,8 +492,21 @@ function printCategory($row, $name, $pretty, $displayPurchases, $readOnly, $modi
     if($modifyList){
 ?>
      <td NOWRAP class="goldenRod" valign="top">
-     <a class="menuLink" href="editItem.php?iso=<?php echo $row2["itemSortOrder"] ?>&iid=<?php echo $row2["iid"] ?>&cid=<?php echo $row["cid"] ?>&cname=<?php echo $row["name"] ?>">[edit]</a>
-     <a class="menuLinkRed" title="Click this to delete the item" href="deleteItem.php?iso=<?php echo $row2["itemSortOrder"] ?>&iid=<?php echo $row2["iid"] ?>&cid=<?php echo $row["cid"] ?>&cname=<?php echo $row["name"] ?>&referrer=modifyList.php">[del]</a>
+     <form method="post" action="editItem.php" style="display:inline-block;">
+     <input type="hidden" name="iso" value="<?php echo $row2["itemSortOrder"] ?>">
+     <input type="hidden" name="iid" value="<?php echo $row2["iid"] ?>">
+     <input type="hidden" name="cid" value="<?php echo $row["cid"] ?>">
+     <input type="hidden" name="cname" value="<?php echo $row["name"] ?>">
+     <input type="submit" value="✏️" class="actionButton">
+     </form>
+     <form method="post" action="deleteItem.php" style="display:inline-block;">
+     <input type="hidden" name="iso" value="<?php echo $row2["itemSortOrder"] ?>">
+     <input type="hidden" name="iid" value="<?php echo $row2["iid"] ?>">
+     <input type="hidden" name="cid" value="<?php echo $row["cid"] ?>">
+     <input type="hidden" name="cname" value="<?php echo $row["name"] ?>">
+     <input type="hidden" name="referrer" value="modifyList.php">
+     <input type="submit" value="🗑️" class="actionButtonRed" title="Click this to delete the item">
+     </form>
 <?php 
 
      if($last2 == 1){
