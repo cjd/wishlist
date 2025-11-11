@@ -21,30 +21,31 @@ $target_userid = $_SESSION["userid"];
 
 if (isset($_REQUEST["target_userid"])) {
     $requested_userid = $_REQUEST["target_userid"];
-    if ($_SESSION["admin"] == 1) {
+        
+    if (($_SESSION["admin"] == 1) || ($requested_userid == $target_userid)) {
         $target_userid = $requested_userid;
         $_SESSION["euserid"] = $target_userid;
     } else {
         // Check if the logged-in user has edit access to the requested user's list
     $query_check_access = "SELECT allowEdit FROM viewList WHERE pid = '" . $requested_userid . "' AND viewer = '" . $_SESSION["userid"] . "'";
     $result_check_access = mysqli_query($link, $query_check_access) or die("Could not query: " . mysqli_error($link));
-    
-    if ($row_check_access = mysqli_fetch_assoc($result_check_access)) {
-        if ($row_check_access["allowEdit"] == '1') {
-            $target_userid = $requested_userid;
-            $_SESSION["euserid"] = $target_userid; // Store in session for other pages
+
+        if ($row_check_access = mysqli_fetch_assoc($result_check_access)) {
+            if ($row_check_access["allowEdit"] == '1') {
+                $target_userid = $requested_userid;
+                $_SESSION["euserid"] = $target_userid; // Store in session for other pages
+            } else {
+                // No edit access, redirect to own account or show error
+                header("Location: updateAccount.php");
+                exit;
+            }
         } else {
-            // No edit access, redirect to own account or show error
+            // No entry in viewList, redirect to own account or show error
             header("Location: updateAccount.php");
             exit;
         }
-    } else {
-        // No entry in viewList, redirect to own account or show error
-        header("Location: updateAccount.php");
-                exit;
-            }
-        }
-    } else if (isset($_SESSION["euserid"])) {    // If no target_userid is specified, but euserid is set, use euserid
+    }
+} else if (isset($_SESSION["euserid"])) {    // If no target_userid is specified, but euserid is set, use euserid
     $target_userid = $_SESSION["euserid"];
     // Re-check access in case session was manipulated or permissions changed
     $query_check_access = "SELECT allowEdit FROM viewList WHERE pid = '" . $target_userid . "' AND viewer = '" . $_SESSION["userid"] . "'";
@@ -84,20 +85,22 @@ elseif ($action == "stopViewMine"){
 
 }
 elseif ($action == "startViewOther"){
-  $adduserid = $_REQUEST["userid"];
+  $adduserid = $_REQUEST["userid"]; // This is the target user
+  $requesterId = $userid; // This is the current user
 
-  $query = "select pid from viewList where pid='" . $adduserid . "' and viewer='" . $userid . "'";
+  // Check if a request already exists
+  $query = "select id from accessRequests where requesterId='" . $requesterId . "' and targetId='" . $adduserid . "'";
   $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
   
   if(mysqli_num_rows($result) > 0){
-    $message = "<h2>You can already view that person's list</h2>";
+    $message = "<h2>You have already sent an access request to this person.</h2>";
   }
   else{
-    // need to add new field
-    $query = "insert into viewList (viewContactInfo, readOnly, allowEdit, pid, viewer,lastViewDate) values (0, 1, 0, '" . $adduserid . "', '" . $userid . "', NOW())";
+    // Insert a new access request
+    $query = "insert into accessRequests (requesterId, targetId, status) values ('" . $requesterId . "', '" . $adduserid . "', 'pending')";
     
     $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
-    $message = "<h2>Send this person an email if you want to view their contact information and to remove your read only status</h2>";
+    $message = "<h2>Your request to view this person's list has been sent. You will be notified when they respond.</h2>";
   }
 }
 elseif ($action == "startViewMine"){
@@ -120,40 +123,25 @@ elseif ($action == "startViewMine"){
 }
 elseif ($action == "hideContactInfo"){
   
-  // First, set all viewContactInfo to 0 for the current user
-  $query_reset_contact = "update viewList set viewContactInfo='0' where pid='" . $userid . "'";
-  mysqli_query($link, $query_reset_contact) or die("Could not query: " . mysqli_error($link));
+  $query = "select viewer from viewList where pid='" . $userid . "'";
+  $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
 
-  if(isset($_REQUEST["admin"]) && $_REQUEST["admin"] != ""){    
-    foreach($_REQUEST["admin"] as $admin){
-      $query_set_contact = "update viewList set viewContactInfo='1' where viewer='" . $admin . "' and pid='" . $userid . "'";
-      mysqli_query($link, $query_set_contact) or die("Could not query: " . mysqli_error($link));
+  while($row = mysqli_fetch_assoc($result)){
+    $viewerId = $row['viewer'];
+
+    $viewContactInfo = in_array($viewerId, $_REQUEST['admin'] ?? []) ? 1 : 0;
+    $readOnly = in_array($viewerId, $_REQUEST['readOnly'] ?? []) ? 1 : 0;
+    $allowEdit = in_array($viewerId, $_REQUEST['allowEdit'] ?? []) ? 1 : 0;
+
+    // If allowEdit is 1, then readOnly must be 0
+    if ($allowEdit == 1) {
+        $readOnly = 0;
     }
+
+    $update_query = "UPDATE viewList SET viewContactInfo = '$viewContactInfo', readOnly = '$readOnly', allowEdit = '$allowEdit' WHERE viewer = '$viewerId' AND pid = '$userid'";
+    mysqli_query($link, $update_query) or die("Could not query: " . mysqli_error($link));
   }
 
-  // First, set all readOnly to 0 for the current user
-  $query_reset_readOnly = "update viewList set readOnly='0' where pid='" . $userid . "'";
-  mysqli_query($link, $query_reset_readOnly) or die("Could not query: " . mysqli_error($link));
-
-  if(isset($_REQUEST["readOnly"]) && $_REQUEST["readOnly"] != "") {
-    foreach($_REQUEST["readOnly"] as $rOnly){
-      $query_set_readOnly = "update viewList set readOnly='1' where viewer='" . $rOnly . "' and pid='" . $userid . "'";
-      mysqli_query($link, $query_set_readOnly) or die("Could not query: " . mysqli_error($link));
-    }
-  }
-
-  // First, set all allowEdit to 0 for the current user
-  $query_reset_allowEdit = "update viewList set allowEdit='0' where pid='" . $userid . "'";
-  mysqli_query($link, $query_reset_allowEdit) or die("Could not query: " . mysqli_error($link));
-
-  if(isset($_REQUEST["allowEdit"]) && $_REQUEST["allowEdit"] != ""){    
-    foreach($_REQUEST["allowEdit"] as $rOnly){
-      if (!empty($rOnly)) {
-        $query_set_allowEdit = "update viewList set allowEdit='1' where viewer='" . $rOnly . "' and pid='" . $userid . "'";
-        mysqli_query($link, $query_set_allowEdit) or die("Could not query: " . mysqli_error($link));
-      }
-    }
-  }
   $message = "<h2>Privileges changed</h2>";
   
 }

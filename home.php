@@ -14,6 +14,31 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 include "funcLib.php";
+
+// Fetch pending access requests
+$pending_requests_query = "SELECT ar.*, p.firstname, p.lastname FROM accessRequests ar JOIN people p ON ar.requesterId = p.userid WHERE ar.targetId = '" . $_SESSION['userid'] . "' AND ar.status = 'pending'";
+$pending_requests_result = mysqli_query($link, $pending_requests_query);
+
+// Fetch notifications for the requester
+$notifications_query = "SELECT ar.*, p.firstname, p.lastname FROM accessRequests ar JOIN people p ON ar.targetId = p.userid WHERE ar.requesterId = '" . $_SESSION['userid'] . "' AND ar.status != 'pending' AND ar.notified = 0";
+$notifications_result = mysqli_query($link, $notifications_query);
+
+if (mysqli_num_rows($notifications_result) > 0) {
+    echo "<script>";
+    while ($notification = mysqli_fetch_assoc($notifications_result)) {
+        $targetName = $notification['firstname'] . ' ' . $notification['lastname'];
+        if ($notification['status'] == 'approved') {
+            echo "alert('Your request to view " . $targetName . "\\'s list has been approved.');";
+        } else {
+            echo "alert('Your request to view " . $targetName . "\\'s list has been denied.');";
+        }
+        // Mark as notified
+        $update_notified_query = "UPDATE accessRequests SET notified = 1 WHERE id = " . $notification['id'];
+        mysqli_query($link, $update_notified_query);
+    }
+    echo "</script>";
+}
+
 if (isset ($_REQUEST["lastname"])) {
     $lastname = $_REQUEST["lastname"];
 } else {
@@ -196,6 +221,46 @@ if($_SESSION["admin"] == 1){
 ?>
 </div>
 </td></tr></table>
+
+<?php if (mysqli_num_rows($pending_requests_result) > 0): ?>
+<div id="accessRequestModal" class="modal">
+  <div class="modal-content">
+    <span class="close">&times;</span>
+    <h2>Access Requests</h2>
+    <?php while ($request = mysqli_fetch_assoc($pending_requests_result)): ?>
+      <div class="request">
+        <p><b><?php echo $request['firstname'] . ' ' . $request['lastname']; ?></b> would like to view your wishlist.</p>
+        <form action="handleAccessRequest.php" method="post">
+          <input type="hidden" name="requestId" value="<?php echo $request['id']; ?>">
+          <input type="hidden" name="requesterId" value="<?php echo $request['requesterId']; ?>">
+          <button type="submit" name="decision" value="approve_readonly" class="buttonstyle">Approve (Read-Only)</button>
+          <button type="submit" name="decision" value="approve_contact" class="buttonstyle">Approve (with Contact Info)</button>
+          <button type="submit" name="decision" value="deny" class="buttonstyle">Deny</button>
+        </form>
+      </div>
+    <?php endwhile; ?>
+  </div>
+</div>
+<script>
+$(document).ready(function() {
+  var modal = document.getElementById("accessRequestModal");
+  if (modal) {
+    var span = document.getElementsByClassName("close")[0];
+    modal.style.display = "block";
+
+    span.onclick = function() {
+      modal.style.display = "none";
+    }
+
+    window.onclick = function(event) {
+      if (event.target == modal) {
+        modal.style.display = "none";
+      }
+    }
+  }
+});
+</script>
+<?php endif; ?>
 
 </td></tr></table>
 </body>

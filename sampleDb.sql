@@ -192,3 +192,19 @@ CREATE TABLE IF NOT EXISTS `viewList` (
 -- Dumping data for table `viewList`
 -- 
 
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `accessRequests`
+--
+
+DROP TABLE IF EXISTS `accessRequests`;
+CREATE TABLE IF NOT EXISTS `accessRequests` (
+  `id` int(11) unsigned NOT NULL auto_increment,
+  `requesterId` varchar(50) NOT NULL,
+  `targetId` varchar(50) NOT NULL,
+  `status` enum('pending','approved','denied') NOT NULL default 'pending',
+  `notified` tinyint(1) NOT NULL default '0',
+  `requestDate` timestamp NOT NULL default CURRENT_TIMESTAMP,
+  PRIMARY KEY  (`id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
