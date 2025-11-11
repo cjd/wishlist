@@ -58,6 +58,7 @@ $num_rows = mysqli_num_rows($result);
 
 
 <link rel=stylesheet href=style.css type=text/css>
+<link rel="manifest" href="/manifest.json">
 
 <script src="js/jquery-3.7.1.min.js"></script>
 <script language="JavaScript">
@@ -140,6 +141,7 @@ elseif($season == 4){
 else{
   $image = "waving_santa2.gif";
 }
+$image = "wishlist.png";
 ?>
 <script type="text/javascript">
   if (screen.width <= 1000) {
@@ -149,7 +151,7 @@ else{
   }
 </script>
 </td><td class=headerCell>
-                    Welcome to the Wish List Site
+                    Welcome to the WishList Site
                   </td>
                 </tr>
 
