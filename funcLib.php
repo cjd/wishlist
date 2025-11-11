@@ -386,18 +386,18 @@ function printCategory($row, $name, $pretty, $displayPurchases, $readOnly, $modi
   print "\n<table width=100% border=0 cellpadding=0 cellspacing=0><tr>\n";
 
   if($modifyList){
-    print "<td valign=top class=\"goldenRod sortable-list\" data-category-id='" . $row["cid"] . "'>";
+    print "<td valign=top class=\"categoryHeader\">";
   }
   else{
     print "<td valign=top class=\"categoryHeader\">";
   }
 
-  print "\n<table cellpadding=0 cellspacing=0>";
+  print "\n<table cellpadding=0 cellspacing=0 width=100%>";
   print "<tr>";
 
   if($modifyList and $row["catSortOrder"] != -10000){
   ?>
- <td NOWRAP class=goldenRod valign=top>
+ <td NOWRAP valign=top>
  <form method="post" action="editCategory.php" style="display:inline-block;">
  <input type="hidden" name="cso" value="<?php echo $row["catSortOrder"] ?>">
  <input type="hidden" name="cid" value="<?php echo $row["cid"] ?>">
@@ -467,8 +467,19 @@ function printCategory($row, $name, $pretty, $displayPurchases, $readOnly, $modi
     print $row["catSubDescription"];// . "<br>&nbsp;";
   }
   
-  print "\n</td></tr>\n";
-  print "</table>\n";
+  print "</td>";
+  if($modifyList){
+?>
+<td align="right">
+<form method="post" action="addItem.php" style="display:inline-block;">
+<input type="hidden" name="cid" value="<?php echo $row["cid"] ?>">
+<input type="hidden" name="cname" value="<?php echo $row["name"] ?>">
+<input type="submit" value="➕ Add Item" class="actionButton">
+</form>
+</td>
+<?php
+  }
+  print "</tr></table>";
   
   print "</td></tr></table>\n";
 
@@ -603,13 +614,6 @@ function printCategory($row, $name, $pretty, $displayPurchases, $readOnly, $modi
 
   if($modifyList){
 ?>
-<table width=100% cellspacing=0 cellpadding=0>
-<tr><td class="goldenRod sortable-list" align="center" data-category-id="<?php echo $row["cid"] ?>">
-<b>
-<a class="menuLink" href="addItem.php?cid=<?php echo $row["cid"] ?>&cname=<?php echo $row["name"] ?>">Add New Item to <u><?php echo $row["name"] ?></u></a></b>
-</td></tr>
-<tr><td>&nbsp;</td></tr>
-</table>
 <?php
   }
   else{
