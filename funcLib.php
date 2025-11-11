@@ -385,12 +385,7 @@ function printCategory($row, $name, $pretty, $displayPurchases, $readOnly, $modi
 
   print "\n<table width=100% border=0 cellpadding=0 cellspacing=0><tr>\n";
 
-  if($modifyList){
-    print "<td valign=top class=\"categoryHeader\">";
-  }
-  else{
-    print "<td valign=top class=\"categoryHeader\">";
-  }
+  print "<td valign=top class=\"categoryHeader\">";
 
   print "\n<table cellpadding=0 cellspacing=0 width=100%>";
   print "<tr>";
@@ -431,7 +426,7 @@ function printCategory($row, $name, $pretty, $displayPurchases, $readOnly, $modi
       }
     }
       
- print "</td><td>";
+ print "</td><td width=100% align=center>";
 
   }
   else{
