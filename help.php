@@ -26,6 +26,10 @@
 <p>To see someone's wishlist, you first need to be granted permission. Once the list owner has given you access, their name will appear on your homepage. Simply click on their name to view their list.</p>
 <p>If you don't see the person's list you're looking for, you can request access. Go to <b>Update Your Account >> Manage List Access</b> and use the search function to find the person by their username or email. This will send a request for them to approve.</p>
 
+<a name="accessRequests"></a><h3>How do access requests work?</h3>
+<p>When you request access to someone's list, the owner of that list will be notified the next time they log in. They will be presented with a dialog where they can approve or deny your request. They can choose to grant you read-only access, or full access (which includes the ability to see their contact information).</p>
+<p>Once they have made a decision, you will be notified of the outcome the next time you log in. If your request is approved, you will see their name on your homepage and you will be able to view their list.</p>
+
 <a name="checkOff"></a><h3>How do I mark an item as purchased?</h3>
 <p>When you are viewing someone's list, you can mark items that you have purchased to prevent duplicate gifts. The way you do this depends on the quantity the person has requested:</p>
 <ul>
