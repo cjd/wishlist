@@ -24,6 +24,7 @@ include "../funcLib.php";
 <link rel=stylesheet href=../style.css type=text/css>
 <script type="text/javascript" src="../js/jquery-3.7.1.min.js"></script>
 <script type="text/javascript" src="../js/jquery.vanillabox-0.1.6.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 <link rel=stylesheet href="../js/theme/bitter/vanillabox.css">
 <script type="text/javascript">
 $(document).ready(function() {
@@ -110,5 +111,49 @@ printModifyList($userid);
 </td>
 </tr>
 </table>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var lists = document.querySelectorAll('.sortable-list');
+    lists.forEach(function (list) {
+        new Sortable(list, {
+            group: 'shared', // set both lists to same group
+            animation: 150,
+            handle: '.drag-handle',
+            onAdd: function (evt) {
+                var placeholder = evt.to.querySelector('.empty-category-placeholder');
+                if (placeholder) {
+                    placeholder.remove();
+                }
+            },
+            onEnd: function (evt) {
+                var itemEl = evt.item;
+                var itemId = itemEl.dataset.itemId;
+                var fromCategoryId = evt.from.dataset.categoryId;
+                var toCategoryId = evt.to.dataset.categoryId;
+                var newIndex = evt.newIndex;
+
+                $.ajax({
+                    url: 'updateItemOrder.php',
+                    type: 'POST',
+                    data: {
+                        itemId: itemId,
+                        fromCategoryId: fromCategoryId,
+                        toCategoryId: toCategoryId,
+                        newIndex: newIndex
+                    },
+                    success: function(response) {
+                        // You can add a success message here if you want
+                        console.log(response);
+                    },
+                    error: function() {
+                        // You can add an error message here if you want
+                        console.error('Error updating item order');
+                    }
+                });
+            }
+        });
+    });
+});
+</script>
 </body>
 </html>

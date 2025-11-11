@@ -87,6 +87,54 @@ td.goldenRod{background-color : rgb(245, 255, 189);}
     color:#ffffff;
 }
 
+.sortable-list {
+    min-height: 50px;
+    border: 1px dashed #ccc;
+}
+
+.drag-handle {
+    cursor: move;
+    font-size: 20px;
+    text-align: center;
+}
+
+.empty-category-placeholder {
+    height: 50px;
+    background-color: #f0f0f0;
+    text-align: center;
+    color: #999;
+}
+
+.item-row {
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #eee;
+    padding: 5px;
+}
+.item-cell {
+    padding: 5px;
+}
+.item-buttons {
+    flex-shrink: 0;
+}
+.item-checkbox {
+    flex-shrink: 0;
+}
+.item-content {
+    flex-grow: 1;
+}
+.item-handle {
+    flex-shrink: 0;
+}
+
+.item-details {
+    padding-left: 20px;
+    font-size: 0.9em;
+}
+.item-detail-row {
+    margin-top: 5px;
+}
+
 
 
 table.headerBox {

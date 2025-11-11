@@ -386,7 +386,7 @@ function printCategory($row, $name, $pretty, $displayPurchases, $readOnly, $modi
   print "\n<table width=100% border=0 cellpadding=0 cellspacing=0><tr>\n";
 
   if($modifyList){
-    print "<td valign=top class=\"goldenRod\">";
+    print "<td valign=top class=\"goldenRod sortable-list\" data-category-id='" . $row["cid"] . "'>";
   }
   else{
     print "<td valign=top class=\"categoryHeader\">";
@@ -472,7 +472,7 @@ function printCategory($row, $name, $pretty, $displayPurchases, $readOnly, $modi
   
   print "</td></tr></table>\n";
 
-  print "<table cellpadding=0 cellspacing=0><tr>";
+  print "<div class='sortable-list' data-category-id='" . $row["cid"] . "'>";
 
   if ($row["cid"] == "") { $row["cid"]=-1;}
   // Now begin iterating through items in this category
@@ -487,11 +487,12 @@ function printCategory($row, $name, $pretty, $displayPurchases, $readOnly, $modi
   // before we print out the item details, need to display either a checkbox
   // or a drop down box to allow people to purchase the item
   while($row2 = mysqli_fetch_assoc($rs2)){
-    print "\n<tr>\n";
+    print "\n<div class='sortable-item' data-item-id='" . $row2["iid"] . "'>\n";
+    print "<div class='item-row'>";
     
     if($modifyList){
+      print "<div class='item-cell item-buttons'>";
 ?>
-     <td NOWRAP class="goldenRod" valign="top">
      <form method="post" action="editItem.php" style="display:inline-block;">
      <input type="hidden" name="iso" value="<?php echo $row2["itemSortOrder"] ?>">
      <input type="hidden" name="iid" value="<?php echo $row2["iid"] ?>">
@@ -508,28 +509,7 @@ function printCategory($row, $name, $pretty, $displayPurchases, $readOnly, $modi
      <input type="submit" value="🗑️" class="actionButtonRed" title="Click this to delete the item">
      </form>
 <?php 
-
-     if($last2 == 1){
-       print "<img width=26px height=13px src=\"../images/space.GIF\">";
-     }
-     else{
-       if ($j != 0){
-         print "<a href=\"moveItem.php?dir=up&cid=" . $row["cid"] . "&iid=" . $row2["iid"] . "&iso=" . $row2["itemSortOrder"] . "\"><img width=13px height=13px border=0 src=\"../images/up_arrow_lyellow.gif\" title=\"Click this arrow to move the item up\"></a>";
-       }
-       
-       if($j != $last2 - 1){
-         print "<a href=\"moveItem.php?dir=down&cid=" . $row["cid"] . "&iid=" . $row2["iid"] . "&iso=" . $row2["itemSortOrder"] . "\"><img width=13px height=13px border=0 src=\"../images/down_arrow_lyellow.gif\" title=\"Click this arrow to move the item down\"></a>";
-         if($j == 0){
-           print "<img width=13px height=13px src=\"../images/space.GIF\">";
-         }
-       }
-       else{
-         print "<img width=13px height=13px src=\"../images/space.GIF\">";
-       }
-     }
-
-
-     print "</td>";
+     print "</div>";
     }
 
     $bought = 0;
@@ -547,7 +527,7 @@ function printCategory($row, $name, $pretty, $displayPurchases, $readOnly, $modi
         }  
       }
 
-      print "<td align=right valign=top width=1px>\n";
+      print "<div class='item-cell item-checkbox'>";
       $quantity = $row2["quantity"];
       
       if($quantity > 1){
@@ -574,7 +554,7 @@ function printCategory($row, $name, $pretty, $displayPurchases, $readOnly, $modi
           print "<select disabled>";
         }
         print "</select>";
-        print "</td><td>";
+        print "</div><div class='item-cell item-content'>";
       }
       else{
         // person only wants one of the item so display a checkbox
@@ -597,38 +577,44 @@ function printCategory($row, $name, $pretty, $displayPurchases, $readOnly, $modi
           $titley = "title=\"Click here if you purchased this item\"";
 
         print "<input $titley type='checkbox' name='chk" . $iid . "' " . $val  . ">";
-        print "</td><td>";
+        print "</div><div class='item-cell item-content'>";
       }
     }
     else{
       // can't check this item off so don't display checkbox or drop down
-      print "<td colspan=2>";
+      print "<div class='item-cell item-content' colspan=2>";
     }
     
     if($bought > 0 && $quantity==1){ print "<s>"; }
     printItem($row2, $pretty, $name, $quantity, $bought);
     if($bought > 0 && $quantity==1){ print "</s>"; }
     
+    print "</div>"; // close the item content td
     
-    print "\n</td></tr>\n";       
+    if ($modifyList) {
+        print "<div class='item-cell item-handle drag-handle'>&#9776;</div>";
+    }
+
+    print "</div>"; // end item-row
+    print "</div>\n"; // end sortable-item
     $j++;
   }
+  print "</div>";
+
   if($modifyList){
 ?>
-</table>
-
 <table width=100% cellspacing=0 cellpadding=0>
-<tr><td class="goldenRod" align="center">
+<tr><td class="goldenRod sortable-list" align="center" data-category-id="<?php echo $row["cid"] ?>">
 <b>
 <a class="menuLink" href="addItem.php?cid=<?php echo $row["cid"] ?>&cname=<?php echo $row["name"] ?>">Add New Item to <u><?php echo $row["name"] ?></u></a></b>
 </td></tr>
 <tr><td>&nbsp;</td></tr>
+</table>
 <?php
   }
   else{
-    print "<tr><td>&nbsp;</td></tr>"; // blank line
+    print "<div>&nbsp;</div>"; // blank line
   }
-  print "</table>";
 }
 
 
@@ -695,35 +681,30 @@ function printItem($row2, $pretty, $name, $quantity, $bought){
   
   
   if($subdesc != "" or $link2 != "" or $link3 != "" or $quantity > 1){
-    print "<table border=0>";
+    print "<div class='item-details'>";
     
     if($subdesc != ""){
-      print "<tr><td width='15px'>&nbsp;</td><td>";
+      print "<div class='item-detail-row'>";
       print $subdesc;
-      print "</td></tr>";
+      print "</div>";
     }
     
     if($link2 != ""){
-      print "<tr><td width='15px'>&nbsp;</td><td>";
-      print "<a target='_blank' href='" . $link2url . "'>" . $link2 ."</a></td></tr>";
+      print "<div class='item-detail-row'>";
+      print "<a target='_blank' href='" . $link2url . "'>" . $link2 ."</a></div>";
       
       if($link3 != ""){
-        print "<tr><td width='15px'>&nbsp;</td><td>";
-        print "<a target='_blank' href='" . $link3url . "'>" . $link3 . "</a></td></tr>";
+        print "<div class='item-detail-row'>";
+        print "<a target='_blank' href='" . $link3url . "'>" . $link3 . "</a></div>";
       }
     }
     
     if($quantity > 1){ 
-      print "<tr><td width='15px'>&nbsp;</td><td>";
+      print "<div class='item-detail-row'>";
       print "<font color=red>" . $name . " wants " . $quantity . " of these, there are " . ($quantity - $bought) . " left to be purchased";
-/*       print $bought == 1 ? "has" : "have"; */
-/*       print " been purchased";   */
-/*       if($pretty == 0 and $quantity > $bought){ */
-/*         print "<br>Use the drop down box to indicate how many you have bought"; */
-/*       } */
-      print "</font></td></tr>";
+      print "</font></div>";
     }
-    print "</table>";
+    print "</div>";
   }
   else{
     print "<br>";
