@@ -27,8 +27,10 @@ if($linkurl != "" && strpos($linkurl, "http") === false){
     $linkurl = "https://" . $linkurl;
 }                
 
-$query = "select max(catSortOrder) as cso from categories where userid='" . $userid . "'";
-$rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+$stmt = mysqli_prepare($link, "SELECT max(catSortOrder) as cso FROM categories WHERE userid = ?");
+mysqli_stmt_bind_param($stmt, "s", $userid);
+mysqli_stmt_execute($stmt);
+$rs = mysqli_stmt_get_result($stmt);
 
 $cso = 0;
 
@@ -40,18 +42,12 @@ if($row = mysqli_fetch_assoc($rs)){
 if($cso == "" or $cso < 0)
    $cso = 0;
 
-$query = "insert into categories (cid, userid, name, description, linkname, linkurl, catSortOrder, catSubDescription) values (null, '" . $userid . "', " .
-"'" . $cname . "', " .
-"'" . $description . "', " .
-"'" . $linkname . "', " .
-"'" . $linkurl . "', " . 
-$cso . ", " . 
-"'" . $catSubDescription . "')";
-
-$rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+$stmt = mysqli_prepare($link, "INSERT INTO categories (cid, userid, name, description, linkname, linkurl, catSortOrder, catSubDescription) VALUES (null, ?, ?, ?, ?, ?, ?, ?)");
+mysqli_stmt_bind_param($stmt, "sssssis", $userid, $cname, $description, $linkname, $linkurl, $cso, $catSubDescription);
+mysqli_stmt_execute($stmt);
 
 header("Location: " . getFullPath("modifyList.php"));
 
-$query = "update people set lastModDate=NOW() where userid='" . $userid . "'";
-
-$rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+$stmt = mysqli_prepare($link, "UPDATE people SET lastModDate=NOW() WHERE userid = ?");
+mysqli_stmt_bind_param($stmt, "s", $userid);
+mysqli_stmt_execute($stmt);

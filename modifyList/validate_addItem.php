@@ -72,9 +72,10 @@ else
   $addStar = '1';
 
 
-$query = "select max(itemSortOrder) as iso from items where cid = " . $cid;
-
-$rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+$stmt = mysqli_prepare($link, "SELECT max(itemSortOrder) as iso FROM items WHERE cid = ?");
+mysqli_stmt_bind_param($stmt, "i", $cid);
+mysqli_stmt_execute($stmt);
+$rs = mysqli_stmt_get_result($stmt);
 
 $iso = 0;
 
@@ -85,21 +86,9 @@ if($row = mysqli_fetch_assoc($rs)){
   }
 }
 
-$query = "insert into items (iid, cid, addStar, title, description, price, quantity, link1, link1url, subdesc, allowCheck, itemSortOrder) values (null, " .
-"" . $cid . ", " .
-"" . $addStar . ", " .
-"'" . $title . "', " .
-"'" . $description . "', " .
-"" . $price . ", " .
-"" . $quantity . ", " .
-"'" . $link1 . "', " .
-"'" . $link1url . "', " .
-"'" . $subdesc . "', " .
-"'" . $allowCheck . "', " .
-"" . $iso . ")";
-
-//print $query;
-$rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+$stmt = mysqli_prepare($link, "INSERT INTO items (iid, cid, addStar, title, description, price, quantity, link1, link1url, subdesc, allowCheck, itemSortOrder) VALUES (null, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+mysqli_stmt_bind_param($stmt, "isssdissssi", $cid, $addStar, $title, $description, $price, $quantity, $link1, $link1url, $subdesc, $allowCheck, $iso);
+mysqli_stmt_execute($stmt) or die("Could not execute statement: " . mysqli_stmt_error($stmt));
 
 if (isset($_FILES['image']) && ($_FILES['image']['error']==0)) {
     $uploadDir = $base_dir.'/uploads/';
@@ -107,13 +96,14 @@ if (isset($_FILES['image']) && ($_FILES['image']['error']==0)) {
     $uploadFile = "image-" . $id.".jpg";
     $result = process_image_upload('image',$uploadDir.$uploadFile);
     if ($result) {
-        $query = "UPDATE items SET image = \"".$uploadFile."\" WHERE iid=".$id.";";
-        $rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+        $stmt = mysqli_prepare($link, "UPDATE items SET image = ? WHERE iid = ?");
+        mysqli_stmt_bind_param($stmt, "si", $uploadFile, $id);
+        mysqli_stmt_execute($stmt) or die("Could not execute statement: " . mysqli_stmt_error($stmt));
     }
 }
 
 header("Location: " . getFullPath("modifyList.php"));
-$query = "update people set lastModDate=NOW() where userid='" . $userid . "'";
-
-$rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+$stmt = mysqli_prepare($link, "UPDATE people SET lastModDate=NOW() WHERE userid = ?");
+mysqli_stmt_bind_param($stmt, "s", $userid);
+mysqli_stmt_execute($stmt) or die("Could not execute statement: " . mysqli_stmt_error($stmt));
 

@@ -29,14 +29,12 @@ if($linkurl != "" && strpos($linkurl, "http") === false){
     $linkurl = "https://" . $linkurl;
 }                
 
-$query = "update categories set name='" . $name . "', description='" . $description . 
-       "', linkname='" . $linkname . "', linkurl='" . $linkurl . "', catSubDescription='" . $catSubDescription . "' " . 
-       "where cid=" . $cid;
-
-$rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+$stmt = mysqli_prepare($link, "UPDATE categories SET name = ?, description = ?, linkname = ?, linkurl = ?, catSubDescription = ? WHERE cid = ?");
+mysqli_stmt_bind_param($stmt, "sssssi", $name, $description, $linkname, $linkurl, $catSubDescription, $cid);
+mysqli_stmt_execute($stmt);
 
 header("Location: " . getFullPath("modifyList.php"));
 
-$query = "update people set lastModDate=NOW() where userid='" . $userid . "'";
-
-$rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+$stmt = mysqli_prepare($link, "UPDATE people SET lastModDate=NOW() WHERE userid = ?");
+mysqli_stmt_bind_param($stmt, "s", $userid);
+mysqli_stmt_execute($stmt);

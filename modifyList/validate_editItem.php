@@ -70,13 +70,14 @@ else
 if($cid != $movecid){
   // moving to a different category so update iso
 
-  $query = "update items set itemSortOrder = itemSortOrder - 1 where itemSortOrder > " . 
-    $iso . " and cid=" . $cid;
-  //print $query . "<br>";
-  $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+  $stmt = mysqli_prepare($link, "UPDATE items SET itemSortOrder = itemSortOrder - 1 WHERE itemSortOrder > ? AND cid = ?");
+  mysqli_stmt_bind_param($stmt, "ii", $iso, $cid);
+  mysqli_stmt_execute($stmt);
 
-  $query = "select max(itemSortOrder) as iso from items where cid = " . $movecid;
-  $rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+  $stmt = mysqli_prepare($link, "SELECT max(itemSortOrder) as iso FROM items WHERE cid = ?");
+  mysqli_stmt_bind_param($stmt, "i", $movecid);
+  mysqli_stmt_execute($stmt);
+  $rs = mysqli_stmt_get_result($stmt);
   
   if($row = mysqli_fetch_assoc($rs)){
     if($row["iso"] != ""){
@@ -92,18 +93,9 @@ if($cid != $movecid){
 }
 
 
-$query = "update items set title='" . $title . 
-"', description='" . $description . 
-"', quantity=" . $quantity . 
-", subdesc='" . $subdesc . 
-"', price = " . $price . 
-", allowCheck='" . $allowCheck . 
-"', addStar=" . $addStar . 
-", link1='" . $link1 . 
-"', link1url='" . $link1url .
-"', itemSortOrder = " . $iso .
-", cid = " . $movecid .
-" where iid=" . $iid;
+$stmt = mysqli_prepare($link, "UPDATE items SET title = ?, description = ?, quantity = ?, subdesc = ?, price = ?, allowCheck = ?, addStar = ?, link1 = ?, link1url = ?, itemSortOrder = ?, cid = ? WHERE iid = ?");
+mysqli_stmt_bind_param($stmt, "ssisdsissiii", $title, $description, $quantity, $subdesc, $price, $allowCheck, $addStar, $link1, $link1url, $iso, $movecid, $iid);
+mysqli_stmt_execute($stmt);
 
 if (isset($_FILES['image']) && ($_FILES['image']['error']==0)) {
     $uploadDir = $base_dir.'/uploads/';
@@ -113,18 +105,17 @@ if (isset($_FILES['image']) && ($_FILES['image']['error']==0)) {
     }
     $result = process_image_upload('image',$uploadDir.$uploadFile);
     if ($result) {
-        $query = "UPDATE items SET image = \"".$uploadFile."\" WHERE iid=".$iid.";";
-        $rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+        $stmt = mysqli_prepare($link, "UPDATE items SET image = ? WHERE iid = ?");
+        mysqli_stmt_bind_param($stmt, "si", $uploadFile, $iid);
+        mysqli_stmt_execute($stmt);
     }
 }
 
-
-
 //print $query . "<br>";
-$rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+mysqli_stmt_execute($stmt);
 
 header("Location: " . getFullPath("modifyList.php"));
 
-$query = "update people set lastModDate=NOW() where userid='" . $userid . "'";
-
-$rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+$stmt = mysqli_prepare($link, "UPDATE people SET lastModDate=NOW() WHERE userid = ?");
+mysqli_stmt_bind_param($stmt, "s", $userid);
+mysqli_stmt_execute($stmt);

@@ -24,23 +24,28 @@ $iid = mysqli_escape_string($link,$_REQUEST["iid"]);
 $iso = mysqli_escape_string($link,$_REQUEST["iso"]);
 
 if($dir == "down"){
-  $query = "update items set itemSortOrder = itemSortOrder - 1 where itemSortOrder = " . ($iso + 1) . " and cid = " . $cid;
-  $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+  $stmt = mysqli_prepare($link, "UPDATE items SET itemSortOrder = itemSortOrder - 1 WHERE itemSortOrder = ? AND cid = ?");
+  $new_iso = $iso + 1;
+  mysqli_stmt_bind_param($stmt, "ii", $new_iso, $cid);
+  mysqli_stmt_execute($stmt);
 
-  $query = "update items set itemSortOrder = itemSortOrder + 1 where iid = " . $iid;
-  $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+  $stmt = mysqli_prepare($link, "UPDATE items SET itemSortOrder = itemSortOrder + 1 WHERE iid = ?");
+  mysqli_stmt_bind_param($stmt, "i", $iid);
+  mysqli_stmt_execute($stmt);
 }
 else{
-  $query = "update items set itemSortOrder = itemSortOrder + 1 where itemSortOrder = " . ($iso - 1) . " and cid = " . $cid;
-  $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+  $stmt = mysqli_prepare($link, "UPDATE items SET itemSortOrder = itemSortOrder + 1 WHERE itemSortOrder = ? AND cid = ?");
+  $new_iso = $iso - 1;
+  mysqli_stmt_bind_param($stmt, "ii", $new_iso, $cid);
+  mysqli_stmt_execute($stmt);
 
-  $query = "update items set itemSortOrder = itemSortOrder - 1 where iid = " . $iid;
-  $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
-
+  $stmt = mysqli_prepare($link, "UPDATE items SET itemSortOrder = itemSortOrder - 1 WHERE iid = ?");
+  mysqli_stmt_bind_param($stmt, "i", $iid);
+  mysqli_stmt_execute($stmt);
 }
 
   header("Location: " . getFullPath("modifyList.php"));
 
-
-  $query =  "update people set lastModDate=NOW() where userid='" . $userid . "'";
-  $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+  $stmt = mysqli_prepare($link, "UPDATE people SET lastModDate=NOW() WHERE userid = ?");
+  mysqli_stmt_bind_param($stmt, "s", $userid);
+  mysqli_stmt_execute($stmt);

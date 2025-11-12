@@ -56,9 +56,10 @@ createNavBar("../home.php:Home|:Modify WishList");
 
 <?php
 
-  $mquery = "select catSubDescription from categories where userid ='" . $userid . "' and catSortOrder=-1000";
-
-  $mrs = mysqli_query($link,$mquery) or die("Could not query: " . mysqli_error($link));
+  $stmt = mysqli_prepare($link, "SELECT catSubDescription FROM categories WHERE userid = ? AND catSortOrder=-1000");
+  mysqli_stmt_bind_param($stmt, "s", $userid);
+  mysqli_stmt_execute($stmt);
+  $mrs = mysqli_stmt_get_result($stmt);
   $mrow = mysqli_fetch_assoc($mrs);
 
 print "<table border=0 cellpadding=2 cellspacing=0 width=100%><tr>";
@@ -93,9 +94,10 @@ printModifyList($userid);
 <p>
 
 <?php
-  $mquery = "select * from categories where userid ='" . $userid . "' and catSortOrder=-10000";
-
-  $mrs = mysqli_query($link,$mquery) or die("Could not query: " . mysqli_error($link));
+  $stmt = mysqli_prepare($link, "SELECT * FROM categories WHERE userid = ? AND catSortOrder=-10000");
+  mysqli_stmt_bind_param($stmt, "s", $userid);
+  mysqli_stmt_execute($stmt);
+  $mrs = mysqli_stmt_get_result($stmt);
   $mrow = mysqli_fetch_assoc($mrs);
 
   printCategory($mrow, $_SESSION["fullname"], 1, 0, 0, 1, 0, 0, 1);

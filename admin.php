@@ -37,33 +37,47 @@ $message = "<h2>Admin Page</h2>";
 if($_REQUEST["action"] == "commitDelete"){
   $delUserid = $_REQUEST["userid"];
   if($_REQUEST["confirm"] == "Yes"){
-    $query = "delete from viewList where pid='" . $delUserid . "'";
-    $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
-    $query = "delete from viewList where viewer='" . $delUserid . "'";
-    $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+    $stmt = mysqli_prepare($link, "DELETE FROM viewList WHERE pid = ?");
+    mysqli_stmt_bind_param($stmt, "s", $delUserid);
+    mysqli_stmt_execute($stmt);
+
+    $stmt = mysqli_prepare($link, "DELETE FROM viewList WHERE viewer = ?");
+    mysqli_stmt_bind_param($stmt, "s", $delUserid);
+    mysqli_stmt_execute($stmt);
     
-    $query = "delete from comments where userid='" . $delUserid . "'";
-    $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
-    $query = "delete from comments where comment_userid='" . $delUserid . "'";
-    $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+    $stmt = mysqli_prepare($link, "DELETE FROM comments WHERE userid = ?");
+    mysqli_stmt_bind_param($stmt, "s", $delUserid);
+    mysqli_stmt_execute($stmt);
+
+    $stmt = mysqli_prepare($link, "DELETE FROM comments WHERE comment_userid = ?");
+    mysqli_stmt_bind_param($stmt, "s", $delUserid);
+    mysqli_stmt_execute($stmt);
     
-    $query = "delete from purchaseHistory where userid='" . $delUserid . "'";
-    $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+    $stmt = mysqli_prepare($link, "DELETE FROM purchaseHistory WHERE userid = ?");
+    mysqli_stmt_bind_param($stmt, "s", $delUserid);
+    mysqli_stmt_execute($stmt);
     
-    $query = "select iid from items, categories where items.cid=categories.cid and userid='" . $delUserid . "'";
-    $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+    $stmt = mysqli_prepare($link, "SELECT iid FROM items, categories WHERE items.cid = categories.cid AND userid = ?");
+    mysqli_stmt_bind_param($stmt, "s", $delUserid);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
     while($row = mysqli_fetch_assoc($result)){
-      $query = "delete from purchaseHistory where iid=" . $row["iid"];
-      mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
-      $query = "delete from items where iid=" . $row["iid"];
-      mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+      $stmt2 = mysqli_prepare($link, "DELETE FROM purchaseHistory WHERE iid = ?");
+      mysqli_stmt_bind_param($stmt2, "i", $row["iid"]);
+      mysqli_stmt_execute($stmt2);
+
+      $stmt2 = mysqli_prepare($link, "DELETE FROM items WHERE iid = ?");
+      mysqli_stmt_bind_param($stmt2, "i", $row["iid"]);
+      mysqli_stmt_execute($stmt2);
     }
     
-    $query = "delete from categories where userid='" . $delUserid . "'";
-    $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+    $stmt = mysqli_prepare($link, "DELETE FROM categories WHERE userid = ?");
+    mysqli_stmt_bind_param($stmt, "s", $delUserid);
+    mysqli_stmt_execute($stmt);
     
-    $query = "delete from people where userid='" . $delUserid . "'";
-    $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+    $stmt = mysqli_prepare($link, "DELETE FROM people WHERE userid = ?");
+    mysqli_stmt_bind_param($stmt, "s", $delUserid);
+    mysqli_stmt_execute($stmt);
     
     $message = "<h2>Person deleted</h2>";
   }
@@ -74,24 +88,33 @@ elseif($_REQUEST["action"] == "commitEdit"){
 
   if($oldUserid != "" and $newUserid != "" and $oldUserid != $newUserid){
 
-    $query = "update viewList set pid='" . $newUserid . "' where pid='" . $oldUserid . "'";
-    $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
-    $query = "update viewList set viewer='" . $newUserid . "' where viewer='" . $oldUserid . "'";
-    $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+    $stmt = mysqli_prepare($link, "UPDATE viewList SET pid = ? WHERE pid = ?");
+    mysqli_stmt_bind_param($stmt, "ss", $newUserid, $oldUserid);
+    mysqli_stmt_execute($stmt);
+
+    $stmt = mysqli_prepare($link, "UPDATE viewList SET viewer = ? WHERE viewer = ?");
+    mysqli_stmt_bind_param($stmt, "ss", $newUserid, $oldUserid);
+    mysqli_stmt_execute($stmt);
     
-    $query = "update comments set userid='" . $newUserid . "' where userid='" . $oldUserid . "'";
-    $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
-    $query = "update comments set comment_userid='" . $newUserid . "' where comment_userid='" . $oldUserid . "'";
-    $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+    $stmt = mysqli_prepare($link, "UPDATE comments SET userid = ? WHERE userid = ?");
+    mysqli_stmt_bind_param($stmt, "ss", $newUserid, $oldUserid);
+    mysqli_stmt_execute($stmt);
+
+    $stmt = mysqli_prepare($link, "UPDATE comments SET comment_userid = ? WHERE comment_userid = ?");
+    mysqli_stmt_bind_param($stmt, "ss", $newUserid, $oldUserid);
+    mysqli_stmt_execute($stmt);
     
-    $query = "update purchaseHistory set userid='" . $newUserid . "' where userid='" . $oldUserid . "'";
-    $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+    $stmt = mysqli_prepare($link, "UPDATE purchaseHistory SET userid = ? WHERE userid = ?");
+    mysqli_stmt_bind_param($stmt, "ss", $newUserid, $oldUserid);
+    mysqli_stmt_execute($stmt);
     
-    $query = "update categories set userid='" . $newUserid . "' where userid='" . $oldUserid . "'";
-    $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+    $stmt = mysqli_prepare($link, "UPDATE categories SET userid = ? WHERE userid = ?");
+    mysqli_stmt_bind_param($stmt, "ss", $newUserid, $oldUserid);
+    mysqli_stmt_execute($stmt);
     
-    $query = "update people set userid='" . $newUserid . "' where userid='" . $oldUserid . "'";
-    $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+    $stmt = mysqli_prepare($link, "UPDATE people SET userid = ? WHERE userid = ?");
+    mysqli_stmt_bind_param($stmt, "ss", $newUserid, $oldUserid);
+    mysqli_stmt_execute($stmt);
   }
 }
 elseif($_REQUEST["action"] == "commitAdd"){
@@ -118,29 +141,26 @@ elseif($_REQUEST["action"] == "commitAdd"){
         }
     }
     
-    $query = "insert into people (userid, firstname, lastname, suffix, email, password, lastLoginDate, lastModDate) value (" .
-      "'" . $desiredUserid . "'," .
-      "'" . $fname . "', " .
-      "'" . $lname . "', " .
-      "'" . $suffix . "', " .
-      "'" . $email . "', " .
-      "'" . md5($password) . "', now(), now())";
+    $password_hash = password_hash($password, PASSWORD_DEFAULT);
+
+    $stmt = mysqli_prepare($link, "INSERT INTO people (userid, firstname, lastname, suffix, email, password, lastLoginDate, lastModDate) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())");
+    mysqli_stmt_bind_param($stmt, "sssss", $desiredUserid, $fname, $lname, $suffix, $email, $password_hash);
     
     // first add them to the people table
-    $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+    mysqli_stmt_execute($stmt) or die("Could not execute statement: " . mysqli_stmt_error($stmt));
 
     // now set up the special categories
-    $query  = "insert into categories (catSortOrder, userid, name, catSubDescription) value (-10000, '" . $desiredUserid . "', 'Items Under Consideration', 'You are the only person who can view items in this category. Use it for items you are thinking of adding to your list')";
-    $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+    $stmt = mysqli_prepare($link, "INSERT INTO categories (catSortOrder, userid, name, catSubDescription) VALUES (-10000, ?, 'Items Under Consideration', 'You are the only person who can view items in this category. Use it for items you are thinking of adding to your list')");
+    mysqli_stmt_bind_param($stmt, "s", $desiredUserid);
+    mysqli_stmt_execute($stmt);
 
+    $stmt = mysqli_prepare($link, "INSERT INTO categories (catSortOrder, userid, name, description, linkname, linkurl, catSubDescription) VALUES (-1000, ?, '', '', '', '', '')");
+    mysqli_stmt_bind_param($stmt, "s", $desiredUserid);
+    mysqli_stmt_execute($stmt);
 
-    $query  = "insert into categories (catSortOrder, userid, name, description, linkname, linkurl, catSubDescription) value (-1000, '" . $desiredUserid . "', '', '', '', '', '')";
-    $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
-
-
-    $query = "insert into viewList (viewContactInfo, readOnly, pid, viewer) value (1, 0, '" . $desiredUserid . "', '" . $desiredUserid ."')";
-
-    $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+    $stmt = mysqli_prepare($link, "INSERT INTO viewList (viewContactInfo, readOnly, pid, viewer) VALUES (1, 0, ?, ?)");
+    mysqli_stmt_bind_param($stmt, "ss", $desiredUserid, $desiredUserid);
+    mysqli_stmt_execute($stmt);
 
     $message = "<h2>Account created - Password = " . $password . "</h2>Send <a target=\"_blank\" href=\"sendEmail.php?recip=" . $desiredUserid . "&action=addedUser&subject=WishList%20Account%20Created&message=<b>WishList Account Created</b><br><br><b>Userid:</b> " . $desiredUserid . "<br><b>Password:</b> " . $password . "<br><br>In order to change your password, login to the WishList site with the password provided above.  Once logged in, click on the <b><font color=navy>Update Your Account</font></b> button located at the bottom of the homepage.  On the page that opens, click on the <b><font color=navy>Change Password</font></b> button.\">email?</a><p>";
   }
@@ -150,25 +170,23 @@ elseif($_REQUEST["action"] == "commitAdd"){
 }
 elseif($_REQUEST["action"] == "changeAdmin"){
 
-  if($_REQUEST["grantAdmin"] != ""){
-    foreach($_REQUEST["grantAdmin"] as $gAdmin){
-
-      $t .= "userid='" . $gAdmin . "' ";
-      $s .= "userid!='" . $gAdmin . "' ";
-        
-    }
+  if(!empty($_REQUEST["grantAdmin"])){
+    $grantAdmin = $_REQUEST["grantAdmin"];
+    $placeholders = implode(',', array_fill(0, count($grantAdmin), '?'));
     
-    $t = str_replace (' ', " or ", trim($t));
-    $s = str_replace (' ', " and ", trim($s));
+    // Set admin flag for selected users
+    $stmt = mysqli_prepare($link, "UPDATE people SET admin = '1' WHERE userid IN ($placeholders)");
+    $types = str_repeat('s', count($grantAdmin));
+    mysqli_stmt_bind_param($stmt, $types, ...$grantAdmin);
+    mysqli_stmt_execute($stmt);
 
-    $query1 = "update people set admin='1' where (" . $t . ")";
-
-    $result = mysqli_query($link,$query1) or die("Could not query: " . mysqli_error($link));
-    $query2 = "update people set admin='0' where (" . $s . ")";
-
-    $result = mysqli_query($link,$query2) or die("Could not query: " . mysqli_error($link));
+    // Unset admin flag for all other users
+    $stmt = mysqli_prepare($link, "UPDATE people SET admin = '0' WHERE userid NOT IN ($placeholders)");
+    mysqli_stmt_bind_param($stmt, $types, ...$grantAdmin);
+    mysqli_stmt_execute($stmt);
   }
   else{
+    // Unset admin flag for all users if none are selected
     $query = "update people set admin='0'";
     $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
   }

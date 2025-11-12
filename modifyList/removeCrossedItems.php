@@ -22,8 +22,10 @@ $referrer = "modifyList.php";
 
 if($confirm == "yes"){
 
-  $query="SELECT items.iid as iid FROM items,categories,purchaseHistory WHERE categories.userid='".$userid."' and categories.cid=items.cid and purchaseHistory.iid=items.iid";
-  $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+  $stmt = mysqli_prepare($link, "SELECT items.iid as iid FROM items,categories,purchaseHistory WHERE categories.userid= ? AND categories.cid=items.cid AND purchaseHistory.iid=items.iid");
+  mysqli_stmt_bind_param($stmt, "s", $userid);
+  mysqli_stmt_execute($stmt);
+  $result = mysqli_stmt_get_result($stmt);
   while ($row = mysqli_fetch_assoc($result)) {
     deleteItem($row["iid"], $userid, $_SESSION["fullname"], $base_dir);
   }

@@ -301,9 +301,10 @@ function printList2($recip, $buyerUserId, $name, $pretty, $displayPurchases = 1)
 
   global $link;
   // first need to determine if $buyeruserid has read only access
-  $query = "select readOnly from viewList where pid='" . $recip . "' and viewer='" . $buyerUserId . "'";
-
-  $rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+  $stmt = mysqli_prepare($link, "SELECT readOnly FROM viewList WHERE pid = ? AND viewer = ?");
+  mysqli_stmt_bind_param($stmt, "ss", $recip, $buyerUserId);
+  mysqli_stmt_execute($stmt);
+  $rs = mysqli_stmt_get_result($stmt);
 
   $readOnly = 1;
 
@@ -317,9 +318,10 @@ function printList2($recip, $buyerUserId, $name, $pretty, $displayPurchases = 1)
 
   // ok, I really hate doing this query but it is the only way that I can
   // determine if recip has starred an item or not
-  $query = "select addStar from categories, items where addStar='1' and categories.cid=items.cid and userid='" . $recip . "' limit  1";
-
-  $rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+  $stmt = mysqli_prepare($link, "SELECT addStar FROM categories, items WHERE addStar='1' AND categories.cid=items.cid AND userid=? LIMIT 1");
+  mysqli_stmt_bind_param($stmt, "s", $recip);
+  mysqli_stmt_execute($stmt);
+  $rs = mysqli_stmt_get_result($stmt);
 
   if($row = mysqli_fetch_assoc($rs)){
     print "<table><tr><td>A <img src=\"../images/star.gif\"> indicates an item " . $name . " wants most</td></tr></table>&nbsp;";
@@ -328,9 +330,10 @@ function printList2($recip, $buyerUserId, $name, $pretty, $displayPurchases = 1)
 
 
   // Now find all categories associated with $recip
-  $query = "select * from categories where userid ='" . $recip . "' order by catSortOrder";
-  
-  $rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+  $stmt = mysqli_prepare($link, "SELECT * FROM categories WHERE userid = ? ORDER BY catSortOrder");
+  mysqli_stmt_bind_param($stmt, "s", $recip);
+  mysqli_stmt_execute($stmt);
+  $rs = mysqli_stmt_get_result($stmt);
 
   while($row = mysqli_fetch_assoc($rs)){
     printCategory($row, $name, $pretty, $displayPurchases, $readOnly, 0, -1, -1);
@@ -345,9 +348,10 @@ function printList2($recip, $buyerUserId, $name, $pretty, $displayPurchases = 1)
 function printModifyList($userid){
   global $link;
 
-  $query = "select * from categories where catSortOrder > -1 and userid ='" . $userid . "' order by catSortOrder";
-  
-  $rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+  $stmt = mysqli_prepare($link, "SELECT * FROM categories WHERE catSortOrder > -1 AND userid = ? ORDER BY catSortOrder");
+  mysqli_stmt_bind_param($stmt, "s", $userid);
+  mysqli_stmt_execute($stmt);
+  $rs = mysqli_stmt_get_result($stmt);
   
   $val = "";
   
@@ -485,10 +489,10 @@ function printCategory($row, $name, $pretty, $displayPurchases, $readOnly, $modi
 
   if ($row["cid"] == "") { $row["cid"]=-1;}
   // Now begin iterating through items in this category
-  $query = "select * from items where cid=" . $row["cid"] . 
-    " order by itemSortOrder";
-
-  $rs2 = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+  $stmt = mysqli_prepare($link, "SELECT * FROM items WHERE cid = ? ORDER BY itemSortOrder");
+  mysqli_stmt_bind_param($stmt, "i", $row["cid"]);
+  mysqli_stmt_execute($stmt);
+  $rs2 = mysqli_stmt_get_result($stmt);
 
   $j = 0; 
   $last2 = mysqli_num_rows($rs2);
@@ -528,8 +532,10 @@ function printCategory($row, $name, $pretty, $displayPurchases, $readOnly, $modi
     if($row2["allowCheck"] == "true"){
 
       if($modifyList == 0){
-        $query = "SELECT sum(quantity) as numBought FROM purchaseHistory WHERE iid=" . $iid . " GROUP BY iid";
-        $rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+        $stmt = mysqli_prepare($link, "SELECT sum(quantity) as numBought FROM purchaseHistory WHERE iid = ? GROUP BY iid");
+        mysqli_stmt_bind_param($stmt, "i", $iid);
+        mysqli_stmt_execute($stmt);
+        $rs = mysqli_stmt_get_result($stmt);
         
         if($sumRow = mysqli_fetch_assoc($rs)){
           $bought = $sumRow["numBought"];
@@ -721,17 +727,20 @@ function deleteItem($iid, $userid, $fullname, $base_dir){
   global $link;
   $sendMail = 0;
   
-  $query = "select itemSortOrder as iso, categories.cid as cid, image from items, categories where categories.cid=items.cid and iid=" . $iid . " and userid='" . $userid . "'";
-  $item_rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+  $stmt = mysqli_prepare($link, "SELECT itemSortOrder as iso, categories.cid as cid, image FROM items, categories WHERE categories.cid=items.cid AND iid = ? AND userid = ?");
+  mysqli_stmt_bind_param($stmt, "is", $iid, $userid);
+  mysqli_stmt_execute($stmt);
+  $item_rs = mysqli_stmt_get_result($stmt);
 
   if(!($item_row = mysqli_fetch_assoc($item_rs))){ 
     return "Item does not belong to you!";
   }
 
   // check to see if the item has been bought
-  $query = "select title, items.description, email from items, purchaseHistory, people where items.iid=" . $iid . " and items.iid=purchaseHistory.iid and people.userid=purchaseHistory.userid";
-  
-  $rs1 = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+  $stmt = mysqli_prepare($link, "SELECT title, items.description, email FROM items, purchaseHistory, people WHERE items.iid = ? AND items.iid=purchaseHistory.iid AND people.userid=purchaseHistory.userid");
+  mysqli_stmt_bind_param($stmt, "i", $iid);
+  mysqli_stmt_execute($stmt);
+  $rs1 = mysqli_stmt_get_result($stmt);
 
   if(mysqli_num_rows($rs1) > 0){  
     // the item has been puchased so may have to send warning email
@@ -748,25 +757,30 @@ function deleteItem($iid, $userid, $fullname, $base_dir){
   }
 
   // delete from purchaseHistory
-  $query = "delete from purchaseHistory where purchaseHistory.iid=" . $iid;
-  $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+  $stmt = mysqli_prepare($link, "DELETE FROM purchaseHistory WHERE iid = ?");
+  mysqli_stmt_bind_param($stmt, "i", $iid);
+  mysqli_stmt_execute($stmt);
 
   // delete from items
-  $query = "delete from items where items.iid=" . $iid;
-  $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+  $stmt = mysqli_prepare($link, "DELETE FROM items WHERE iid = ?");
+  mysqli_stmt_bind_param($stmt, "i", $iid);
+  mysqli_stmt_execute($stmt);
   
-  $query = "update items set itemSortOrder = itemSortOrder - 1 where itemSortOrder > " . 
-    $item_row["iso"] . " and cid=" . $item_row["cid"];
-  $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+  $stmt = mysqli_prepare($link, "UPDATE items SET itemSortOrder = itemSortOrder - 1 WHERE itemSortOrder > ? AND cid = ?");
+  mysqli_stmt_bind_param($stmt, "ii", $item_row["iso"], $item_row["cid"]);
+  mysqli_stmt_execute($stmt);
   
-  $query = "update people set lastModDate=NOW() where userid='" . $userid . "'";
-  $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+  $stmt = mysqli_prepare($link, "UPDATE people SET lastModDate=NOW() WHERE userid = ?");
+  mysqli_stmt_bind_param($stmt, "s", $userid);
+  mysqli_stmt_execute($stmt);
   
   if($sendMail == 1){
 
     // get userid's bday and bmonth
-    $query = "select bday, bmonth from people where userid='" . $userid . "'";
-    $rs2 = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+    $stmt = mysqli_prepare($link, "SELECT bday, bmonth FROM people WHERE userid = ?");
+    mysqli_stmt_bind_param($stmt, "s", $userid);
+    mysqli_stmt_execute($stmt);
+    $rs2 = mysqli_stmt_get_result($stmt);
     
     $array = array(1 => 'January', 2 => 'February', 3 => 'March', 4 => 'April', 5 => 'May',
                    6 => 'June', 7 => 'July', 8 => 'August', 9 => 'September', 

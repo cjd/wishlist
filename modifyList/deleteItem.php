@@ -41,15 +41,10 @@ if($confirm == "yes"){
 }
 else{
 
-$query = "select items.iid as iid, items.title, items.addStar, items.description, subdesc, price, " .
-       "quantity, link1, link1url, link2, link2url, link3, link3url, image " .
-       "from items, categories " .
-     "where items.cid=categories.cid " . 
-     " and items.iid=" . $iid . 
-     " and items.cid=" . $cid . 
-     " and userid='" . $userid . "'";
-
-   $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+   $stmt = mysqli_prepare($link, "SELECT items.iid as iid, items.title, items.addStar, items.description, subdesc, price, quantity, link1, link1url, link2, link2url, link3, link3url, image FROM items, categories WHERE items.cid=categories.cid AND items.iid = ? AND items.cid = ? AND userid = ?");
+   mysqli_stmt_bind_param($stmt, "iis", $iid, $cid, $userid);
+   mysqli_stmt_execute($stmt);
+   $result = mysqli_stmt_get_result($stmt);
 
 ?>
 <HTML>

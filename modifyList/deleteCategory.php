@@ -24,8 +24,10 @@ $referrer = mysqli_escape_string($link,$_REQUEST["referrer"]);
 // check if either are null
 
 if($confirm == "yes"){
-  $query = "select iid from items where cid=" . $cid;
-  $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+  $stmt = mysqli_prepare($link, "SELECT iid FROM items WHERE cid = ?");
+  mysqli_stmt_bind_param($stmt, "i", $cid);
+  mysqli_stmt_execute($stmt);
+  $result = mysqli_stmt_get_result($stmt);
 
   while($row = mysqli_fetch_assoc($result)){ 
     // individually delete each item in the category
@@ -37,16 +39,19 @@ if($confirm == "yes"){
     }
   }
   
-  $query = "delete from categories where cid=" . $cid;
-  $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+  $stmt = mysqli_prepare($link, "DELETE FROM categories WHERE cid = ?");
+  mysqli_stmt_bind_param($stmt, "i", $cid);
+  mysqli_stmt_execute($stmt);
   
-  $query = "update categories set catSortOrder = catSortOrder - 1 where catSortOrder > " . $cso . " and userid='" . $userid . "'";
-  $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+  $stmt = mysqli_prepare($link, "UPDATE categories SET catSortOrder = catSortOrder - 1 WHERE catSortOrder > ? AND userid = ?");
+  mysqli_stmt_bind_param($stmt, "is", $cso, $userid);
+  mysqli_stmt_execute($stmt);
   
   header("Location: " . getFullPath("modifyList.php"));
   
-  $query = "update people set lastModDate=NOW() where userid='" . $userid . "'";
-  $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+  $stmt = mysqli_prepare($link, "UPDATE people SET lastModDate=NOW() WHERE userid = ?");
+  mysqli_stmt_bind_param($stmt, "s", $userid);
+  mysqli_stmt_execute($stmt);
   
 }
 else{
@@ -71,9 +76,10 @@ createNavBar("../home.php:Home|modifyList.php:Modify WishList|:Delete Category")
 <p>
 
 <?php 
-   $query = "select * from categories where cid=" . $cid . " order by catSortOrder";
-  
-  $rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+   $stmt = mysqli_prepare($link, "SELECT * FROM categories WHERE cid = ? ORDER BY catSortOrder");
+   mysqli_stmt_bind_param($stmt, "i", $cid);
+   mysqli_stmt_execute($stmt);
+   $rs = mysqli_stmt_get_result($stmt);
 
   while($row = mysqli_fetch_assoc($rs)){
     printCategory($row, "", 1, 0, 1, 0, -1, -1);

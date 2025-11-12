@@ -16,22 +16,25 @@
 include "../funcLib.php";
 
 if(isset($_REQUEST["delete"]) && ($_REQUEST["delete"] != "")){
-  $query = "update categories set catSubDescription='' where userid='" . $_SESSION["userid"] . "' and catSortOrder=-1000";
-  mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+  $stmt = mysqli_prepare($link, "UPDATE categories SET catSubDescription='' WHERE userid = ? AND catSortOrder=-1000");
+  mysqli_stmt_bind_param($stmt, "s", $_SESSION["userid"]);
+  mysqli_stmt_execute($stmt);
   header("Location: " . getFullPath("modifyList.php"));
 }
 
 if(isset($_REQUEST["update"]) && ($_REQUEST["update"] != "")){
   $catSubDescription = convertString($_REQUEST["catSubDescription"]);
-  $query = "update categories set catSubDescription='" . $catSubDescription . "' where userid='" . $_SESSION["userid"] . "' and catSortOrder=-1000";
-  mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+  $stmt = mysqli_prepare($link, "UPDATE categories SET catSubDescription = ? WHERE userid = ? AND catSortOrder=-1000");
+  mysqli_stmt_bind_param($stmt, "ss", $catSubDescription, $_SESSION["userid"]);
+  mysqli_stmt_execute($stmt);
  header("Location: " . getFullPath("modifyList.php"));
 }
 
 if(isset($_REQUEST["add"]) && ($_REQUEST["add"] != "")){
   $catSubDescription = convertString($_REQUEST["catSubDescription"]);
-  $query = "INSERT INTO categories (userid, catSortOrder, catSubDescription) VALUES ('" . $_SESSION["userid"] . "', -1000, '" . $catSubDescription . "')";
-  mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+  $stmt = mysqli_prepare($link, "INSERT INTO categories (userid, catSortOrder, catSubDescription) VALUES (?, -1000, ?)");
+  mysqli_stmt_bind_param($stmt, "ss", $_SESSION["userid"], $catSubDescription);
+  mysqli_stmt_execute($stmt);
   header("Location: " . getFullPath("modifyList.php"));
 }
 
@@ -62,8 +65,10 @@ createNavBar("../home.php:Home|modifyList.php:Modify WishList|:Edit List Comment
 </font></td></tr>
 <?php
 
-  $query = "select catSubDescription from categories where userid='" . $_SESSION["userid"] . "' and catSortOrder=-1000";
-  $rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+  $stmt = mysqli_prepare($link, "SELECT catSubDescription FROM categories WHERE userid = ? AND catSortOrder=-1000");
+  mysqli_stmt_bind_param($stmt, "s", $_SESSION["userid"]);
+  mysqli_stmt_execute($stmt);
+  $rs = mysqli_stmt_get_result($stmt);
 
 if($row = mysqli_fetch_assoc($rs)){
 ?>

@@ -54,8 +54,10 @@ Edit Item from <?php echo $cname; ?> Category
   </td><td bgcolor="#eeeeee">
 <?php
 
-  $query = "Select * from categories where catSortOrder!=-1000 and userid='" . $userid . "' order by name"; 
-  $rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+  $stmt = mysqli_prepare($link, "SELECT * FROM categories WHERE catSortOrder != -1000 AND userid = ? ORDER BY name");
+  mysqli_stmt_bind_param($stmt, "s", $userid);
+  mysqli_stmt_execute($stmt);
+  $rs = mysqli_stmt_get_result($stmt);
 
   print "<select name=movecid>";
 
@@ -71,9 +73,10 @@ Edit Item from <?php echo $cname; ?> Category
 
  print "</td></tr>";
 
-   $query = "select title, items.description, price, quantity, link1, link1url, subdesc, allowCheck, addStar, image from items, categories where items.cid=categories.cid and categories.userid='" . $userid . "' and items.iid = " . $iid;
-
-  $rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+   $stmt = mysqli_prepare($link, "SELECT title, items.description, price, quantity, link1, link1url, subdesc, allowCheck, addStar, image FROM items, categories WHERE items.cid=categories.cid AND categories.userid = ? AND items.iid = ?");
+   mysqli_stmt_bind_param($stmt, "si", $userid, $iid);
+   mysqli_stmt_execute($stmt);
+   $rs = mysqli_stmt_get_result($stmt);
 
 while($row = mysqli_fetch_assoc($rs)){
 ?>

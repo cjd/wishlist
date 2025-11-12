@@ -22,24 +22,30 @@ $cid = mysqli_escape_string($link,$_REQUEST["cid"]);
 $cso = mysqli_escape_string($link,$_REQUEST["cso"]);
 
 if($dir == "down"){
-  $query = "update categories set catSortOrder = catSortOrder - 1 where catSortOrder = " . ($cso + 1) . " and userid = '" . $userid . "'";
-  $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+  $stmt = mysqli_prepare($link, "UPDATE categories SET catSortOrder = catSortOrder - 1 WHERE catSortOrder = ? AND userid = ?");
+  $new_cso = $cso + 1;
+  mysqli_stmt_bind_param($stmt, "is", $new_cso, $userid);
+  mysqli_stmt_execute($stmt);
 
-  $query = "update categories set catSortOrder = catSortOrder + 1 where cid = " . $cid;
-  $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+  $stmt = mysqli_prepare($link, "UPDATE categories SET catSortOrder = catSortOrder + 1 WHERE cid = ?");
+  mysqli_stmt_bind_param($stmt, "i", $cid);
+  mysqli_stmt_execute($stmt);
 
 }
 else
 {
-  $query = "update categories set catSortOrder = catSortOrder + 1 where catSortOrder = " . ($cso - 1) . " and userid = '" . $userid . "'";
-  $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+  $stmt = mysqli_prepare($link, "UPDATE categories SET catSortOrder = catSortOrder + 1 WHERE catSortOrder = ? AND userid = ?");
+  $new_cso = $cso - 1;
+  mysqli_stmt_bind_param($stmt, "is", $new_cso, $userid);
+  mysqli_stmt_execute($stmt);
 
-  $query = "update categories set catSortOrder = catSortOrder - 1 where cid = " . $cid;
-  $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
-
+  $stmt = mysqli_prepare($link, "UPDATE categories SET catSortOrder = catSortOrder - 1 WHERE cid = ?");
+  mysqli_stmt_bind_param($stmt, "i", $cid);
+  mysqli_stmt_execute($stmt);
 }
 
   header("Location: " . getFullPath("modifyList.php"));
 
-  $query = "update people set lastModDate=NOW() where userid='" . $userid . "'";
-  $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+  $stmt = mysqli_prepare($link, "UPDATE people SET lastModDate=NOW() WHERE userid = ?");
+  mysqli_stmt_bind_param($stmt, "s", $userid);
+  mysqli_stmt_execute($stmt);

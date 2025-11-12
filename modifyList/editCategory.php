@@ -47,8 +47,10 @@ createNavBar("../home.php:Home|modifyList.php:Modify WishList|:Edit Category");
 </font></td></tr>
 <?php
 
-  $query = "select * from categories where cid=" . $cid;
-  $rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+  $stmt = mysqli_prepare($link, "SELECT * FROM categories WHERE cid = ?");
+  mysqli_stmt_bind_param($stmt, "i", $cid);
+  mysqli_stmt_execute($stmt);
+  $rs = mysqli_stmt_get_result($stmt);
 
 if($row = mysqli_fetch_assoc($rs)){
 ?>
