@@ -28,12 +28,10 @@ This PHP-based web application is designed to manage gift lists for multiple fam
 
 1.  Unpack contents of tarball into a webfolder.
 
-2.  Create a MySQL database and import/load `sampleDb.sql`.
+2.  Visit any of the PHP pages. This will redirect you to the WishList setup page.
 
-3.  Copy `config.php-example` to `config.php` and edit for your settings.
+3.  Set the requested variables.
 
-4.  Visit any of the PHP pages. This will redirect you to the WishList setup page.
+4.  If the database or database user does not exist then it will prompt for database root password for initial setup
 
-5.  Set the requested variables.
-
-6.  You should be redirected to the login page. The admin's username and password are both "admin" (without the quotes). Obviously, you should change the password.
+5.  Once this is setup you should create an initial user and set them as an admin.
