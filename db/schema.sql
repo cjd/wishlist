@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS `comments` (
   `comment_userid` varchar(50) NOT NULL default '',
   `comment` text NOT NULL,
   `commentId` int(11) unsigned NOT NULL auto_increment,
-  `date` datetime default '0000-00-00 00:00:00',
+  `date` datetime default NULL,
   PRIMARY KEY  (`commentId`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
@@ -121,8 +121,8 @@ CREATE TABLE IF NOT EXISTS `people` (
   `userid` varchar(50) NOT NULL default '',
   `admin` char(1) NOT NULL default '0',
   `registered` char(1) NOT NULL default '0',
-  `lastLoginDate` datetime default '0000-00-00 00:00:00',
-  `lastModDate` datetime default '0000-00-00 00:00:00',
+  `lastLoginDate` datetime default NULL,
+  `lastModDate` datetime default NULL,
   `lastname` varchar(100) default '',
   `firstname` varchar(100) default '',
   `suffix` varchar(100) default '',
@@ -160,7 +160,7 @@ CREATE TABLE IF NOT EXISTS `purchaseHistory` (
   `iid` int(11) unsigned NOT NULL default '0',
   `userid` varchar(50) NOT NULL default '',
   `quantity` smallint(11) unsigned NOT NULL default '0',
-  `boughtDate` datetime NOT NULL default '0000-00-00 00:00:00',
+  `boughtDate` datetime NOT NULL default CURRENT_TIMESTAMP,
   PRIMARY KEY  (`purchaseId`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
@@ -180,7 +180,7 @@ CREATE TABLE IF NOT EXISTS `purchaseHistory` (
 
 DROP TABLE IF EXISTS `viewList`;
 CREATE TABLE IF NOT EXISTS `viewList` (
-  `lastViewDate` datetime NOT NULL default '0000-00-00 00:00:00',
+  `lastViewDate` datetime NOT NULL default CURRENT_TIMESTAMP,
   `viewContactInfo` char(1) NOT NULL default '0',
   `readOnly` char(1) NOT NULL default '1',
   `allowEdit` char(1) NOT NULL default '0',
