@@ -102,16 +102,20 @@ elseif($_REQUEST["action"] == "commitAdd"){
   $email = convertString($_REQUEST["email"]);
   
   if($desiredUserid != ""){
-    // come up with random password
-    $salt = "abchefghjkmnpqrstuvwxyz0123456789";
-    srand((double)microtime()*1000000); 
-    $password = '';
-    $i = 0;
-    while ($i <= 7) {
-      $num = rand() % 33;
-      $tmp = substr($salt, $num, 1);
-      $password = $password . $tmp;
-      $i++;
+    // use submitted password or come up with random password
+    if (isset($_REQUEST['password']) && $_REQUEST['password'] != '') {
+        $password = $_REQUEST['password'];
+    } else {
+        $salt = "abchefghjkmnpqrstuvwxyz0123456789";
+        srand((double)microtime()*1000000); 
+        $password = '';
+        $i = 0;
+        while ($i <= 7) {
+          $num = rand() % 33;
+          $tmp = substr($salt, $num, 1);
+          $password = $password . $tmp;
+          $i++;
+        }
     }
     
     $query = "insert into people (userid, firstname, lastname, suffix, email, password, lastLoginDate, lastModDate) value (" .
@@ -218,6 +222,10 @@ if($_REQUEST["action"] == "add"){
 <tr>
 <td align=right><b>Email</b></td>
 <td><input type=text name=email size=40></td>
+</tr>
+<tr>
+<td align=right><b>Password</b></td>
+<td><input type=password name=password size=20></td>
 </tr>
 <tr><td align=center colspan=2 bgcolor="#c0c0c0"><input type=submit value="Add User" style="font-weight:bold"></td>
 </tr></table>
