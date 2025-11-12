@@ -41,6 +41,9 @@ if(!$link){
 }
 else{
   mysqli_select_db($link,$db_name);
+  if (isset($_SESSION["admin"]) && $_SESSION["admin"] == 1) {
+    checkAndApplySchema($link, $base_dir . '/db/schema.sql');
+  }
 }
 
 
@@ -876,6 +879,33 @@ function process_image_upload($field,$destination)
         $result = generate_image_thumbnail($temp_image_path, $destination);
     }
     return $result ? array($temp_image_path, $destination) : false;
+}
+function checkAndApplySchema($link, $schemaFilePath) {
+    if (!file_exists($schemaFilePath)) {
+        error_log("Schema file not found: " . $schemaFilePath);
+        return false;
+    }
+
+    $sql = file_get_contents($schemaFilePath);
+    if ($sql === false) {
+        error_log("Failed to read schema file: " . $schemaFilePath);
+        return false;
+    }
+
+    // Split SQL into individual statements, handling semicolons within statements
+    $statements = array_filter(array_map('trim', explode(';', $sql)));
+
+    foreach ($statements as $statement) {
+        // Only execute CREATE TABLE IF NOT EXISTS statements
+        // This avoids dropping tables and attempts to create them if they don't exist
+        if (preg_match('/^CREATE TABLE IF NOT EXISTS/i', $statement)) {
+            if (!mysqli_query($link, $statement)) {
+                error_log("Error executing schema statement: " . mysqli_error($link) . " - Statement: " . $statement);
+                // Continue to try other statements even if one fails
+            }
+        }
+    }
+    return true;
 }
 
 ?>
