@@ -26,12 +26,12 @@ This PHP-based web application is designed to manage gift lists for multiple fam
 
 ## HOW TO INSTALL
 
-1.  Unpack contents of tarball into a webfolder.
+1.  Unpack the contents of the tarball into a web-accessible directory.
 
-2.  Visit any of the PHP pages. This will redirect you to the WishList setup page.
+2.  In a web browser, navigate to any of the site's PHP pages (e.g., `login.php`). You will be automatically redirected to the setup page (`admin.php?setup=true`).
 
-3.  Set the requested variables.
+3.  Fill out the required fields in the setup form, including database connection details.
 
-4.  If the database or database user does not exist then it will prompt for database root password for initial setup
+4.  If the specified database or database user does not exist, you will be prompted to enter your database root credentials to allow the application to create them.
 
-5.  Once this is setup you should create an initial user and set them as an admin.
+5.  After the `config.php` file is successfully created, you will be redirected to the admin page. From here, you should create your first user account and grant it administrator privileges.
