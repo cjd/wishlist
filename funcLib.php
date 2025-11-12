@@ -32,17 +32,17 @@ if(!isset($_SESSION)){
   }
 }
 
-$link = @(mysqli_connect($db_loc, $db_userid, $db_pass));
-if(!$link){
-  if(!isset($doingSetup)){
+if(!isset($doingSetup)){
+  $link = @(mysqli_connect($db_loc, $db_userid, $db_pass));
+  if(!$link){
     sendEmail($admin_email, "", "Database is dead", "umm, the database is dead", 0);
     die("<p><font size=6>Danger Will Robinson!!!!  It looks like the database is dead.<p>Try back at the top of the hour.</big>");
   }
-}
-else{
-  mysqli_select_db($link,$db_name);
-  if (isset($_SESSION["admin"]) && $_SESSION["admin"] == 1) {
-    checkAndApplySchema($link, $base_dir . '/db/schema.sql');
+  else{
+    mysqli_select_db($link,$db_name);
+    if (isset($_SESSION["admin"]) && $_SESSION["admin"] == 1) {
+      checkAndApplySchema($link, $base_dir . '/db/schema.sql');
+    }
   }
 }
 
