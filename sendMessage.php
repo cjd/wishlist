@@ -1,5 +1,5 @@
 <?php
-include "../funcLib.php";
+include "funcLib.php";
 
 if (isset($_POST['recipient_id']) && isset($_POST['subject']) && isset($_POST['body'])) {
     $recipient_id = $_POST['recipient_id'];
@@ -9,8 +9,11 @@ if (isset($_POST['recipient_id']) && isset($_POST['subject']) && isset($_POST['b
 
     sendEmail($recipient_id, $sender_id, $subject, $body, 0);
 
-    echo "Message sent!";
+    header("Location: viewMessages.php");
+    exit;
 } else {
-    echo "Error: missing parameters.";
+    // Redirect back to the messages page with an error
+    header("Location: viewMessages.php?error=missing_parameters");
+    exit;
 }
 ?>

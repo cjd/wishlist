@@ -100,6 +100,7 @@ CREATE TABLE IF NOT EXISTS `items` (
   `link3url` varchar(255) default '',
   `link1` varchar(255) default '',
   `link1url` varchar(255) default '',
+  `image` varchar(255) default '',
   PRIMARY KEY  (`iid`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 

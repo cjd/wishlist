@@ -216,6 +216,7 @@ echo $textarea."\n";
 <hr>
 <button class='buttonstyle' style='width:100%;' onclick="location.href='modifyList/modifyList.php'">Modify Your List</button><br/>
 <button class='buttonstyle' style='width:100%;' onclick="location.href='viewPurchases.php'">View your Purchases</button><br/>
+<button class='buttonstyle' style='width:100%;' onclick="location.href='viewMessages.php'">View Messages</button><br/>
 <button class='buttonstyle' style='width:100%;' onclick="location.href='updateAccount/updateAccount.php'">Update Your Account</button><br/>
 <?php
 if($_SESSION["admin"] == 1){
@@ -229,7 +230,7 @@ if($_SESSION["admin"] == 1){
 
 <?php
 // Fetch unread messages for the current user
-$unread_messages_query = "SELECT message_id, sender_id, subject, body, timestamp FROM messages WHERE recipient_id = '" . $_SESSION['userid'] . "' AND is_read = 0 ORDER BY timestamp DESC";
+$unread_messages_query = "SELECT m.message_id, m.sender_id, m.subject, m.body, m.timestamp, p.firstname, p.lastname FROM messages m LEFT JOIN people p ON m.sender_id = p.userid WHERE m.recipient_id = '" . $_SESSION['userid'] . "' AND m.is_read = 0 ORDER BY m.timestamp DESC";
 $unread_messages_result = mysqli_query($link, $unread_messages_query);
 
 if (mysqli_num_rows($unread_messages_result) > 0) {
@@ -249,8 +250,9 @@ if (mysqli_num_rows($unread_messages_result) > 0) {
     <h2>You have new messages</h2>
     <?php foreach ($_SESSION['messages'] as $message): ?>
       <div class="message">
-        <h3><?php echo $message['subject']; ?></h3>
-        <p><?php echo $message['body']; ?></p>
+        <h3><strong>Subject:</strong> <?php echo htmlspecialchars($message['subject']); ?></h3>
+        <p><strong>From:</strong> <?php echo $message['sender_id'] ? htmlspecialchars($message['firstname'] . ' ' . $message['lastname']) : 'System'; ?></p>
+        <p><?php echo nl2br(htmlspecialchars($message['body'])); ?></p>
         <form action="markMessageAsRead.php" method="post" class="mark-as-read-form">
           <input type="hidden" name="message_id" value="<?php echo $message['message_id']; ?>">
           <button type="submit" name="decision" value="read" class="buttonstyle">Mark as Read</button>
@@ -261,25 +263,6 @@ if (mysqli_num_rows($unread_messages_result) > 0) {
 </div>
 <?php endif; ?>
 
-<?php if (mysqli_num_rows($pending_requests_result) > 0): ?>
-<div id="accessRequestModal" class="modal">
-  <div class="modal-content">
-    <span class="close">&times;</span>
-    <h2>Access Requests</h2>
-    <?php while ($request = mysqli_fetch_assoc($pending_requests_result)): ?>
-      <div class="request">
-        <p><b><?php echo $request['firstname'] . ' ' . $request['lastname']; ?></b> would like to view your wishlist.</p>
-        <form action="handleAccessRequest.php" method="post">
-          <input type="hidden" name="requestId" value="<?php echo $request['id']; ?>">
-          <input type="hidden" name="requesterId" value="<?php echo $request['requesterId']; ?>">
-          <button type="submit" name="decision" value="approve_readonly" class="buttonstyle">Approve (Read-Only)</button>
-          <button type="submit" name="decision" value="approve_contact" class="buttonstyle">Approve (with Contact Info)</button>
-          <button type="submit" name="decision" value="deny" class="buttonstyle">Deny</button>
-        </form>
-      </div>
-    <?php endwhile; ?>
-  </div>
-</div>
 <script>
 $(document).ready(function() {
   var modal = document.getElementById("accessRequestModal");
@@ -315,6 +298,25 @@ $(document).ready(function() {
   }
 });
 </script>
+<?php if (mysqli_num_rows($pending_requests_result) > 0): ?>
+<div id="accessRequestModal" class="modal">
+  <div class="modal-content">
+    <span class="close">&times;</span>
+    <h2>Access Requests</h2>
+    <?php while ($request = mysqli_fetch_assoc($pending_requests_result)): ?>
+      <div class="request">
+        <p><b><?php echo $request['firstname'] . ' ' . $request['lastname']; ?></b> would like to view your wishlist.</p>
+        <form action="handleAccessRequest.php" method="post">
+          <input type="hidden" name="requestId" value="<?php echo $request['id']; ?>">
+          <input type="hidden" name="requesterId" value="<?php echo $request['requesterId']; ?>">
+          <button type="submit" name="decision" value="approve_readonly" class="buttonstyle">Approve (Read-Only)</button>
+          <button type="submit" name="decision" value="approve_contact" class="buttonstyle">Approve (with Contact Info)</button>
+          <button type="submit" name="decision" value="deny" class="buttonstyle">Deny</button>
+        </form>
+      </div>
+    <?php endwhile; ?>
+  </div>
+</div>
 <?php endif; ?>
 
 </td></tr></table>

@@ -196,7 +196,7 @@ function sendEmail($to, $from, $subject, $message, $debug){
             $sender_id = $from;
         }
 
-        $stmt = mysqli_prepare($link, "INSERT INTO messages (recipient_id, sender_id, subject, body) VALUES (?, ?, ?, ?)");
+        $stmt = mysqli_prepare($link, "INSERT INTO messages (recipient_id, sender_id, subject, body, is_read) VALUES (?, ?, ?, ?, 0)");
         mysqli_stmt_bind_param($stmt, "ssss", $recipient_id, $sender_id, $subject, $message);
         mysqli_stmt_execute($stmt);
     }
