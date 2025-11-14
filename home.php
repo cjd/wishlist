@@ -77,18 +77,20 @@ $(document).ready(function() {
   }
 });
 
+var contactInfo = {};
 <?php 
+   mysqli_data_seek($result, 0);
    while($row = mysqli_fetch_assoc($result)){
            $allowView = $row["viewContactInfo"] ?? false;
            $new_userid = $row["userid"];
            $name = $row["firstname"] . ' ' . $row["lastname"] . ' ' .$row["suffix"];
            $email = $row["email"];
            if ($allowView) {
-             echo "  ".$new_userid."_contact =\"".$name."\\n".$email."\\n";
+             $contact_string = $name."\\n".$email."\\n";
              if ($row['bday'] <> 0) {
-                echo "Birthday: ".$row['bmonth']." ".$row['bday'];
+                $contact_string .= "Birthday: ".$row['bmonth']." ".$row['bday'];
              }
-             echo "\";\n";
+             echo "contactInfo['".$new_userid."'] = \"".$contact_string."\";\n";
            }
     }
 ?>
@@ -98,8 +100,9 @@ $(document).ready(function() {
 
   function show_record(obj, txtArea, PersonName) {
     if ((theObject != obj) && (screen.width > 1000)) {
-      cnt = eval(PersonName + "_contact");
-      txtArea.value = cnt;
+      if (contactInfo[PersonName]) {
+        txtArea.value = contactInfo[PersonName];
+      }
       theObject = obj;
     }
   }
@@ -224,6 +227,40 @@ if($_SESSION["admin"] == 1){
 </div>
 </td></tr></table>
 
+<?php
+// Fetch unread messages for the current user
+$unread_messages_query = "SELECT message_id, sender_id, subject, body, timestamp FROM messages WHERE recipient_id = '" . $_SESSION['userid'] . "' AND is_read = 0 ORDER BY timestamp DESC";
+$unread_messages_result = mysqli_query($link, $unread_messages_query);
+
+if (mysqli_num_rows($unread_messages_result) > 0) {
+    $_SESSION['messages'] = [];
+    while ($message = mysqli_fetch_assoc($unread_messages_result)) {
+        $_SESSION['messages'][] = $message;
+    }
+} else {
+    unset($_SESSION['messages']);
+}
+?>
+
+<?php if (isset($_SESSION['messages']) && !empty($_SESSION['messages'])): ?>
+<div id="messageModal" class="modal">
+  <div class="modal-content">
+    <span class="close-messages">&times;</span>
+    <h2>You have new messages</h2>
+    <?php foreach ($_SESSION['messages'] as $message): ?>
+      <div class="message">
+        <h3><?php echo $message['subject']; ?></h3>
+        <p><?php echo $message['body']; ?></p>
+        <form action="markMessageAsRead.php" method="post" class="mark-as-read-form">
+          <input type="hidden" name="message_id" value="<?php echo $message['message_id']; ?>">
+          <button type="submit" name="decision" value="read" class="buttonstyle">Mark as Read</button>
+        </form>
+      </div>
+    <?php endforeach; ?>
+  </div>
+</div>
+<?php endif; ?>
+
 <?php if (mysqli_num_rows($pending_requests_result) > 0): ?>
 <div id="accessRequestModal" class="modal">
   <div class="modal-content">
@@ -257,6 +294,22 @@ $(document).ready(function() {
     window.onclick = function(event) {
       if (event.target == modal) {
         modal.style.display = "none";
+      }
+    }
+  }
+
+  var messageModal = document.getElementById("messageModal");
+  if (messageModal) {
+    var span = document.getElementsByClassName("close-messages")[0];
+    messageModal.style.display = "block";
+
+    span.onclick = function() {
+      messageModal.style.display = "none";
+    }
+
+    window.onclick = function(event) {
+      if (event.target == messageModal) {
+        messageModal.style.display = "none";
       }
     }
   }

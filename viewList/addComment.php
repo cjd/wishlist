@@ -43,30 +43,21 @@ $rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link
 
   header("Location: " . getFullPath("viewList.php") . "?recip=" . $recip . "&name=" . $name);
 
-if($email != ""){
+if (isset($_REQUEST["recipients"])) {
+    $recipients = $_REQUEST["recipients"];
+} else {
+    $recipients = array();
+}
 
-  $ar = array();                   
-  $to = "";
+if(!empty($recipients)){
 
-  foreach($_REQUEST['email'] as $email){
-     $to = $email . ", " . $to;
-  }                         
+  $to = implode(",", $recipients);
 
-  $query = "select email from people  where userid='" . $userid . "'";
+  $from = $_SESSION["userid"];
+  $subject = $_SESSION["fullname"] . " has added a comment to " . $_REQUEST["name"] . "'s list";
+  $message = "<b>Comment:</b><br>" . cleanString($_REQUEST["comment"]);
 
-  $rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
- 
-  if($row = mysqli_fetch_assoc($rs)){
-
-     print $to;
-      $from = $_SESSION["fullname"] . "<" . $row["email"] . ">";
-
-      $subject = $_SESSION["fullname"] . " has added a comment to " . $_REQUEST["name"] . "'s list";
-      $message = "<b>Comment:</b><br>" . $cleanString($_REQUEST["comment"]);
-
-      sendEmail($to, $from, $subject, $message, 0);
-   }
-
+  sendEmail($to, $from, $subject, $message, 0);
 }
 }
 else{
@@ -102,8 +93,8 @@ Send Email?</font></b>
 <tr>
 <td align=center>
 
-<b>Your comment will be sent in an email to each person who has a check next to their name</b>
-<br>You may want to include your own name to verify the emails are sent
+<b>Your comment will be sent as a message to each person who has a check next to their name</b>
+<br>You may want to include your own name to verify the messages are sent
 </td></tr>
 <tr><td align=center>
 <table><tr><td align=center>
@@ -117,7 +108,7 @@ $rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link
 while($row = mysqli_fetch_assoc($rs)){
 ?>
 
-<input type=checkbox name=email[] value="<?php echo $row["email"] ?>"><?php echo $row["firstname"] . ' ' . $row["lastname"] . ' ' . $row["suffix"] ?><br>
+<input type=checkbox name=recipients[] value="<?php echo $row["userid"] ?>"><?php echo $row["firstname"] . ' ' . $row["lastname"] . ' ' . $row["suffix"] ?><br>
 <?php
 }
 ?>
@@ -130,14 +121,14 @@ while($row = mysqli_fetch_assoc($rs)){
 
 function checkAll(field)
 {
-for (i = 0; i < this.document.theForm.elements['email[]'].length; i++)
-    this.document.theForm.elements['email[]'][i].checked = true;
+for (i = 0; i < this.document.theForm.elements['recipients[]'].length; i++)
+    this.document.theForm.elements['recipients[]'][i].checked = true;
 }
 
 function uncheckAll(field)
 {
-for (i = 0; i < this.document.theForm.elements['email[]'].length; i++)
-    this.document.theForm.elements['email[]'][i].checked = false;
+for (i = 0; i < this.document.theForm.elements['recipients[]'].length; i++)
+    this.document.theForm.elements['recipients[]'][i].checked = false;
 }
 
 //  End -->

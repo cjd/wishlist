@@ -49,9 +49,6 @@ createNavBar("../home.php:Home|:Modify WishList");
 <table width="100%"><tr><td>
 <font face=arial size=5 color=red><b><?php if (!array_key_exists("recip",$_REQUEST) || $_REQUEST["recip"] == "") { echo "Your "; } else { echo $_REQUEST["recip"];} ?> List</b></font> - 
 <font size=-1 face=arial><b>All check marks have been removed</b></font>
-</td>
-<td align="right">
-<b><a class="menuLink" target="_blank" href="print.php">Printer Friendly Version</a></b>
 </td></tr></table>
 
 <?php

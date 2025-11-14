@@ -162,7 +162,10 @@ elseif($_REQUEST["action"] == "commitAdd"){
     mysqli_stmt_bind_param($stmt, "ss", $desiredUserid, $desiredUserid);
     mysqli_stmt_execute($stmt);
 
-    $message = "<h2>Account created - Password = " . $password . "</h2>Send <a target=\"_blank\" href=\"sendEmail.php?recip=" . $desiredUserid . "&action=addedUser&subject=WishList%20Account%20Created&message=<b>WishList Account Created</b><br><br><b>Userid:</b> " . $desiredUserid . "<br><b>Password:</b> " . $password . "<br><br>In order to change your password, login to the WishList site with the password provided above.  Once logged in, click on the <b><font color=navy>Update Your Account</font></b> button located at the bottom of the homepage.  On the page that opens, click on the <b><font color=navy>Change Password</font></b> button.\">email?</a><p>";
+    $subject = "WishList Account Created";
+    $email_message = "<b>WishList Account Created</b><br><br><b>Userid:</b> " . $desiredUserid . "<br><b>Password:</b> " . $password . "<br><br>In order to change your password, login to the WishList site with the password provided above.  Once logged in, click on the <b><font color=navy>Update Your Account</font></b> button located at the bottom of the homepage.  On the page that opens, click on the <b><font color=navy>Change Password</font></b> button.";
+    sendEmail($desiredUserid, $_SESSION['userid'], $subject, $email_message, 0);
+    $message = "<h2>Account created - Password = " . $password . "</h2><p>A message has been sent to the user with their login details.</p>";
   }
   else{
     $message = "<h2> The userid cannot be empty!</h2>";

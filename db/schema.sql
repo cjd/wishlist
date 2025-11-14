@@ -208,3 +208,20 @@ CREATE TABLE IF NOT EXISTS `accessRequests` (
   `requestDate` timestamp NOT NULL default CURRENT_TIMESTAMP,
   PRIMARY KEY  (`id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+--
+-- Table structure for table `messages`
+--
+
+DROP TABLE IF EXISTS `messages`;
+CREATE TABLE IF NOT EXISTS `messages` (
+  `message_id` int(11) NOT NULL AUTO_INCREMENT,
+  `recipient_id` varchar(50) NOT NULL,
+  `sender_id` varchar(50) DEFAULT NULL,
+  `subject` varchar(255) NOT NULL,
+  `body` text NOT NULL,
+  `timestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `is_read` tinyint(1) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`message_id`),
+  KEY `recipient_id` (`recipient_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;

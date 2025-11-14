@@ -29,20 +29,50 @@ if($confirm == "No"){
 ?>
 <HTML>
 
-<head><meta name="viewport" content="width=device-width, initial-scale=1.0" /></head>
-
-<link rel=stylesheet href=../style.css type=text/css>
-<script type="text/javascript" src="../js/jquery-3.7.1.min.js"></script>
-<script type="text/javascript" src="../js/jquery.vanillabox-0.1.6.min.js"></script>
-<link rel=stylesheet href="../js/theme/bitter/vanillabox.css">
-<script type="text/javascript">
-$(document).ready(function() {
-    $('#single-image').vanillabox();
-});
-</script>
-
-
 <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel=stylesheet href=../style.css type=text/css>
+    <link rel=stylesheet href=../css/featherlight.min.css type=text/css>
+    <script type="text/javascript" src="../js/jquery-3.7.1.min.js"></script>
+    <script type="text/javascript" src="../js/featherlight.min.js"></script>
+    <script type="text/javascript">
+    $(document).ready(function() {
+        var sendMessageModal = document.getElementById("sendMessageModal");
+        var sendMessageBtn = document.getElementById("sendMessageBtn");
+        var span = document.getElementsByClassName("close-send-message")[0];
+
+        if (sendMessageBtn) {
+            sendMessageBtn.onclick = function() {
+              sendMessageModal.style.display = "block";
+            }
+        }
+
+        if (span) {
+            span.onclick = function() {
+              sendMessageModal.style.display = "none";
+            }
+        }
+
+        window.onclick = function(event) {
+          if (event.target == sendMessageModal) {
+            sendMessageModal.style.display = "none";
+          }
+        }
+
+        $('#sendMessageForm').on('submit', function(e) {
+            e.preventDefault();
+            $.ajax({
+                type: 'POST',
+                url: 'sendMessage.php',
+                data: $(this).serialize(),
+                success: function(response) {
+                    alert('Message sent!');
+                    sendMessageModal.style.display = "none";
+                }
+            });
+        });
+    });
+    </script>
 </head>
 
 <title><?php echo $name ?>'s WishList</title>
@@ -76,48 +106,8 @@ if($recip != $userid){
 } else {
   $allowEdit=1;
 }
-?>
 
-<BODY <?php if (isset($alert)) {echo $alert;} ?>>
-<table class=pagetable>
-<tr>
-<td valign="top">
-
-<?php
-createNavBar("../home.php:Home|:View List - " . $_REQUEST["name"], false, "viewOther");
-?>
-
-<br>
-
-
-<font size="4">
-
-<?php
-
-  $canEdit = false;
-  $query = "select allowEdit from viewList where pid = '" . $recip . "' and viewer = '" . $_SESSION["userid"] . "'";
-  $rs_edit = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
-  if($row_edit = mysqli_fetch_assoc($rs_edit)){
-    if($row_edit["allowEdit"] == '1'){
-      $canEdit = true;
-    }
-  }
-
-if(($recip == $_SESSION["userid"] || $canEdit) and $confirm == "Edit Instead"){
-  print "<meta http-equiv=\"refresh\" content=\"0;url=../modifyList/modifyList.php\">";
-  print "</body></html>";
-  return;
-}
-if(($recip == $_SESSION["userid"] || $canEdit) and $confirm != "Yes"){
-
-  print "<center><p>&nbsp;<form method=post>";
-  print "<b>Are you sure you want to view this list?<br>You will be able to see any purchases that may have been made!  This could ruin the surprise</b>";
-  print "<p><input type=submit name=confirm value=Yes class=\"buttonstyle\"> <input type=submit name=confirm value=No class=\"buttonstyle\"> <input type=submit name=confirm value=\"Edit Instead\" class=\"buttonstyle\">";
-  print "</form>\n";
-  print "</center>";
-  print "</td></tr></table></body></html>";
-  return;
-}
+function displayWishlist($recip, $userid, $name, $allowEdit, $link) {
 ?>
 <form method="post" action="validate_purchase.php" name="wishlist">
 <input type="hidden" name="receiverUserid" value="<?php echo $recip ?>">
@@ -137,6 +127,7 @@ if(($recip == $_SESSION["userid"] || $canEdit) and $confirm != "Yes"){
 <input type="button" value="Edit User" class="buttonstyle" onclick="location.href='../updateAccount/updateAccount.php?target_userid=<?php echo $recip ?>'">
 <?php } ?>
 <input type="button" value="Go Home" class="buttonstyle" onclick="location.href='../home.php'">
+<input type="button" value="Send Message" class="buttonstyle" id="sendMessageBtn">
 </form>
 
 <hr>
@@ -194,7 +185,7 @@ else{
 <font size=2>
 <a class="navMenuLink" href="viewLog.php?recip=<?php echo $recip ?>&name=<?php echo $name ?>">Click here to see what you bought or to unselect items</a>
 </font></td>
-<td class=navBar align="center">
+<td class=navBar align="right">
 
 <?php
 
@@ -211,13 +202,68 @@ $rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link
 }
 ?>
   
-</td><td class=navBar align="right">
-<font size=2>
-        <a class="navMenuLink" target="_blank" href="print.php?recip=<?php echo $recip ?>&name=<?php echo $name ?>">Printer Friendly Version</a>
-</font>
 </td></tr></table>
-</td></tr>
-</table>
+</td></tr></table>
+<div id="sendMessageModal" class="modal">
+  <div class="modal-content">
+    <span class="close-send-message">&times;</span>
+    <h2>Send a message to <?php echo $name; ?></h2>
+    <form id="sendMessageForm">
+      <input type="hidden" name="recipient_id" value="<?php echo $recip; ?>">
+      <input type="text" name="subject" placeholder="Subject" required><br><br>
+      <textarea name="body" rows="5" cols="50" placeholder="Message" required></textarea><br><br>
+      <input type="submit" value="Send Message" class="buttonstyle">
+    </form>
+  </div>
+</div>
+<?php
+}
+?>
+
+<BODY <?php if (isset($alert)) {echo $alert;} ?>>
+<table class=pagetable>
+<tr>
+<td valign="top">
+
+<?php
+createNavBar("../home.php:Home|:View List - " . $_REQUEST["name"], false, "viewOther");
+?>
+
+<br>
+
+
+<font size="4">
+
+<?php
+
+  $canEdit = false;
+  $query = "select allowEdit from viewList where pid = '" . $recip . "' and viewer = '" . $_SESSION["userid"] . "'";
+  $rs_edit = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+  if($row_edit = mysqli_fetch_assoc($rs_edit)){
+    if($row_edit["allowEdit"] == '1'){
+      $canEdit = true;
+    }
+  }
+
+if(($recip == $_SESSION["userid"] || $canEdit) and $confirm == "Edit Instead"){
+  print "<meta http-equiv=\"refresh\" content=\"0;url=../modifyList/modifyList.php\">";
+  print "</body></html>";
+  return;
+}
+if(($recip == $_SESSION["userid"] || $canEdit) and $confirm != "Yes"){
+
+  print "<center><p>&nbsp;<form method=post>";
+  print "<b>Are you sure you want to view this list?<br>You will be able to see any purchases that may have been made!  This could ruin the surprise</b>";
+  print "<p><input type=submit name=confirm value=Yes class=\"buttonstyle\"> <input type=submit name=confirm value=No class=\"buttonstyle\"> <input type=submit name=confirm value=\"Edit Instead\" class=\"buttonstyle\">";
+  print "</form>\n";
+  print "</center>";
+  print "</td></tr></table></body></html>";
+  return;
+}
+else {
+    displayWishlist($recip, $userid, $name, $allowEdit, $link);
+}
+?>
 </body>
 </html>
 

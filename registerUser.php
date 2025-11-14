@@ -47,15 +47,16 @@ if($stop){
   $email = convertString($_REQUEST["email"]);
   $comment = convertString($_REQUEST["comment"]);
 
-  // send an email out to all the admins
-  $query = "select * from people where admin=1";
+  // send a message to all the admins
+  $query = "select userid from people where admin=1";
   $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));  
 
   $to = "";
 
   while($row = mysqli_fetch_assoc($result)){
-    $to .= $row["email"] . ",";
+    $to .= $row["userid"] . ",";
   }
+  $to = rtrim($to, ',');
 
   $subject = "Request for new WishList account";
   $message = "The following person is requesting a new account<p><b>First Name:</b> " . $fname . "<br><b>Last Name:</b> " . $lname ."<br><b>Suffix:</b> " . $suffix . "<br><b>Desired Userid:</b> " . $userid . "<br><b>Email:</b> " . $email . "<br><b>Comment</b><br>" .$comment;

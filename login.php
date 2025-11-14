@@ -81,6 +81,19 @@ if (!empty($_REQUEST["userid"]) && !empty($_REQUEST["password"])) {
       $_SESSION["userid"] = $row["userid"];
       $_SESSION["fullname"] = $row["firstname"] . " " . $row["lastname"] . ' ' . $row["suffix"];
       $_SESSION["admin"] = $row["admin"];
+
+      // Check for unread messages
+      $stmt = mysqli_prepare($link, "SELECT * FROM messages WHERE recipient_id = ? AND is_read = 0");
+      mysqli_stmt_bind_param($stmt, "s", $row["userid"]);
+      mysqli_stmt_execute($stmt);
+      $messages_result = mysqli_stmt_get_result($stmt);
+      
+      $messages = array();
+      while($message = mysqli_fetch_assoc($messages_result)){
+          $messages[] = $message;
+      }
+      $_SESSION["messages"] = $messages;
+      
       header("Location: home.php");
       mysqli_free_result($result);
       

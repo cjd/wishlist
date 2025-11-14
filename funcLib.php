@@ -40,9 +40,7 @@ if(!isset($doingSetup)){
   }
   else{
     mysqli_select_db($link,$db_name);
-    if (isset($_SESSION["admin"]) && $_SESSION["admin"] == 1) {
-      checkAndApplySchema($link, $base_dir . '/db/schema.sql');
-    }
+    checkAndApplySchema($link, $base_dir . '/db/schema.sql');
   }
 }
 
@@ -55,6 +53,7 @@ if(!isset($doingSetup)){
  * 4 => fall   (sep 22 -> nov 30)
  * 5 => christmas (dec 1 -> dec 31)
  */
+
 function getSeason(){
   $today = getdate();
   
@@ -159,105 +158,49 @@ function parseDate($date, $shortMonth=0, $clientLoc = 3){
   }
 }
 
-/* $to should be of the form "x@x.com, y@y.com, z@z.com".  The
- $message should have all new lines converted to <br> wherever desired
- before calling this method */
+/* $to should be a comma-separated list of userids.
+ * $from is the userid of the sender.
+ * $message should have all new lines converted to <br> wherever desired
+ * before calling this method */
 function sendEmail($to, $from, $subject, $message, $debug){
+    global $link;
 
-  $degug = 1;
+    // 'to' can be a comma-separated list of userids
+    $recipients = explode(',', $to);
 
-  if($debug == 1){
-    $to = "Me <" . $admin_email . ">";
-  }
-  
-  if($from == "")
-    $from = "From: WishList Site <" . $admin_email . ">\n";
-  else
-    $from = "From: " . $from . "\n";
-  
-  $headers  = "MIME-Version: 1.0\r\n";
-  $headers .= "Content-type: text/html; charset=iso-8859-1\r\n";
-  
-  $message = "<html><body><small>This is an automated message from the " .
-    "<a href=\"". getFullPath("home.php") . "\">WishList Site</a>." .
-    "</small><p>" . $message . "</body></html>";
+    foreach ($recipients as $recipient_id) {
+        $recipient_id = trim($recipient_id);
+        if (empty($recipient_id)) {
+            continue;
+        }
 
-  if (mail($to, $subject, str_replace("<br>", "<br>\r\n", str_replace(". ", ". \r\n", $message)), $headers, "-F 'Chris Debenham' -f chris@adebenham.com")) {
-    return 1;
-  }
-  else{
-    return 0; // an error has occurred
-  }
-}
+        // If debug is enabled, send to admin instead
+        if ($debug == 1) {
+            global $admin_email;
+            // This assumes the admin's email is their userid.
+            // A better approach would be to have a dedicated admin userid.
+            $stmt = mysqli_prepare($link, "SELECT userid FROM people WHERE email = ?");
+            mysqli_stmt_bind_param($stmt, "s", $admin_email);
+            mysqli_stmt_execute($stmt);
+            $result = mysqli_stmt_get_result($stmt);
+            if ($row = mysqli_fetch_assoc($result)) {
+                $recipient_id = $row['userid'];
+            } else {
+                continue; // Admin user not found
+            }
+        }
 
-function TESTsendEmail($to, $from, $subject, $message, $debug){
+        $sender_id = NULL;
+        if (!empty($from)) {
+            // Assuming 'from' is a userid
+            $sender_id = $from;
+        }
 
-  if($debug == 1){
-    $to = "Me <" . $admin_email . ">";
-  }
-  
-  if($from == "")
-    $from = "From: WishList Site <" . $admin_email . ">";
-  else
-    $from = "From: " . $from;
-  
-  $message = str_replace("<br>", "<br>\r\n", str_replace(". ", ". \r\n", $message));
-
-  $boundary = md5(uniqid(time()));
-
-  $headers  = "From: " . $from . "\r\n" .
-              "Return-Path: " . $from . "\r\n" .
-              "MIME-Version: 1.0\r\n" .
-              "Content-Type: multipart/alternative; boundary=\"" . $boundary . "\"\r\n\r\n" .
-              "--" . $boundary . "\r\n" .
-              "Content-Type: text/plain; charset=ISO-8859-1\r\n" .
-              "Content-Transfer-Encoding: 8bit\r\n" .
-              "Content-Disposition: inline\r\n\r\n" .
-              "Please view this with an HTML compliant browser\r\n" .
-              "--" . $boundary . "\r\n" .
-              "Content-Type: text/html; charset=ISO-8859-1\r\n" .
-              "Content-Transfer-Encoding: 8bit\r\n" .
-              "Content-Disposition: inline\r\n\r\n" .
-              "<html><body><small>This is an automated message from the " .
-              "<a href=\"". getFullPath("home.php") . "\">WishList Site</a>." .
-              "</small><p>" . $message . "</body></html>\r\n" .
-              "--" . $boundary . "--\r\n";
-
-  if (mail($to, $subject, '', $headers)){
-    return 1;
-  }
-  else{
-    return 0; // an error has occurred
-  }
-}
-
-/* $to should be of the form "x@x.com, y@y.com, z@z.com".  The
- $message should have all new lines converted to <br> wherever desired
- before calling this method */
-function sendEmailFromFavorites($to, $from, $subject, $message, $debug){
-
-  if($debug == 1){
-    $to = "Me <" . $admin_email . ">"; 
-  }
-  
-  if($from == "")
-    $from = "From: Favorites Site <" . $admin_email . ">\n";
-  else
-    $from = "From: " . $from . "\n";
-  
-  $headers  = "MIME-Version: 1.0\r\n";
-  $headers .= "Content-type: text/html; charset=iso-8859-1\r\n";
-  
-  $message = "<html><body><small>This is an automated message from the " .
-    "<a href=\"". getFullPath("home.php") . "\">Favorites Site</a>." .
-    "</small><p>" . $message . "</body></html>";
-
-  if (mail($to, $subject, str_replace("<br>", "<br>\r\n", str_replace(". ", ". \r\n", $message)), $from . $headers)){
-    return 1;
-  }
-  else{
-    return 0; // an error has occurred
-  }
+        $stmt = mysqli_prepare($link, "INSERT INTO messages (recipient_id, sender_id, subject, body) VALUES (?, ?, ?, ?)");
+        mysqli_stmt_bind_param($stmt, "ssss", $recipient_id, $sender_id, $subject, $message);
+        mysqli_stmt_execute($stmt);
+    }
+    return 1; // Assume success
 }
 
 /* useful function to get rid of the auto escapes either the server is doing
@@ -640,7 +583,7 @@ function printItem($row2, $pretty, $name, $quantity, $bought){
   }
 
   if($row2["image"] != "") {
-    $text .= "<a href=\"".$base_url."/uploads/image-".$row2["iid"].".jpg\" title=\"".$row2["title"]."\" id=\"single-image\">";
+    $text .= "<a href=\"#\" data-featherlight=\"".$base_url."/uploads/image-".$row2["iid"].".jpg\" title=\"".$row2["title"]."\">";
     $text .= "<img src=\"".$base_url."/uploads/image-".$row2["iid"].".jpg\" width=64></a>";
   }
     
@@ -727,23 +670,13 @@ function deleteItem($iid, $userid, $fullname, $base_dir){
   global $link;
   $sendMail = 0;
   
-  $stmt = mysqli_prepare($link, "SELECT itemSortOrder as iso, categories.cid as cid, image FROM items, categories WHERE categories.cid=items.cid AND iid = ? AND userid = ?");
-  mysqli_stmt_bind_param($stmt, "is", $iid, $userid);
-  mysqli_stmt_execute($stmt);
-  $item_rs = mysqli_stmt_get_result($stmt);
-
-  if(!($item_row = mysqli_fetch_assoc($item_rs))){ 
-    return "Item does not belong to you!";
-  }
-
-  // check to see if the item has been bought
-  $stmt = mysqli_prepare($link, "SELECT title, items.description, email FROM items, purchaseHistory, people WHERE items.iid = ? AND items.iid=purchaseHistory.iid AND people.userid=purchaseHistory.userid");
+  $stmt = mysqli_prepare($link, "SELECT title, items.description, people.userid FROM items, purchaseHistory, people WHERE items.iid = ? AND items.iid=purchaseHistory.iid AND people.userid=purchaseHistory.userid");
   mysqli_stmt_bind_param($stmt, "i", $iid);
   mysqli_stmt_execute($stmt);
   $rs1 = mysqli_stmt_get_result($stmt);
 
   if(mysqli_num_rows($rs1) > 0){  
-    // the item has been puchased so may have to send warning email
+    // the item has been puchased so may have to send warning message
     $sendMail = 1;
   }
   
@@ -801,15 +734,17 @@ function deleteItem($iid, $userid, $fullname, $base_dir){
       // less than 20 days till bday or xmas so 
       // send an email to each person who has purchased this gift
       
+      $to = "";
       while($row1 = mysqli_fetch_assoc($rs1)){
-        $to .= $row1["email"] .", ";
+        $to .= $row1["userid"] .",";
       }
+      $to = rtrim($to, ',');
 
       // rewind cursor so that we can get the title and description
       mysqli_data_seek($rs1, 0);
       $row1 = mysqli_fetch_assoc($rs1);      
 
-      $from = "";
+      $from = $userid;
       $subject = $fullname . "'s WishList has been modified";
       $message = "<p><font color=indianred><b>" . $fullname .
         "</b></font> has <b>deleted</b> the following item that you have already bought <dir>" .
