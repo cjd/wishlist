@@ -329,6 +329,7 @@ while($row = mysqli_fetch_assoc($result)){
 </form>
 
 <button class='buttonstyle' onclick="location.href='admin.php?action=add'">Add New User</button><br>
+<button class='buttonstyle' onclick="location.href='admin/accessRequests.php'">Manage Access Requests</button><br>
 <button class='buttonstyle' onclick="location.href='admin.php?setup=true'">Change Settings</button>
 
 </center>

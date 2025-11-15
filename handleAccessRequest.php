@@ -19,7 +19,24 @@ if (isset($_POST['requestId']) && isset($_POST['requesterId']) && isset($_POST['
     $requestId = $_POST['requestId'];
     $requesterId = $_POST['requesterId'];
     $decision = $_POST['decision'];
-    $targetId = $_SESSION['userid'];
+    
+    // Get the targetId from the database
+    $stmt_target = mysqli_prepare($link, "SELECT targetId FROM accessRequests WHERE id = ?");
+    mysqli_stmt_bind_param($stmt_target, "i", $requestId);
+    mysqli_stmt_execute($stmt_target);
+    $result_target = mysqli_stmt_get_result($stmt_target);
+    if ($row_target = mysqli_fetch_assoc($result_target)) {
+        $targetId = $row_target['targetId'];
+    } else {
+        header("Location: home.php?error=invalid_request");
+        exit();
+    }
+
+    // Security check: ensure the user is either the target or an admin
+    if ($_SESSION['userid'] != $targetId && $_SESSION['admin'] != 1) {
+        header("Location: home.php?error=unauthorized");
+        exit();
+    }
 
     mysqli_begin_transaction($link);
 
@@ -54,7 +71,11 @@ if (isset($_POST['requestId']) && isset($_POST['requesterId']) && isset($_POST['
         }
 
         mysqli_commit($link);
-        header("Location: home.php");
+        if ($_SESSION['admin'] == 1) {
+            header("Location: admin/accessRequests.php");
+        } else {
+            header("Location: home.php");
+        }
         exit();
 
     } catch (mysqli_sql_exception $exception) {
