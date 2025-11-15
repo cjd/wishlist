@@ -22,15 +22,10 @@ include "../funcLib.php";
 
 
 <link rel=stylesheet href=../style.css type=text/css>
+<link rel=stylesheet href=../css/featherlight.min.css type=text/css>
 <script type="text/javascript" src="../js/jquery-3.7.1.min.js"></script>
-<script type="text/javascript" src="../js/jquery.vanillabox-0.1.6.min.js"></script>
+<script type="text/javascript" src="../js/featherlight.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
-<link rel=stylesheet href="../js/theme/bitter/vanillabox.css">
-<script type="text/javascript">
-$(document).ready(function() {
-    $('#single-image').vanillabox();
-});
-</script>
 
 <head>
 </head>
@@ -102,7 +97,6 @@ printModifyList($userid);
 
 <center>
 <input type="button" value="Edit Account" class="buttonstyle" onclick="location.href='../updateAccount/updateAccount.php'">
-<input type="button" value="Send Update Notification" class="buttonstyle" onclick="javascript:open('../sendEmail.php?action=emailRecipViewers&recip=<?php print $_SESSION["userid"] ?>','WishList_com','height=575,width=850,left=10,top=10,location=1,scrollbars=yes,menubar=1,toolbars=1,resizable=yes');">
 <form method="post" action="removeCrossedItems.php">
 <input type="submit" value="Remove Crossed Off Items" class="buttonstyle">
 </form>
