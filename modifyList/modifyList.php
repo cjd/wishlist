@@ -101,6 +101,7 @@ printModifyList($userid);
 ?>
 
 <center>
+<input type="button" value="Edit Account" class="buttonstyle" onclick="location.href='../updateAccount/updateAccount.php'">
 <input type="button" value="Send Update Notification" class="buttonstyle" onclick="javascript:open('../sendEmail.php?action=emailRecipViewers&recip=<?php print $_SESSION["userid"] ?>','WishList_com','height=575,width=850,left=10,top=10,location=1,scrollbars=yes,menubar=1,toolbars=1,resizable=yes');">
 <form method="post" action="removeCrossedItems.php">
 <input type="submit" value="Remove Crossed Off Items" class="buttonstyle">

@@ -23,7 +23,7 @@ if (isset ($_REQUEST["confirm"])) {
     $confirm = $_REQUEST["confirm"];
 }
 
-if($confirm == "No"){
+if($confirm == "Ho Home"){
      header("Location: " . getFullPath("../home.php"));
 }
 ?>
@@ -123,9 +123,6 @@ function displayWishlist($recip, $userid, $name, $allowEdit, $link) {
 
 <input type="submit" value="Save Changes" class="buttonstyle">
 <input type="reset" value="Undo Changes" class="buttonstyle" onclick="history.go(0)">
-<?php if ($allowEdit==1) { ?>
-<input type="button" value="Edit User" class="buttonstyle" onclick="location.href='../updateAccount/updateAccount.php?target_userid=<?php echo $recip ?>'">
-<?php } ?>
 <input type="button" value="Go Home" class="buttonstyle" onclick="location.href='../home.php'">
 <input type="button" value="Send Message" class="buttonstyle" id="sendMessageBtn">
 </form>
@@ -245,16 +242,16 @@ createNavBar("../home.php:Home|:View List - " . $_REQUEST["name"], false, "viewO
     }
   }
 
-if(($recip == $_SESSION["userid"] || $canEdit) and $confirm == "Edit Instead"){
+if(($recip == $_SESSION["userid"] || $canEdit) and $confirm == "Edit List"){
   print "<meta http-equiv=\"refresh\" content=\"0;url=../modifyList/modifyList.php\">";
   print "</body></html>";
   return;
 }
-if(($recip == $_SESSION["userid"] || $canEdit) and $confirm != "Yes"){
+if(($recip == $_SESSION["userid"] || $canEdit) and $confirm != "View List"){
 
   print "<center><p>&nbsp;<form method=post>";
   print "<b>Are you sure you want to view this list?<br>You will be able to see any purchases that may have been made!  This could ruin the surprise</b>";
-  print "<p><input type=submit name=confirm value=Yes class=\"buttonstyle\"> <input type=submit name=confirm value=No class=\"buttonstyle\"> <input type=submit name=confirm value=\"Edit Instead\" class=\"buttonstyle\">";
+  print "<p><input type=submit name=confirm value=\"View List\" class=\"buttonstyle\"> <input type=submit name=confirm value=\"Go Home\" class=\"buttonstyle\"> <input type=submit name=confirm value=\"Edit List\" class=\"buttonstyle\">";
   print "</form>\n";
   print "</center>";
   print "</td></tr></table></body></html>";
