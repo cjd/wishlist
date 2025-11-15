@@ -53,6 +53,7 @@ $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($
 $num_rows = mysqli_num_rows($result);
 
 ?>
+<!DOCTYPE html>
 <HTML>
 <head><meta name="viewport" content="width=device-width, initial-scale=1.0" /></head>
 

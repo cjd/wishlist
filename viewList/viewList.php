@@ -250,8 +250,8 @@ if(($recip == $_SESSION["userid"] || $canEdit) and $confirm == "Edit List"){
 if(($recip == $_SESSION["userid"] || $canEdit) and $confirm != "View List"){
 
   print "<center><p>&nbsp;<form method=post>";
-  print "<b>Are you sure you want to view this list?<br>You will be able to see any purchases that may have been made!  This could ruin the surprise</b>";
-  print "<p><input type=submit name=confirm value=\"View List\" class=\"buttonstyle\"> <input type=submit name=confirm value=\"Go Home\" class=\"buttonstyle\"> <input type=submit name=confirm value=\"Edit List\" class=\"buttonstyle\">";
+  print "<b>Are you sure you want to view this list?<br>You will be able to see any purchases that may have been made!<br>This could ruin the surprise</b>";
+  print "<p><input type=submit name=confirm value=\"View List\" class=\"buttonstyle\"> <input type=submit name=confirm value=\"Edit List\" class=\"buttonstyle\"> <input type=submit name=confirm value=\"Go Home\" class=\"buttonstyle\">";
   print "</form>\n";
   print "</center>";
   print "</td></tr></table></body></html>";
