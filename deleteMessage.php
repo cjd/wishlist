@@ -1,17 +1,4 @@
 <?php
-session_name("WishListSite");
-session_start();
-
-if (!isset($_SESSION["userid"])) {
-    header("Location: login.php");
-    exit;
-}
-
-$userid = $_SESSION["userid"];
-if (isset($_SESSION["euserid"])) {
-    $userid = $_SESSION["euserid"];
-}
-
 include "funcLib.php";
 
 if (isset($_POST['message_id']) && isset($_SESSION['userid'])) {

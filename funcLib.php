@@ -12,6 +12,26 @@ if(!isset($base_dir)){
   }
 }
 
+if(!isset($_SESSION)){
+  session_name("WishListSite");
+  session_start();
+
+  if (!isset($_SESSION["userid"])) {
+
+    // if the page that is including this file has not set $ignoreSession then
+    // redirect the user to login
+    if(!isset($ignoreSession)){
+      header("Location: " . $base_url."/login.php");
+      exit;
+    }
+  }
+  else {
+    $userid = $_SESSION["userid"];
+    if (isset($_SESSION["euserid"]))
+        $userid = $_SESSION["euserid"];
+  }
+}
+
 if(!isset($doingSetup)){
   $link = @(mysqli_connect($db_loc, $db_userid, $db_pass));
   if(!$link){
