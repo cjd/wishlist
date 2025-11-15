@@ -782,6 +782,23 @@ function generate_image_thumbnail($source_image_path, $thumbnail_image_path)
     if ($source_gd_image === false) {
         return false;
     }
+
+    // auto-rotate based on EXIF orientation
+    $exif = exif_read_data($source_image_path);
+    if (!empty($exif['Orientation'])) {
+        switch ($exif['Orientation']) {
+            case 3:
+                $source_gd_image = imagerotate($source_gd_image, 180, 0);
+                break;
+            case 6:
+                $source_gd_image = imagerotate($source_gd_image, -90, 0);
+                break;
+            case 8:
+                $source_gd_image = imagerotate($source_gd_image, 90, 0);
+                break;
+        }
+    }
+
     $source_aspect_ratio = $source_image_width / $source_image_height;
     $thumbnail_aspect_ratio = THUMBNAIL_IMAGE_MAX_WIDTH / THUMBNAIL_IMAGE_MAX_HEIGHT;
     if ($source_image_width <= THUMBNAIL_IMAGE_MAX_WIDTH && $source_image_height <= THUMBNAIL_IMAGE_MAX_HEIGHT) {
