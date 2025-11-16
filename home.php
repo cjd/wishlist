@@ -211,7 +211,7 @@ echo $textarea."\n";
 <hr>
 <button class='buttonstyle' style='width:100%;' onclick="location.href='modifyList/modifyList.php'">Modify Your List</button><br/>
 <button class='buttonstyle' style='width:100%;' onclick="location.href='viewPurchases.php'">View your Purchases</button><br/>
-<button class='buttonstyle' style='width:100%;' onclick="location.href='viewMessages.php'">View Messages</button><br/>
+<button class='buttonstyle' style='width:100%;' onclick="location.href='messages.php'">Messages</button><br/>
 <button class='buttonstyle' style='width:100%;' onclick="location.href='updateAccount/updateAccount.php'">Update Your Account</button><br/>
 <?php
 if($_SESSION["admin"] == 1){

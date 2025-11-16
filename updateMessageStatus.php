@@ -13,6 +13,6 @@ if (isset($_POST['message_id']) && isset($_POST['status']) && isset($_SESSION['u
 }
 
 // Redirect back to the messages page
-header("Location: viewMessages.php");
+header("Location: messages.php");
 exit;
 ?>

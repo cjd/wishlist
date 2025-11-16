@@ -23,12 +23,12 @@ $users_result = mysqli_stmt_get_result($stmt_users);
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-<title>View Messages</title>
+<title>Messages</title>
 <BODY>
 <table class="pagetable">
 <tr>
 <td valign="top">
-<?php createNavBar("home.php:Home|viewMessages.php:View Messages", true); ?>
+<?php createNavBar("home.php:Home|messages.php:Messages", true); ?>
 <center>
 <h2>Your Messages</h2>
 <table border=1 class="viewpurchases">
@@ -67,11 +67,45 @@ $users_result = mysqli_stmt_get_result($stmt_users);
 
 <hr>
 
+<h2>Sent Messages</h2>
+<table border=1 class="viewpurchases">
+    <tr class="viewpurchaseshead">
+        <th>To</th>
+        <th>Subject</th>
+        <th>Date</th>
+        <th>Status</th>
+    </tr>
+    <?php
+    // Fetch sent messages
+    $sent_messages_query = "SELECT m.*, p.firstname, p.lastname FROM messages m LEFT JOIN people p ON m.recipient_id = p.userid WHERE m.sender_id = ? ORDER BY m.timestamp DESC";
+    $stmt_sent = mysqli_prepare($link, $sent_messages_query);
+    mysqli_stmt_bind_param($stmt_sent, "s", $user_id);
+    mysqli_stmt_execute($stmt_sent);
+    $sent_messages_result = mysqli_stmt_get_result($stmt_sent);
+
+    while ($message = mysqli_fetch_assoc($sent_messages_result)):
+    ?>
+    <tr class="<?php echo $message['is_read'] ? 'viewpurchases2' : 'viewpurchases1'; ?>">
+        <td><?php echo htmlspecialchars($message['firstname'] . ' ' . $message['lastname']); ?></td>
+        <td><?php echo htmlspecialchars($message['subject']); ?></td>
+        <td><?php echo parseDate($message['timestamp']); ?></td>
+        <td><?php echo $message['is_read'] ? 'Read' : 'Unread'; ?></td>
+    </tr>
+    <tr>
+        <td colspan="4" class="<?php echo $message['is_read'] ? 'viewpurchases2' : 'viewpurchases1'; ?>">
+            <?php echo nl2br(htmlspecialchars($message['body'])); ?>
+        </td>
+    </tr>
+    <?php endwhile; ?>
+</table>
+
+<hr>
+
 <h2>Send a New Message</h2>
 <form action="sendMessage.php" method="post">
     <table border=0>
         <tr>
-            <td>Recipient:</td>
+            <td>Recipient(s):</td>
             <td>
                 <select id="recipient_id" name="recipient_id[]" multiple="multiple" style="width: 300px;">
                     <?php while ($user = mysqli_fetch_assoc($users_result)): ?>
