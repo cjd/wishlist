@@ -305,7 +305,7 @@ $(document).ready(function() {
           <input type="hidden" name="requestId" value="<?php echo $request['id']; ?>">
           <input type="hidden" name="requesterId" value="<?php echo $request['requesterId']; ?>">
           <button type="submit" name="decision" value="approve_readonly" class="buttonstyle">Approve (Read-Only)</button>
-          <button type="submit" name="decision" value="approve_contact" class="buttonstyle">Approve (with Contact Info)</button>
+          <button type="submit" name="decision" value="approve_contact" class="buttonstyle">Approve (with List Access)</button>
           <button type="submit" name="decision" value="deny" class="buttonstyle">Deny</button>
         </form>
       </div>

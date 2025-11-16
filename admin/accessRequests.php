@@ -41,7 +41,7 @@ $pending_requests_result = mysqli_query($link, $pending_requests_query);
                 <input type="hidden" name="requestId" value="<?php echo $request['id']; ?>">
                 <input type="hidden" name="requesterId" value="<?php echo $request['requesterId']; ?>">
                 <button type="submit" name="decision" value="approve_readonly" class="actionButton">Approve (Read-Only)</button>
-                <button type="submit" name="decision" value="approve_contact" class="actionButton">Approve (with Contact Info)</button>
+                <button type="submit" name="decision" value="approve_contact" class="actionButton">Approve (with List Access)</button>
                 <button type="submit" name="decision" value="deny" class="actionButtonRed">Deny</button>
             </form>
         </td>

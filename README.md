@@ -8,6 +8,11 @@ This PHP-based web application is designed to manage gift lists for multiple fam
 *   **Wishlist Management:** Users can create, edit, and delete categories and items within their personal wishlists. Items can be prioritized, include details like price and links, and be marked as purchasable.
 *   **Wishlist Viewing & Sharing:** Users can view others' wishlists based on granted permissions. A purchase history allows tracking of gifts bought for others. Email notifications are sent for certain events.
 *   **Admin Functionality:** Administrators have elevated privileges for site configuration, user management, and comprehensive control over site settings.
+*   **Messaging System:** A built-in messaging system allows users to communicate with each other.
+    *   Users can send and receive messages from other users on the platform.
+    *   The system supports marking messages as read or unread, and deleting messages.
+    *   A user can only send messages to other users whose lists they are permitted to view.
+    *   The system also sends notifications for events like item deletion.
 
 ## Recent Improvements
 

@@ -72,7 +72,7 @@ if($action == "stopViewOther"){
   $query = "delete from viewList where pid='" . $removeuserid . "' and viewer='" . $userid . "'";
 
   $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
-  $message = "<h2>Successfully removed yourself</h2>";
+  $message = "<h2>Successfully stopped viewing " . $removeuserid . " for " . $userid . "</h2>";
 }
 elseif ($action == "stopViewMine"){
 
@@ -81,7 +81,7 @@ elseif ($action == "stopViewMine"){
   $query = "delete from viewList where pid='" . $userid . "' and viewer='" . $removeuserid . "'";
 
   $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
-  $message = "<h2>The person you removed can no longer view your list</h2>";
+  $message = "<h2>Successfully stopped " . $removeuserid . " from viewing list of " . $userid . "</h2>";
 
 }
 elseif ($action == "startViewOther"){
@@ -240,50 +240,6 @@ $row = mysqli_fetch_assoc($result);
 
 
 <!-- start of first table -->
-<table style="border-collapse: collapse;" id="AutoNumber1" border="0" bordercolor="#111111" cellPadding="0" cellSpacing="0">
-<tr>
-<td colspan=6 align="center" bgcolor="#6702cc">
-<font size=3 color=white><b>People who can view your list</b></font>
-</td>
-</tr>
-
-<tr bgcolor=lightYellow>
-<td>&nbsp;</td>
-<td>&nbsp;</td>
-<td valign=bottom><b>Name</b></td>
-<td align=center><b>Can View Your<br>Contact Info</b></td>
-<td align=center><b>Read Only<br>Access</b></td>
-<td align=center><b>Edit<br>Access</b></td>
-</tr>
-<?php
-$query = "select viewer, firstname, lastname, suffix, userid, viewContactInfo, readOnly, allowEdit from viewList, people where viewList.viewer = people.userid and viewList.pid = '" . $userid . "'" . " order by lastname, firstname";
-
-$result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
-
-$list = "";
-
-while($row = mysqli_fetch_assoc($result)){
-  $list .= $row["userid"] . ",";
- 
-  print "<tr><td><a class=\"menuLink\" href=updateAccount.php?action=stopViewMine&userid=" . $row["userid"] . ($userid != $_SESSION["userid"] ? "&target_userid=" . $userid : "") . ">[Remove]</a></td><td>&nbsp;</td><td>" . $row["firstname"] . " " . $row["lastname"] . ' ' . $row["suffix"] . "</td><td align=center><input name=admin[] value=" . $row["userid"] . " type='checkbox' ";
-  print $row["viewContactInfo"] ? "checked" : "";
-  print "></td>";
-  print "<td align=center><input name=readOnly[] type=checkbox value=" . $row["userid"];
-  print $row["readOnly"] ? " checked" : "";
-  print "></td><td align=center><input name=allowEdit[] type=checkbox value=" . $row["userid"];
-  print $row["allowEdit"] ? " checked" : "";
-  print "></td></tr>";
-}
-print "<input type=hidden name=listUsers value=" . $list . ">";
-?>
-<tr><td colspan=6 align="center" bgcolor="#c0c0c0">
-<input type=submit value="Make Changes"  style="font-weight:bold">
-</td></tr></table>
-</form>
-
-<p>&nbsp;
-
-
 <table style="border-collapse: collapse;" id="AutoNumber1" border="0" bordercolor="#111111" cellpadding="2" cellspacing="0">
 <tr>
 <td align="center" bgcolor="#6702cc">
@@ -324,6 +280,50 @@ if($_REQUEST["action"] == "addUser"){
 </td>
 </tr>
 </table>
+<table style="border-collapse: collapse;" id="AutoNumber1" border="0" bordercolor="#111111" cellPadding="2" cellSpacing="0">
+<tr>
+<td colspan=6 align="center" bgcolor="#6702cc">
+<font size=3 color=white><b>People who can view your list</b></font>
+</td>
+</tr>
+
+<tr bgcolor=lightYellow>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td valign=bottom><b>Name</b></td>
+<td align=center><b>Can View<br>Your List</b></td>
+<td align=center><b>Read Only<br>Access</b></td>
+<td align=center><b>Edit<br>Access</b></td>
+</tr>
+<?php
+$query = "select viewer, firstname, lastname, suffix, userid, viewContactInfo, readOnly, allowEdit from viewList, people where viewList.viewer = people.userid and viewList.pid = '" . $userid . "'" . " order by lastname, firstname";
+
+$result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+
+$list = "";
+
+while($row = mysqli_fetch_assoc($result)){
+  $list .= $row["userid"] . ",";
+ 
+  print "<tr><td><a class=\"menuLink\" href=updateAccount.php?action=stopViewMine&userid=" . $row["userid"] . ($userid != $_SESSION["userid"] ? "&target_userid=" . $userid : "") . ">[Remove]</a></td><td>&nbsp;</td><td>" . $row["firstname"] . " " . $row["lastname"] . ' ' . $row["suffix"] . "</td><td align=center><input name=admin[] value=" . $row["userid"] . " type='checkbox' ";
+  print $row["viewContactInfo"] ? "checked" : "";
+  print "></td>";
+  print "<td align=center><input name=readOnly[] type=checkbox value=" . $row["userid"];
+  print $row["readOnly"] ? " checked" : "";
+  print "></td><td align=center><input name=allowEdit[] type=checkbox value=" . $row["userid"];
+  print $row["allowEdit"] ? " checked" : "";
+  print "></td></tr>";
+}
+print "<input type=hidden name=listUsers value=" . $list . ">";
+?>
+<tr><td colspan=6 align="center" bgcolor="#c0c0c0">
+<input type=submit value="Make Changes"  style="font-weight:bold">
+</td></tr></table>
+</form>
+
+<p>&nbsp;
+
+
 
 
 <!-- end of first table -->
@@ -355,6 +355,20 @@ if($_REQUEST["action"] == "addUser"){
 <tr>
 <td align=center>
 
+<table style="border-collapse: collapse;" id="AutoNumber1" border="0" bordercolor="#111111" cellpadding="2" cellspacing="0">
+<tr>
+<td align="center" bgcolor="#6702cc">
+<font size=3 color=white><b>Find someone elses list to view</b></font>
+</td>
+</tr>
+<tr>
+<td>
+Enter the person's userid or e-mail:<br>
+<form method=post action="updateAccount.php">
+<input type=text size=20 name=email>
+<input type=hidden name=action value=findUser>
+<input type=submit value="Go">
+</form>
 
 <table style="border-collapse: collapse;" id="AutoNumber1" border="0" bordercolor="#111111" cellpadding="2" cellspacing="0">
 <tr>
@@ -382,20 +396,6 @@ while($row = mysqli_fetch_assoc($result)){
 <p>&nbsp;
 
 
-<table style="border-collapse: collapse;" id="AutoNumber1" border="0" bordercolor="#111111" cellpadding="2" cellspacing="0">
-<tr>
-<td align="center" bgcolor="#6702cc">
-<font size=3 color=white><b>Find someone elses list to view</b></font>
-</td>
-</tr>
-<tr>
-<td>
-Enter the person's userid or e-mail:<br>
-<form method=post action="updateAccount.php">
-<input type=text size=20 name=email>
-<input type=hidden name=action value=findUser>
-<input type=submit value="Go">
-</form>
 <?php
 
 if($_REQUEST["action"] == "findUser"){

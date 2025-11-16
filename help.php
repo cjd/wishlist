@@ -74,6 +74,20 @@
 
 </td></tr>
 <tr><td>
+<h2 class="categoryHeader">Messaging</h2>
+
+<a name="messages"></a><h3>How do I use the messaging system?</h3>
+<p>The website has a built-in messaging system that allows you to communicate with other users. You can access it by clicking on the <b>Messages</b> button on your homepage.</p>
+<p>On the messages page, you will find your inbox with received messages and a list of sent messages. You can also compose new messages to send to other users.</p>
+
+<h3>How do I send a message?</h3>
+<p>To send a new message, go to the <b>Messages</b> page and find the "Send a New Message" form. You can select one or more recipients from the dropdown list. This list contains all the users whose wishlists you are currently able to view. Fill in the subject and body of the message, and click "Send Message".</p>
+
+<h3>How do I manage my messages?</h3>
+<p>For each message in your inbox, you have the option to mark it as read or unread, and to delete it. Sent messages can be viewed but not edited or deleted.</p>
+
+</td></tr>
+<tr><td>
 <h2 class="categoryHeader">Your Account</h2>
 
 <a name="changeInfo"></a><h3>How do I change my personal information?</h3>
