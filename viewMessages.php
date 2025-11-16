@@ -70,7 +70,7 @@ $users_result = mysqli_stmt_get_result($stmt_users);
         <tr>
             <td>Recipient:</td>
             <td>
-                <select name="recipient_id">
+                <select name="recipient_id[]" multiple>
                     <?php while ($user = mysqli_fetch_assoc($users_result)): ?>
                     <option value="<?php echo htmlspecialchars($user['userid']); ?>"><?php echo htmlspecialchars($user['firstname'] . ' ' . $user['lastname']); ?></option>
                     <?php endwhile; ?>

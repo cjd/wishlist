@@ -2,12 +2,14 @@
 include "funcLib.php";
 
 if (isset($_POST['recipient_id']) && isset($_POST['subject']) && isset($_POST['body'])) {
-    $recipient_id = $_POST['recipient_id'];
+    $recipient_ids = $_POST['recipient_id'];
     $subject = $_POST['subject'];
     $body = $_POST['body'];
     $sender_id = $_SESSION['userid'];
 
-    sendEmail($recipient_id, $sender_id, $subject, $body, 0);
+    $recipient_id_string = implode(',', $recipient_ids);
+
+    sendEmail($recipient_id_string, $sender_id, $subject, $body, 0);
 
     header("Location: viewMessages.php");
     exit;
