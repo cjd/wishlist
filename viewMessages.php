@@ -10,9 +10,9 @@ mysqli_stmt_execute($stmt);
 $messages_result = mysqli_stmt_get_result($stmt);
 
 // Fetch all users for the new message dropdown
-$users_query = "SELECT userid, firstname, lastname FROM people WHERE userid != ? ORDER BY lastname, firstname";
+$users_query = "SELECT p.userid, p.firstname, p.lastname FROM people p JOIN viewList vl ON p.userid = vl.pid WHERE vl.viewer = ? AND p.userid != ? ORDER BY p.lastname, p.firstname";
 $stmt_users = mysqli_prepare($link, $users_query);
-mysqli_stmt_bind_param($stmt_users, "s", $user_id);
+mysqli_stmt_bind_param($stmt_users, "ss", $user_id, $user_id);
 mysqli_stmt_execute($stmt_users);
 $users_result = mysqli_stmt_get_result($stmt_users);
 ?>
@@ -20,6 +20,9 @@ $users_result = mysqli_stmt_get_result($stmt_users);
 <head><meta name="viewport" content="width=device-width, initial-scale=1.0" /></head>
 <link rel=stylesheet href=style.css type=text/css>
 <link rel="manifest" href="/manifest.json">
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <title>View Messages</title>
 <BODY>
 <table class="pagetable">
@@ -70,7 +73,7 @@ $users_result = mysqli_stmt_get_result($stmt_users);
         <tr>
             <td>Recipient:</td>
             <td>
-                <select name="recipient_id[]" multiple>
+                <select id="recipient_id" name="recipient_id[]" multiple="multiple" style="width: 300px;">
                     <?php while ($user = mysqli_fetch_assoc($users_result)): ?>
                     <option value="<?php echo htmlspecialchars($user['userid']); ?>"><?php echo htmlspecialchars($user['firstname'] . ' ' . $user['lastname']); ?></option>
                     <?php endwhile; ?>
@@ -96,5 +99,10 @@ $users_result = mysqli_stmt_get_result($stmt_users);
 </td>
 </tr>
 </table>
+<script>
+$(document).ready(function() {
+    $('#recipient_id').select2();
+});
+</script>
 </BODY>
 </HTML>
