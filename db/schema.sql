@@ -90,6 +90,7 @@ CREATE TABLE `items` (
   `link1` varchar(255) DEFAULT '',
   `link1url` varchar(1024) DEFAULT NULL,
   `image` varchar(255) DEFAULT NULL,
+  `createDate` datetime DEFAULT '0000-00-00 00:00:00',
   PRIMARY KEY (`iid`)
 ) ENGINE=MyISAM AUTO_INCREMENT=5569 DEFAULT CHARSET=latin1;
 

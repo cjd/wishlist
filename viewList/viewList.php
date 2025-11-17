@@ -71,6 +71,28 @@ if($confirm == "Ho Home"){
                 }
             });
         });
+
+        var infoModal = document.getElementById("infoModal");
+        var infoModalText = document.getElementById("infoModalText");
+        var closeInfoModal = document.getElementsByClassName("close-info-modal")[0];
+
+        $('.info-icon').on('click', function() {
+            var createDate = $(this).data('create-date');
+            infoModalText.innerHTML = "This item was added on " + createDate;
+            infoModal.style.display = "block";
+        });
+
+        if (closeInfoModal) {
+            closeInfoModal.onclick = function() {
+                infoModal.style.display = "none";
+            }
+        }
+
+        window.onclick = function(event) {
+          if (event.target == infoModal) {
+            infoModal.style.display = "none";
+          }
+        }
     });
     </script>
 </head>
@@ -211,6 +233,12 @@ $rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link
       <textarea name="body" rows="5" cols="50" placeholder="Message" required></textarea><br><br>
       <input type="submit" value="Send Message" class="buttonstyle">
     </form>
+  </div>
+</div>
+<div id="infoModal" class="info-modal">
+  <div class="info-modal-content">
+    <span class="close-info-modal">&times;</span>
+    <p id="infoModalText"></p>
   </div>
 </div>
 <?php

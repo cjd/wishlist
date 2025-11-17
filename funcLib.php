@@ -236,11 +236,10 @@ function convertString_no_escape($str){
  * $recip : The user whos list to print
  * $buyerUserId : The user requesting to view recip's list
  * $name : The full name of $recip
- * $pretty : if equal to 0 then $userid wants printer friendly version
  * $displayPurchases : if equal to 0 then don't indicate if item has 
  *   been purchased
  */
-function printList2($recip, $buyerUserId, $name, $pretty, $displayPurchases = 1){
+function printList2($recip, $buyerUserId, $name, $displayPurchases = 1){
 
   global $link;
   // first need to determine if $buyeruserid has read only access
@@ -279,7 +278,7 @@ function printList2($recip, $buyerUserId, $name, $pretty, $displayPurchases = 1)
   $rs = mysqli_stmt_get_result($stmt);
 
   while($row = mysqli_fetch_assoc($rs)){
-    printCategory($row, $name, $pretty, $displayPurchases, $readOnly, 0, -1, -1);
+    printCategory($row, $name, $displayPurchases, $readOnly, 0, -1, -1);
   }
 
 }
@@ -313,7 +312,7 @@ function printModifyList($userid){
 /* printCategory
  *   if displayPurchases = 0 then the user is modifying his/her list 
  */
-function printCategory($row, $name, $pretty, $displayPurchases, $readOnly, $modifyList, $i, $last, $printConsider = 0){
+function printCategory($row, $name, $displayPurchases, $readOnly, $modifyList, $i, $last, $printConsider = 0){
   global $link;
 
   // handle any special categories first
@@ -432,7 +431,7 @@ function printCategory($row, $name, $pretty, $displayPurchases, $readOnly, $modi
 
   if ($row["cid"] == "") { $row["cid"]=-1;}
   // Now begin iterating through items in this category
-  $stmt = mysqli_prepare($link, "SELECT * FROM items WHERE cid = ? ORDER BY itemSortOrder");
+  $stmt = mysqli_prepare($link, "SELECT *, DATE_FORMAT(createDate, '%M %d, %Y') as createDateFormatted FROM items WHERE cid = ? ORDER BY itemSortOrder");
   mysqli_stmt_bind_param($stmt, "i", $row["cid"]);
   mysqli_stmt_execute($stmt);
   $rs2 = mysqli_stmt_get_result($stmt);
@@ -544,7 +543,7 @@ function printCategory($row, $name, $pretty, $displayPurchases, $readOnly, $modi
     }
     
     if($bought > 0 && $quantity==1){ print "<s>"; }
-    printItem($row2, $pretty, $name, $quantity, $bought);
+    printItem($row2, $name, $quantity, $bought, $row2['createDateFormatted']);
     if($bought > 0 && $quantity==1){ print "</s>"; }
     
     print "</div>"; // close the item content td
@@ -570,7 +569,7 @@ function printCategory($row, $name, $pretty, $displayPurchases, $readOnly, $modi
 
 
 
-function printItem($row2, $pretty, $name, $quantity, $bought){
+function printItem($row2, $name, $quantity, $bought, $createDateFormatted){
     global $base_url;
   global $link;
 
@@ -619,8 +618,13 @@ function printItem($row2, $pretty, $name, $quantity, $bought){
 
   print $text;  
 
+  // Only show info icon if createDate is later than 2020
+  if (strtotime($row2['createDate']) > strtotime('2020-12-31')) {
+    print "<span class='info-icon' data-create-date='" . $row2['createDateFormatted'] . "'>&#9432;</span>";
+  }
+
   //if($row2["userid"] != null and 
-  //   $row2["userid"] == $buyerUserId and $pretty == 0){
+  //   $row2["userid"] == $buyerUserId){
   //  print " <b><a class=menuLinkRed href=\"viewLog.php?recip=" . $recip . "&name=" . $name . "\">[Undo]</a></b>";
   //}
   

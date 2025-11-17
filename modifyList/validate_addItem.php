@@ -86,7 +86,7 @@ if($row = mysqli_fetch_assoc($rs)){
   }
 }
 
-$stmt = mysqli_prepare($link, "INSERT INTO items (iid, cid, addStar, title, description, price, quantity, link1, link1url, subdesc, allowCheck, itemSortOrder) VALUES (null, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+$stmt = mysqli_prepare($link, "INSERT INTO items (iid, cid, addStar, title, description, price, quantity, link1, link1url, subdesc, allowCheck, itemSortOrder, createDate) VALUES (null, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
 mysqli_stmt_bind_param($stmt, "isssdissssi", $cid, $addStar, $title, $description, $price, $quantity, $link1, $link1url, $subdesc, $allowCheck, $iso);
 mysqli_stmt_execute($stmt) or die("Could not execute statement: " . mysqli_stmt_error($stmt));
 
