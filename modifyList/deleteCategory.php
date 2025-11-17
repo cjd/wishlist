@@ -82,7 +82,7 @@ createNavBar("../home.php:Home|modifyList.php:Modify WishList|:Delete Category")
    $rs = mysqli_stmt_get_result($stmt);
 
   while($row = mysqli_fetch_assoc($rs)){
-    printCategory($row, "", 1, 0, 1, 0, -1, -1);
+    printCategory($row, "", 0, 1, 0, -1, -1);
   }
 
 ?>

@@ -92,7 +92,7 @@ printModifyList($userid);
   $mrs = mysqli_stmt_get_result($stmt);
   $mrow = mysqli_fetch_assoc($mrs);
 
-  printCategory($mrow, $_SESSION["fullname"], 1, 0, 0, 1, 0, 0, 1);
+  printCategory($mrow, $_SESSION["fullname"], 0, 0, 1, 0, 0, 1);
 ?>
 
 <center>

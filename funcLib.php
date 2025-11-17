@@ -302,7 +302,7 @@ function printModifyList($userid){
   while($row = mysqli_fetch_assoc($rs)){
     
     if ($row["cid"] != "") {
-        printCategory($row, $_SESSION["fullname"], 1, 0, 0, 1, $i, $last);
+        printCategory($row, $_SESSION["fullname"], 0, 0, 1, $i, $last);
     }
     $i++;
   }
