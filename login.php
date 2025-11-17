@@ -50,6 +50,57 @@ if (!empty($_REQUEST["userid"]) && !empty($_REQUEST["password"])) {
   }
   mysqli_select_db($link,$db_name);
 
+  // Schema update check
+  $query = "SELECT version FROM schema_version";
+  $result = mysqli_query($link, $query);
+  $current_version = 0;
+  if ($result && mysqli_num_rows($result) > 0) {
+      $row = mysqli_fetch_assoc($result);
+      $current_version = $row['version'];
+  } else {
+    // If the schema_version table doesn't exist, we're at version 1
+    $current_version = 1;
+    $v1_check_query = "SHOW TABLES LIKE 'people'";
+    $v1_result = mysqli_query($link, $v1_check_query);
+    if (mysqli_num_rows($v1_result) > 0) {
+        $create_version_table = "CREATE TABLE `schema_version` (`version` int(11) NOT NULL) ENGINE=MyISAM DEFAULT CHARSET=latin1;";
+        mysqli_query($link, $create_version_table);
+        $insert_version = "INSERT INTO `schema_version` (`version`) VALUES (1);";
+        mysqli_query($link, $insert_version);
+    }
+  }
+
+  $schema_files = glob($base_dir . '/db/V*_schema.sql');
+  $highest_version = 0;
+  foreach ($schema_files as $file) {
+      $filename = basename($file);
+      preg_match('/V(\d+)_schema.sql/', $filename, $matches);
+      if (isset($matches[1])) {
+          $version = intval($matches[1]);
+          if ($version > $highest_version) {
+              $highest_version = $version;
+          }
+      }
+  }
+
+  if ($current_version < $highest_version) {
+      for ($i = $current_version + 1; $i <= $highest_version; $i++) {
+          $schema_file = $base_dir . '/db/V' . $i . '_schema.sql';
+          if (file_exists($schema_file)) {
+              $sql = file_get_contents($schema_file);
+              $statements = array_filter(array_map('trim', explode(';', $sql)));
+              foreach ($statements as $statement) {
+                  if (!mysqli_query($link, $statement)) {
+                      // Handle error
+                      error_log("Error applying schema update V" . $i . ": " . mysqli_error($link));
+                  }
+              }
+              $update_query = "UPDATE schema_version SET version = " . $i;
+              mysqli_query($link, $update_query);
+          }
+      }
+  }
+
   $stmt = mysqli_prepare($link, "SELECT * FROM people WHERE userid = ?");
   mysqli_stmt_bind_param($stmt, "s", $_REQUEST["userid"]);
   mysqli_stmt_execute($stmt);

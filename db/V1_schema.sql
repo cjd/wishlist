@@ -168,3 +168,10 @@ CREATE TABLE `viewList` (
   `viewer` varchar(50) NOT NULL DEFAULT '0',
   `allowEdit` char(1) NOT NULL DEFAULT '0'
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+DROP TABLE IF EXISTS `viewList`;
+CREATE TABLE `schema_version` (
+  `version` int(11) NOT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+INSERT INTO `schema_version` (`version`) VALUES (1);
