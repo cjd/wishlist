@@ -105,6 +105,12 @@ printModifyList($userid);
 </td>
 </tr>
 </table>
+<div id="infoModal" class="info-modal">
+  <div class="info-modal-content">
+    <span class="close-info-modal">&times;</span>
+    <p id="infoModalText"></p>
+  </div>
+</div>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     var lists = document.querySelectorAll('.sortable-list');
@@ -147,6 +153,28 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     });
+    
+    var infoModal = document.getElementById("infoModal");
+    var infoModalText = document.getElementById("infoModalText");
+    var closeInfoModal = document.getElementsByClassName("close-info-modal")[0];
+
+    $('.info-icon').on('click', function() {
+        var createDate = $(this).data('create-date');
+        infoModalText.innerHTML = "This item was added on " + createDate;
+        infoModal.style.display = "block";
+    });
+
+    if (closeInfoModal) {
+        closeInfoModal.onclick = function() {
+            infoModal.style.display = "none";
+        }
+    }
+
+    window.onclick = function(event) {
+      if (event.target == infoModal) {
+        infoModal.style.display = "none";
+      }
+    }
 });
 </script>
 </body>
