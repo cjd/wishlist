@@ -490,3 +490,18 @@ input[type=checkbox] {
   text-decoration: none;
   cursor: pointer;
 }
+
+.purchased-checkbox-x {
+  display: inline-block;
+  width: 32px; /* Match checkbox width */
+  height: 32px; /* Match checkbox height */
+  border: 2px solid #ccc; /* Simulate checkbox border */
+  text-align: center;
+  line-height: 30px; /* Vertically center the X */
+  font-size: 24px; /* Size of the X */
+  color: #d9534f; /* Red color for the X */
+  background-color: #f2f2f2; /* Light background */
+  cursor: not-allowed; /* Indicate disabled state */
+  opacity: 0.7; /* Visual cue for disabled */
+  box-sizing: border-box; /* Include padding and border in the element's total width and height */
+}

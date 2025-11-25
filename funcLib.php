@@ -515,24 +515,25 @@ function printCategory($row, $name, $displayPurchases, $readOnly, $modifyList, $
       else{
         // person only wants one of the item so display a checkbox
         if($bought > 0){
-          // disable the box if the item has already been bought
-          $val = "checked=true disabled=true";
+          // Item has been bought, display a custom "X" checkbox
+          print "<span class='purchased-checkbox-x' title='This item has been purchased'>&#10006;</span>"; // Unicode 'X' mark
         }
         else{
+          // Item not bought, display a regular checkbox
           if($readOnly)
             $val = "disabled=true";
           else
             $val = "";
+          
+          if($displayPurchases == 0)
+            $val = "";
+
+          $titley = "";
+          if($displayPurchases == 1)
+            $titley = "title=\"Click here if you purchased this item\"";
+
+          print "<input $titley type='checkbox' name='chk" . $iid . "' " . $val . ">";
         }
-        
-        if($displayPurchases == 0)
-          $val = "";
-
-        $titley = "";
-        if($displayPurchases == 1)
-          $titley = "title=\"Click here if you purchased this item\"";
-
-        print "<input $titley type='checkbox' name='chk" . $iid . "' " . $val  . ">";
         print "</div><div class='item-cell item-content'>";
       }
     }
