@@ -3,3 +3,4 @@ uploads
 config.php
 GEMINI.md
 testing
+.php-cs-fixer.cache
