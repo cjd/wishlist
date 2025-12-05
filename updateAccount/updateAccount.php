@@ -280,6 +280,9 @@ if($_REQUEST["action"] == "addUser"){
 </td>
 </tr>
 </table>
+<form action="updateAccount.php" method=post>
+<input type=hidden name=action value="hideContactInfo">
+<input type=hidden name=target_userid value="<?php echo $userid; ?>">
 <table style="border-collapse: collapse;" id="AutoNumber1" border="0" bordercolor="#111111" cellPadding="2" cellSpacing="0">
 <tr>
 <td colspan=6 align="center" bgcolor="#6702cc">
