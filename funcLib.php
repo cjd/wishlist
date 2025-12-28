@@ -229,6 +229,20 @@ function convertString_no_escape($str){
   return trim(str_replace(chr(34), "&quot;", (str_replace("\r\n", "<br>" , $str))));
 }
 
+function formatMessage($body) {
+    $body = htmlspecialchars($body);
+    $replacements = array(
+        '&lt;b&gt;' => '<b>',
+        '&lt;/b&gt;' => '</b>',
+        '&lt;p&gt;' => '<p>',
+        '&lt;/p&gt;' => '</p>',
+        '&lt;br&gt;' => '<br>',
+        '&lt;br/&gt;' => '<br>',
+        '&lt;br /&gt;' => '<br>'
+    );
+    return nl2br(str_replace(array_keys($replacements), array_values($replacements), $body));
+}
+
 
 /* printList2
  *

@@ -59,7 +59,7 @@ $users_result = mysqli_stmt_get_result($stmt_users);
     </tr>
     <tr>
         <td colspan="5" class="<?php echo $message['is_read'] ? 'viewpurchases2' : 'viewpurchases1'; ?>">
-            <?php echo nl2br(htmlspecialchars($message['body'])); ?>
+            <?php echo formatMessage($message['body']); ?>
         </td>
     </tr>
     <?php endwhile; ?>
@@ -93,7 +93,7 @@ $users_result = mysqli_stmt_get_result($stmt_users);
     </tr>
     <tr>
         <td colspan="4" class="<?php echo $message['is_read'] ? 'viewpurchases2' : 'viewpurchases1'; ?>">
-            <?php echo nl2br(htmlspecialchars($message['body'])); ?>
+            <?php echo formatMessage($message['body']); ?>
         </td>
     </tr>
     <?php endwhile; ?>

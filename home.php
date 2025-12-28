@@ -39,7 +39,7 @@ if (mysqli_num_rows($notifications_result) > 0) {
     echo "</script>";
 }
 
-if (isset ($_REQUEST["lastname"])) {
+if (isset($_REQUEST["lastname"])) {
     $lastname = $_REQUEST["lastname"];
 } else {
     $lastname = "";
@@ -48,7 +48,7 @@ unset($_SESSION["euserid"]);
 
 $query = "select people.*, viewList.allowEdit from people, viewList where pid = people.userid and viewer='" . $userid . "' order by lastname, firstname";
 
-$result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+$result = mysqli_query($link, $query) or die("Could not query: " . mysqli_error($link));
 
 $num_rows = mysqli_num_rows($result);
 
@@ -79,21 +79,21 @@ $(document).ready(function() {
 });
 
 var contactInfo = {};
-<?php 
+<?php
    mysqli_data_seek($result, 0);
-   while($row = mysqli_fetch_assoc($result)){
-           $allowView = $row["viewContactInfo"] ?? false;
-           $new_userid = $row["userid"];
-           $name = $row["firstname"] . ' ' . $row["lastname"] . ' ' .$row["suffix"];
-           $email = $row["email"];
-           if ($allowView) {
-             $contact_string = $name."\\n".$email."\\n";
-             if ($row['bday'] <> 0) {
-                $contact_string .= "Birthday: ".$row['bmonth']." ".$row['bday'];
-             }
-             echo "contactInfo['".$new_userid."'] = \"".$contact_string."\";\n";
-           }
+while ($row = mysqli_fetch_assoc($result)) {
+    $allowView = $row["viewContactInfo"] ?? false;
+    $new_userid = $row["userid"];
+    $name = $row["firstname"] . ' ' . $row["lastname"] . ' ' .$row["suffix"];
+    $email = $row["email"];
+    if ($allowView) {
+        $contact_string = $name."\\n".$email."\\n";
+        if ($row['bday'] <> 0) {
+            $contact_string .= "Birthday: ".$row['bmonth']." ".$row['bday'];
+        }
+        echo "contactInfo['".$new_userid."'] = \"".$contact_string."\";\n";
     }
+}
 ?>
   var theObject;
   navName = navigator.appName;
@@ -130,20 +130,16 @@ createNavBar("home.php:Home|", true);
 
 $season = getSeason();
 
-if($season == 1){
-  $image = "winter.png";
-}
-elseif($season == 2){
-  $image = "spring.png";
-}
-elseif($season == 3){
-  $image = "summer.png";
-}
-elseif($season == 4){
-  $image = "autumn.png";
-}
-else{
-  $image = "waving_santa2.gif";
+if ($season == 1) {
+    $image = "winter.png";
+} elseif ($season == 2) {
+    $image = "spring.png";
+} elseif ($season == 3) {
+    $image = "summer.png";
+} elseif ($season == 4) {
+    $image = "autumn.png";
+} else {
+    $image = "waving_santa2.gif";
 }
 $image = "wishlist.png";
 ?>
@@ -165,35 +161,35 @@ $image = "wishlist.png";
 <tr><td valign="center">
 <?php
 
-if ($num_rows > 0)
-     mysqli_data_seek($result, 0);
+if ($num_rows > 0) {
+    mysqli_data_seek($result, 0);
+}
 
 $oldlast = "";
 $div_last = "<div id='lastnames'><div style='display:none;'>";
 $div_first = "";
-while($row = mysqli_fetch_assoc($result)){
-  if ($oldlast != $row['lastname']) {
-    $oldlast=$row['lastname'];
-    $div_last .= "<br></div><button class='buttonstyle' style='width:100%;' onclick=\"showfamily('#".$row['lastname']."')\" >".$row['lastname']."</button><br>\n";
-    $div_last .= "<div id='".$row['lastname']."' style='display:none;'>";
-  }
+while ($row = mysqli_fetch_assoc($result)) {
+    if ($oldlast != $row['lastname']) {
+        $oldlast = $row['lastname'];
+        $div_last .= "<br></div><button class='buttonstyle' style='width:100%;' onclick=\"showfamily('#".$row['lastname']."')\" >".$row['lastname']."</button><br>\n";
+        $div_last .= "<div id='".$row['lastname']."' style='display:none;'>";
+    }
 
     $name =  $row['firstname'] . ' ' . $row['lastname'];
 
-    $div_last.= "<button class='lightbutton' style='width:100%;' onclick='window.location=\"viewList/viewList.php?recip=" . $row['userid']. "&name=" . $name . "\"' onmouseover='show_record(this, theForm.contact, \"" . $row['userid']. "\")'>" . $name . "</button><br>\n";
+    $div_last .= "<button class='lightbutton' style='width:100%;' onclick='window.location=\"viewList/viewList.php?recip=" . $row['userid']. "&name=" . $name . "\"' onmouseover='show_record(this, theForm.contact, \"" . $row['userid']. "\")'>" . $name . "</button><br>\n";
 }
 $div_last .= "</div>\n</div>\n";
 
 
-if($num_rows > 0){
-  if ($lastname != "") {
-    $message = "Click on a name to view their Wishlist";
-  } else {
-    $message = "Click on a family to view their members";
-  }
-}
-else{
-  $message = "You cannot view anybody's list\\nGoto Update Your Account > Manage List Access to add people";
+if ($num_rows > 0) {
+    if ($lastname != "") {
+        $message = "Click on a name to view their Wishlist";
+    } else {
+        $message = "Click on a family to view their members";
+    }
+} else {
+    $message = "You cannot view anybody's list\\nGoto Update Your Account > Manage List Access to add people";
 }
 
 $textarea = "<div id=message><form name=theForm><textarea COLS='30' ROWS='3' class='contact' WRAP='physical' noscroll NAME='contact' readonly>" . $message ."</textarea></form></div>";
@@ -214,11 +210,11 @@ echo $textarea."\n";
 <button class='buttonstyle' style='width:100%;' onclick="location.href='messages.php'">Messages</button><br/>
 <button class='buttonstyle' style='width:100%;' onclick="location.href='updateAccount/updateAccount.php'">Update Your Account</button><br/>
 <?php
-if($_SESSION["admin"] == 1){
-?>
+if ($_SESSION["admin"] == 1) {
+    ?>
 <button class='buttonstyle' style='width:100%;' onclick="location.href='admin.php'">Admin Page</button><br/>
 <?php
-   }
+}
 ?>
 </div>
 </td></tr></table>
@@ -247,7 +243,7 @@ if (mysqli_num_rows($unread_messages_result) > 0) {
       <div class="message">
         <h3><strong>Subject:</strong> <?php echo htmlspecialchars($message['subject']); ?></h3>
         <p><strong>From:</strong> <?php echo $message['sender_id'] ? htmlspecialchars($message['firstname'] . ' ' . $message['lastname']) : 'System'; ?></p>
-        <p><?php echo nl2br(htmlspecialchars($message['body'])); ?></p>
+        <p><?php echo formatMessage($message['body']); ?></p>
         <form action="markMessageAsRead.php" method="post" class="mark-as-read-form">
           <input type="hidden" name="message_id" value="<?php echo $message['message_id']; ?>">
           <button type="submit" name="decision" value="read" class="buttonstyle">Mark as Read</button>
