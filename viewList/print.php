@@ -17,6 +17,7 @@ include "../funcLib.php";
 
 $recip = $_REQUEST["recip"];
 $name = $_REQUEST["name"];
+$userid = $_SESSION["userid"];
 
 ?>
 <HTML>

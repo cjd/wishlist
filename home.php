@@ -45,6 +45,7 @@ if (isset($_REQUEST["lastname"])) {
     $lastname = "";
 }
 unset($_SESSION["euserid"]);
+$userid = $_SESSION["userid"];
 
 $query = "select people.*, viewList.allowEdit from people, viewList where pid = people.userid and viewer='" . $userid . "' order by lastname, firstname";
 

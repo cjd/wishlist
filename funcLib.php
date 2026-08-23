@@ -267,6 +267,10 @@ function printList2($recip, $buyerUserId, $name, $displayPurchases = 1){
     $readOnly = $row["readOnly"];
   }
 
+  if($recip == $buyerUserId){
+    $readOnly = 0;
+  }
+
   if($readOnly)
     print "<h2>You have Read Only Access to this list</h2>";
 

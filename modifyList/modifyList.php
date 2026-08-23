@@ -42,7 +42,21 @@ createNavBar("../home.php:Home|:Modify WishList");
 ?>
 
 <table width="100%"><tr><td>
-<font face=arial size=5 color=red><b><?php if (!array_key_exists("recip",$_REQUEST) || $_REQUEST["recip"] == "") { echo "Your "; } else { echo $_REQUEST["recip"];} ?> List</b></font> - 
+<?php
+$displayName = "Your ";
+if ($userid != $_SESSION["userid"]) {
+    $stmt_name = mysqli_prepare($link, "SELECT firstname FROM people WHERE userid = ?");
+    mysqli_stmt_bind_param($stmt_name, "s", $userid);
+    mysqli_stmt_execute($stmt_name);
+    $res_name = mysqli_stmt_get_result($stmt_name);
+    if ($row_name = mysqli_fetch_assoc($res_name)) {
+        $displayName = $row_name["firstname"] . "'s ";
+    } else {
+        $displayName = $userid . "'s ";
+    }
+}
+?>
+<font face=arial size=5 color=red><b><?php echo $displayName; ?>List</b></font> - 
 <font size=-1 face=arial><b>All check marks have been removed</b></font>
 </td></tr></table>
 

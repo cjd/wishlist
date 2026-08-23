@@ -23,7 +23,7 @@ if (isset($_REQUEST["confirm"])) {
     $confirm = $_REQUEST["confirm"];
 }
 
-if ($confirm == "Ho Home") {
+if ($confirm == "Go Home" || $confirm == "Ho Home") {
     header("Location: " . getFullPath("../home.php"));
 }
 ?>
@@ -111,7 +111,6 @@ if ($recip != $userid) {
     $allowEdit = 0;
     while ($row = mysqli_fetch_assoc($rs)) {
         if ($row["allowEdit"] == "1") {
-            $userid = $recip;
             $allowEdit = 1;
             $_SESSION["euserid"] = $recip;
         }
