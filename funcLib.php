@@ -839,7 +839,7 @@ function deleteItem($iid, $userid, $fullname, $base_dir){
         "had been purchased. This warning is sent out if a person deletes an item (which has been " .
         "purchased) from their list " .
         "within 20 days of their birthday or Christmas<br>" .
-        "<br>Day until " . $fullname . "'s bday is " . $diff . "<br>Days till Christmas=" . $xmas;
+        "<br>" . $diff . " days until " . $fullname . "'s birthday and " . $xmas ." days until Christmas";
       sendEmail($to,$from,$subject,$message,0);
     } 
   }
