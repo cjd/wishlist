@@ -230,17 +230,81 @@ function convertString_no_escape($str){
 }
 
 function formatMessage($body) {
-    $body = htmlspecialchars($body);
-    $replacements = array(
+    // 1. Strip script and style blocks entirely
+    $body = preg_replace('~<script\b[^>]*>.*?</script>~is', '', $body);
+    $body = preg_replace('~<style\b[^>]*>.*?</style>~is', '', $body);
+
+    // 2. Strip document structural tags (<html>, </html>, <body>, </body>, <head>, etc.)
+    $body = preg_replace('~</?(?:html|body|head|meta|title|doctype)\b[^>]*>~is', '', $body);
+
+    // 3. Escape HTML special characters for security
+    $body = htmlspecialchars($body, ENT_QUOTES, 'UTF-8');
+
+    // 4. Restore safe formatting tags (case-insensitive)
+    $simple_replacements = array(
+        // Bold / strong
         '&lt;b&gt;' => '<b>',
         '&lt;/b&gt;' => '</b>',
+        '&lt;strong&gt;' => '<strong>',
+        '&lt;/strong&gt;' => '</strong>',
+        // Italic / emphasis
+        '&lt;i&gt;' => '<i>',
+        '&lt;/i&gt;' => '</i>',
+        '&lt;em&gt;' => '<em>',
+        '&lt;/em&gt;' => '</em>',
+        // Underline / strike
+        '&lt;u&gt;' => '<u>',
+        '&lt;/u&gt;' => '</u>',
+        '&lt;s&gt;' => '<s>',
+        '&lt;/s&gt;' => '</s>',
+        '&lt;strike&gt;' => '<strike>',
+        '&lt;/strike&gt;' => '</strike>',
+        '&lt;del&gt;' => '<del>',
+        '&lt;/del&gt;' => '</del>',
+        // Paragraph / line break / horizontal rule
         '&lt;p&gt;' => '<p>',
         '&lt;/p&gt;' => '</p>',
         '&lt;br&gt;' => '<br>',
         '&lt;br/&gt;' => '<br>',
-        '&lt;br /&gt;' => '<br>'
+        '&lt;br /&gt;' => '<br>',
+        '&lt;hr&gt;' => '<hr>',
+        '&lt;hr/&gt;' => '<hr>',
+        '&lt;hr /&gt;' => '<hr>',
+        // Lists / quotes / directories
+        '&lt;dir&gt;' => '<dir>',
+        '&lt;/dir&gt;' => '</dir>',
+        '&lt;ul&gt;' => '<ul>',
+        '&lt;/ul&gt;' => '</ul>',
+        '&lt;ol&gt;' => '<ol>',
+        '&lt;/ol&gt;' => '</ol>',
+        '&lt;li&gt;' => '<li>',
+        '&lt;/li&gt;' => '</li>',
+        '&lt;blockquote&gt;' => '<blockquote>',
+        '&lt;/blockquote&gt;' => '</blockquote>',
+        // Closing tags for styled elements
+        '&lt;/font&gt;' => '</font>',
+        '&lt;/a&gt;' => '</a>'
     );
-    return nl2br(str_replace(array_keys($replacements), array_values($replacements), $body));
+    $body = str_ireplace(array_keys($simple_replacements), array_values($simple_replacements), $body);
+
+    // 5. Restore <font color="..."> with alphanumeric / hex / color names
+    $body = preg_replace(
+        '/&lt;font\s+color=(?:&quot;|&#039;|&#39;|\"|\')?([a-zA-Z0-9#]+)(?:&quot;|&#039;|&#39;|\"|\')?\s*&gt;/i',
+        '<font color="$1">',
+        $body
+    );
+
+    // 6. Restore safe <a href="..."> links (http, https, mailto)
+    $body = preg_replace(
+        '/&lt;a\s+href=(?:&quot;|&#039;|&#39;|\"|\')((?:https?|mailto):[^\s&"\'<>]+)(?:&quot;|&#039;|&#39;|\"|\')\s*&gt;/i',
+        '<a href="$1" target="_blank" rel="noopener noreferrer">',
+        $body
+    );
+
+    // 7. Avoid duplicate line breaks after existing HTML block / break tags
+    $body = preg_replace('/(<(?:br|\/p|p|hr|dir|\/dir|ul|\/ul|ol|\/ol|li|\/li)[^>]*>)\s*[\r\n]+/i', '$1', $body);
+
+    return nl2br(trim($body));
 }
 
 
@@ -775,8 +839,7 @@ function deleteItem($iid, $userid, $fullname, $base_dir){
         "had been purchased. This warning is sent out if a person deletes an item (which has been " .
         "purchased) from their list " .
         "within 20 days of their birthday or Christmas<br>" .
-        "<br>Day until " . $fullname . "'s bday is " . $diff . "<br>Days till Christmas=" . $xmas . 
-        "</body></html>";
+        "<br>Day until " . $fullname . "'s bday is " . $diff . "<br>Days till Christmas=" . $xmas;
       sendEmail($to,$from,$subject,$message,0);
     } 
   }
