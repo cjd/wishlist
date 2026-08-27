@@ -830,7 +830,7 @@ function deleteItem($iid, $userid, $fullname, $base_dir){
       mysqli_data_seek($rs1, 0);
       $row1 = mysqli_fetch_assoc($rs1);      
 
-      $from = $userid;
+      $from = ""; // System message
       $subject = $fullname . "'s WishList has been modified";
       $message = "<p><font color=indianred><b>" . $fullname .
         "</b></font> has <b>deleted</b> the following item that you have already bought <dir>" .

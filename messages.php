@@ -76,8 +76,8 @@ $users_result = mysqli_stmt_get_result($stmt_users);
         <th>Status</th>
     </tr>
     <?php
-    // Fetch sent messages (excluding automated list modification notifications)
-    $sent_messages_query = "SELECT m.*, p.firstname, p.lastname FROM messages m LEFT JOIN people p ON m.recipient_id = p.userid WHERE m.sender_id = ? AND NOT (COALESCE(m.subject, '') LIKE '%WishList has been modified%' AND COALESCE(m.body, '') LIKE '%had no way of knowing that%') ORDER BY m.timestamp DESC";
+    // Fetch sent messages
+    $sent_messages_query = "SELECT m.*, p.firstname, p.lastname FROM messages m LEFT JOIN people p ON m.recipient_id = p.userid WHERE m.sender_id = ? ORDER BY m.timestamp DESC";
     $stmt_sent = mysqli_prepare($link, $sent_messages_query);
     mysqli_stmt_bind_param($stmt_sent, "s", $user_id);
     mysqli_stmt_execute($stmt_sent);
