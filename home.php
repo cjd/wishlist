@@ -15,25 +15,34 @@
 
 include "funcLib.php";
 
+unset($_SESSION["euserid"]);
+$userid = $_SESSION["userid"];
+
 // Fetch pending access requests
-$pending_requests_query = "SELECT ar.*, p.firstname, p.lastname FROM accessRequests ar JOIN people p ON ar.requesterId = p.userid WHERE ar.targetId = '" . $_SESSION['userid'] . "' AND ar.status = 'pending'";
-$pending_requests_result = mysqli_query($link, $pending_requests_query);
+$pending_requests_query = "SELECT ar.*, p.firstname, p.lastname FROM accessRequests ar JOIN people p ON ar.requesterId = p.userid WHERE ar.targetId = ? AND ar.status = 'pending'";
+$stmt_pending = mysqli_prepare($link, $pending_requests_query);
+mysqli_stmt_bind_param($stmt_pending, "s", $userid);
+mysqli_stmt_execute($stmt_pending);
+$pending_requests_result = mysqli_stmt_get_result($stmt_pending);
 
 // Fetch notifications for the requester
-$notifications_query = "SELECT ar.*, p.firstname, p.lastname FROM accessRequests ar JOIN people p ON ar.targetId = p.userid WHERE ar.requesterId = '" . $_SESSION['userid'] . "' AND ar.status != 'pending' AND ar.notified = 0";
-$notifications_result = mysqli_query($link, $notifications_query);
+$notifications_query = "SELECT ar.*, p.firstname, p.lastname FROM accessRequests ar JOIN people p ON ar.targetId = p.userid WHERE ar.requesterId = ? AND ar.status != 'pending' AND ar.notified = 0";
+$stmt_notif = mysqli_prepare($link, $notifications_query);
+mysqli_stmt_bind_param($stmt_notif, "s", $userid);
+mysqli_stmt_execute($stmt_notif);
+$notifications_result = mysqli_stmt_get_result($stmt_notif);
 
 if (mysqli_num_rows($notifications_result) > 0) {
     echo "<script>";
     while ($notification = mysqli_fetch_assoc($notifications_result)) {
         $targetName = $notification['firstname'] . ' ' . $notification['lastname'];
         if ($notification['status'] == 'approved') {
-            echo "alert('Your request to view " . $targetName . "\\'s list has been approved.');";
+            echo "alert('Your request to view " . addslashes($targetName) . "\\'s list has been approved.');";
         } else {
-            echo "alert('Your request to view " . $targetName . "\\'s list has been denied.');";
+            echo "alert('Your request to view " . addslashes($targetName) . "\\'s list has been denied.');";
         }
         // Mark as notified
-        $update_notified_query = "UPDATE accessRequests SET notified = 1 WHERE id = " . $notification['id'];
+        $update_notified_query = "UPDATE accessRequests SET notified = 1 WHERE id = " . intval($notification['id']);
         mysqli_query($link, $update_notified_query);
     }
     echo "</script>";
@@ -44,12 +53,12 @@ if (isset($_REQUEST["lastname"])) {
 } else {
     $lastname = "";
 }
-unset($_SESSION["euserid"]);
-$userid = $_SESSION["userid"];
 
-$query = "select people.*, viewList.allowEdit from people, viewList where pid = people.userid and viewer='" . $userid . "' order by lastname, firstname";
-
-$result = mysqli_query($link, $query) or die("Could not query: " . mysqli_error($link));
+$query = "SELECT people.*, MAX(viewList.allowEdit) as allowEdit, MAX(viewList.viewContactInfo) as viewContactInfo FROM people JOIN viewList ON pid = people.userid WHERE viewList.viewer = ? GROUP BY people.userid ORDER BY people.lastname, people.firstname";
+$stmt_people = mysqli_prepare($link, $query);
+mysqli_stmt_bind_param($stmt_people, "s", $userid);
+mysqli_stmt_execute($stmt_people);
+$result = mysqli_stmt_get_result($stmt_people);
 
 $num_rows = mysqli_num_rows($result);
 
@@ -81,18 +90,20 @@ $(document).ready(function() {
 
 var contactInfo = {};
 <?php
-   mysqli_data_seek($result, 0);
-while ($row = mysqli_fetch_assoc($result)) {
-    $allowView = $row["viewContactInfo"] ?? false;
-    $new_userid = $row["userid"];
-    $name = $row["firstname"] . ' ' . $row["lastname"] . ' ' .$row["suffix"];
-    $email = $row["email"];
-    if ($allowView) {
-        $contact_string = $name."\\n".$email."\\n";
-        if ($row['bday'] <> 0) {
-            $contact_string .= "Birthday: ".$row['bmonth']." ".$row['bday'];
+if ($num_rows > 0) {
+    mysqli_data_seek($result, 0);
+    while ($row = mysqli_fetch_assoc($result)) {
+        $allowView = !empty($row["viewContactInfo"]);
+        $new_userid = $row["userid"];
+        $name = trim($row["firstname"] . ' ' . $row["lastname"] . ' ' . ($row["suffix"] ?? ''));
+        $email = $row["email"] ?? '';
+        if ($allowView) {
+            $contact_string = $name . "\n" . $email . "\n";
+            if (!empty($row['bday']) && $row['bday'] != 0) {
+                $contact_string .= "Birthday: " . $row['bmonth'] . " " . $row['bday'];
+            }
+            echo "contactInfo[" . json_encode($new_userid) . "] = " . json_encode($contact_string) . ";\n";
         }
-        echo "contactInfo['".$new_userid."'] = \"".$contact_string."\";\n";
     }
 }
 ?>
@@ -166,21 +177,35 @@ if ($num_rows > 0) {
     mysqli_data_seek($result, 0);
 }
 
-$oldlast = "";
-$div_last = "<div id='lastnames'><div style='display:none;'>";
+$oldlast = null;
+$div_last = "<div id='lastnames'>";
 $div_first = "";
 while ($row = mysqli_fetch_assoc($result)) {
-    if ($oldlast != $row['lastname']) {
-        $oldlast = $row['lastname'];
-        $div_last .= "<br></div><button class='buttonstyle' style='width:100%;' onclick=\"showfamily('#".$row['lastname']."')\" >".$row['lastname']."</button><br>\n";
-        $div_last .= "<div id='".$row['lastname']."' style='display:none;'>";
+    $family_name = trim($row['lastname'] ?? '');
+    $display_family = ($family_name !== '') ? $family_name : 'Other';
+
+    if ($oldlast === null || strcasecmp($oldlast, $family_name) !== 0) {
+        if ($oldlast !== null) {
+            $div_last .= "<br></div>\n";
+        }
+        $oldlast = $family_name;
+        $family_id = "fam_" . md5($family_name);
+        $div_last .= "<button class='buttonstyle' style='width:100%;' onclick=\"showfamily('#" . $family_id . "')\" >" . htmlspecialchars($display_family) . "</button><br>\n";
+        $div_last .= "<div id='" . $family_id . "' style='display:none;'>";
     }
 
-    $name =  $row['firstname'] . ' ' . $row['lastname'];
+    $name = trim($row['firstname'] . ' ' . $row['lastname'] . ' ' . ($row['suffix'] ?? ''));
+    $name_url = urlencode($name);
+    $recip_url = urlencode($row['userid']);
+    $name_esc = htmlspecialchars($name, ENT_QUOTES);
+    $userid_js = htmlspecialchars(json_encode($row['userid']), ENT_QUOTES);
 
-    $div_last .= "<button class='lightbutton' style='width:100%;' onclick='window.location=\"viewList/viewList.php?recip=" . $row['userid']. "&name=" . $name . "\"' onmouseover='show_record(this, theForm.contact, \"" . $row['userid']. "\")'>" . $name . "</button><br>\n";
+    $div_last .= "<button class='lightbutton' style='width:100%;' onclick='window.location=\"viewList/viewList.php?recip=" . $recip_url . "&name=" . $name_url . "\"' onmouseover='show_record(this, theForm.contact, " . $userid_js . ")'>" . $name_esc . "</button><br>\n";
 }
-$div_last .= "</div>\n</div>\n";
+if ($oldlast !== null) {
+    $div_last .= "</div>\n";
+}
+$div_last .= "</div>\n";
 
 
 if ($num_rows > 0) {

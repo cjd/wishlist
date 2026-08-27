@@ -24,6 +24,7 @@ if (isset($_REQUEST["confirm"])) {
 }
 
 if ($confirm == "Go Home" || $confirm == "Ho Home") {
+    unset($_SESSION["euserid"]);
     header("Location: " . getFullPath("../home.php"));
 }
 ?>
@@ -112,7 +113,6 @@ if ($recip != $userid) {
     while ($row = mysqli_fetch_assoc($rs)) {
         if ($row["allowEdit"] == "1") {
             $allowEdit = 1;
-            $_SESSION["euserid"] = $recip;
         }
     }
     $query = "select lastViewDate from comments, viewList where comments.userid=viewList.pid and pid='" . $recip . "' and viewer='" . $userid . "' and comment_userid!='" . $userid . "' and date > lastViewDate";
@@ -272,6 +272,11 @@ if ($row_edit = mysqli_fetch_assoc($rs_edit)) {
 }
 
 if (($recip == $_SESSION["userid"] || $canEdit) and $confirm == "Edit List") {
+    if ($recip != $_SESSION["userid"]) {
+        $_SESSION["euserid"] = $recip;
+    } else {
+        unset($_SESSION["euserid"]);
+    }
     print "<meta http-equiv=\"refresh\" content=\"0;url=../modifyList/modifyList.php\">";
     print "</body></html>";
     return;
