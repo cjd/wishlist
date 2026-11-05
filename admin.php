@@ -144,7 +144,7 @@ elseif($_REQUEST["action"] == "commitAdd"){
     $password_hash = password_hash($password, PASSWORD_DEFAULT);
 
     $stmt = mysqli_prepare($link, "INSERT INTO people (userid, firstname, lastname, suffix, email, password, lastLoginDate, lastModDate) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())");
-    mysqli_stmt_bind_param($stmt, "sssss", $desiredUserid, $fname, $lname, $suffix, $email, $password_hash);
+    mysqli_stmt_bind_param($stmt, "ssssss", $desiredUserid, $fname, $lname, $suffix, $email, $password_hash);
     
     // first add them to the people table
     mysqli_stmt_execute($stmt) or die("Could not execute statement: " . mysqli_stmt_error($stmt));
