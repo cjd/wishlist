@@ -160,8 +160,9 @@ elseif ($action == "hideContactInfo"){
   
 }
 ?>
-
+<!DOCTYPE html>
 <HTML>
+<head><meta name="viewport" content="width=device-width, initial-scale=1.0" /></head>
 <link rel=stylesheet href=../style.css type=text/css>
 
 <title>Update Account Information</title>

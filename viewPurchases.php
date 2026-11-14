@@ -16,17 +16,14 @@
 include "funcLib.php";
 $userid = $_SESSION["userid"];
 ?>
-
+<!DOCTYPE html>
 <HTML>
 
-<head><meta name="viewport" content="width=device-width, initial-scale=1.0" /></head>
-
-<link rel=stylesheet href=style.css type=text/css>
-
 <head>
-</head>
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel=stylesheet href=style.css type=text/css>
 <title>Your Purchases</title>
+</head>
 
 <BODY>
 <table class=pagetable>

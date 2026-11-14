@@ -16,6 +16,7 @@ mysqli_stmt_bind_param($stmt_users, "ss", $user_id, $user_id);
 mysqli_stmt_execute($stmt_users);
 $users_result = mysqli_stmt_get_result($stmt_users);
 ?>
+<!DOCTYPE html>
 <HTML>
 <head><meta name="viewport" content="width=device-width, initial-scale=1.0" /></head>
 <link rel=stylesheet href=style.css type=text/css>
