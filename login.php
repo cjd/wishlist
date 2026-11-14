@@ -54,7 +54,7 @@ if(isset($_SESSION['userid'])){
 }
 
 $displayError = True;
-$errorMessage = "Please Sign In";
+$errorMessage = !empty($_GET['expired']) ? "Your session has expired due to inactivity. Please sign in again." : "Please Sign In";
 
 // Check if user is temporarily locked out due to repeated failed logins
 if (!empty($_SESSION['login_lockout_until']) && time() < $_SESSION['login_lockout_until']) {
@@ -159,6 +159,7 @@ if (!empty($_SESSION['login_lockout_until']) && time() < $_SESSION['login_lockou
       unset($_SESSION['login_attempts']);
       unset($_SESSION['login_lockout_until']);
 
+      $_SESSION['last_activity'] = time();
       $_SESSION["userid"] = $row["userid"];
       $_SESSION["fullname"] = $row["firstname"] . " " . $row["lastname"] . ' ' . $row["suffix"];
       $_SESSION["admin"] = $row["admin"];
