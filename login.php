@@ -23,6 +23,15 @@ if(!isset($base_dir)){
   exit;
 }
 
+if (PHP_VERSION_ID >= 70300) {
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path' => '/',
+        'httponly' => true,
+        'samesite' => 'Lax',
+        'secure' => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+    ]);
+}
 session_name("WishListSite");
 session_start();
 
@@ -35,7 +44,7 @@ if (isset($_REQUEST["action"])) {
 if(isset($_SESSION['userid'])){
    // already logged in
    header("Location: home.php");
-   return;
+   exit;
 }
 
 $displayError = True;
@@ -45,8 +54,8 @@ if (!empty($_REQUEST["userid"]) && !empty($_REQUEST["password"])) {
 
   $link = mysqli_connect($db_loc, $db_userid, $db_pass);
   if(!$link){
-    sendEmail($admin_email, "", "Database is dead", "umm, the database is dead", 0);
-    die("<p><font size=+2>Danger Will Robinson!!!!  It looks like the database is dead.<p>Try back at the top of the hour.</big>");
+    error_log("Database connection failed: " . mysqli_connect_error());
+    die("<p><font size=+2>Danger Will Robinson! It looks like the database is down.<p>Please try again later.</font>");
   }
   mysqli_select_db($link,$db_name);
 
@@ -107,6 +116,7 @@ if (!empty($_REQUEST["userid"]) && !empty($_REQUEST["password"])) {
   $result = mysqli_stmt_get_result($stmt);
 
   if ($row = mysqli_fetch_assoc($result)) {
+    $passValidate = false;
     $password_from_db = $row["password"];
     $submitted_password = $_REQUEST["password"];
 
@@ -126,8 +136,11 @@ if (!empty($_REQUEST["userid"]) && !empty($_REQUEST["password"])) {
         mysqli_stmt_execute($update_stmt);
     }
 
-    if($passValidate){
-      session_start();
+    if(!empty($passValidate)){
+      if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+      }
+      session_regenerate_id(true);
 
       $_SESSION["userid"] = $row["userid"];
       $_SESSION["fullname"] = $row["firstname"] . " " . $row["lastname"] . ' ' . $row["suffix"];
@@ -145,13 +158,13 @@ if (!empty($_REQUEST["userid"]) && !empty($_REQUEST["password"])) {
       }
       $_SESSION["messages"] = $messages;
       
-      header("Location: home.php");
+      $stmt_notif = mysqli_prepare($link, "UPDATE people SET lastLoginDate = NOW() WHERE userid = ?");
+      mysqli_stmt_bind_param($stmt_notif, "s", $row["userid"]);
+      mysqli_stmt_execute($stmt_notif);
+
       mysqli_free_result($result);
-      
-      $query = "update people set lastLoginDate=NOW() where userid='" .
-        $row["userid"] . "'";
-      mysqli_query($link, $query) or die("Could not query: " . mysqli_error($link));
-      
+
+      header("Location: home.php");
       exit;
     }
   }

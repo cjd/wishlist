@@ -42,26 +42,30 @@ $password = isset($_REQUEST["password"]) ? $_REQUEST["password"] : "";
 if($userid != ""){
 
    if(isset($_REQUEST["changePassword"]) && $_REQUEST["changePassword"] == "true"){
-     
-     // come up with random password
-     $salt = "abchefghjkmnpqrstuvwxyz0123456789";
-     srand((double)microtime()*1000000); 
-     $i = 0;
-     $pass = "";
-     while ($i <= 7) {
-       $num = rand() % 33;
-       $tmp = substr($salt, $num, 1);
-       $pass = $pass . $tmp;
-       $i++;
+     $to = $_REQUEST["recipient"] ?? "";
+
+     // Verify the recipient is an authorized contact for this user
+     $check_recipient = mysqli_prepare($link, "SELECT p.userid FROM people p JOIN viewList vl ON p.userid = vl.pid WHERE vl.viewer = ? AND p.userid = ? AND p.userid != ?");
+     mysqli_stmt_bind_param($check_recipient, "sss", $userid, $to, $userid);
+     mysqli_stmt_execute($check_recipient);
+     $res_recipient = mysqli_stmt_get_result($check_recipient);
+     if (mysqli_num_rows($res_recipient) == 0) {
+         die("Invalid or unauthorized recipient selected.");
      }
      
-     // Secure update
+     // Generate secure random password
+     $salt = "abcdefghjkmnpqrstuvwxyz23456789";
+     $pass = "";
+     for ($i = 0; $i < 8; $i++) {
+       $pass .= $salt[random_int(0, strlen($salt) - 1)];
+     }
+     
+     // Modern password hash update
+     $password_hash = password_hash($pass, PASSWORD_DEFAULT);
      $stmt = mysqli_prepare($link, "UPDATE people SET password=? WHERE userid=?");
-     $md5pass = md5($pass);
-     mysqli_stmt_bind_param($stmt, "ss", $md5pass, $userid);
+     mysqli_stmt_bind_param($stmt, "ss", $password_hash, $userid);
      mysqli_stmt_execute($stmt);
 
-     $to = $_REQUEST["recipient"];
      $from = ""; // System message
      $subject = "Password Reset for " . $userid;
      $message = "The password for user <b>" . $userid . "</b> has been reset.<br>" .
@@ -106,7 +110,7 @@ if($userid != ""){
      <form name=theForm method=post action=forgotPassword.php>
 
      <input type=hidden name=changePassword value="true">
-     <input type=hidden name=userid value=<?php echo htmlspecialchars($_REQUEST["userid"]) ?>>
+     <input type=hidden name=userid value="<?php echo htmlspecialchars($_REQUEST["userid"]) ?>">
      
      <h3>Reset Password for <?php echo htmlspecialchars($row["firstname"] . " " . $row["lastname"]) ?></h3>
      
