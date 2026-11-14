@@ -1,6 +1,8 @@
 <?php
 include "funcLib.php";
 
+verifyCsrfOrDie();
+
 if (isset($_POST['recipient_id']) && isset($_POST['subject']) && isset($_POST['body'])) {
     $recipient_ids = $_POST['recipient_id'];
     $subject = $_POST['subject'];

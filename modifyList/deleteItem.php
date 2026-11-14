@@ -29,6 +29,14 @@ if (array_key_exists("confirm", $_REQUEST)) {
 // check if either are null
 
 if($confirm == "yes"){
+  verifyCsrfOrDie();
+  $check = mysqli_prepare($link, "SELECT items.iid FROM items JOIN categories ON items.cid = categories.cid WHERE items.iid = ? AND categories.userid = ?");
+  mysqli_stmt_bind_param($check, "is", $iid, $userid);
+  mysqli_stmt_execute($check);
+  $res = mysqli_stmt_get_result($check);
+  if (mysqli_num_rows($res) == 0) {
+    die("Unauthorized: That item does not belong to you.");
+  }
 
   $result = deleteItem($iid, $userid, $_SESSION["fullname"], $base_dir);
   
@@ -37,6 +45,7 @@ if($confirm == "yes"){
   }
   else{
     header("Location: " . getFullPath("modifyList.php?cid=" . $cid . "&cname=" . $cname));
+    exit;
   }
 }
 else{
@@ -80,20 +89,21 @@ createNavBar("../home.php:Home|modifyList.php:Modify WishList|:Delete Item");
 <h3>Are you sure you want to delete this item?</h3>
 </td><td>
 <form method="post" action="deleteItem.php">
-<input type="hidden" name="iid" value="<?php echo $iid ?>">
-<input type="hidden" name="iso" value="<?php echo $iso ?>">
-<input type="hidden" name="cid" value="<?php echo $cid ?>">
-<input type="hidden" name="cname" value="<?php echo $cname ?>">
+<input type="hidden" name="csrf_token" value="<?php echo getCsrfToken(); ?>">
+<input type="hidden" name="iid" value="<?php echo htmlspecialchars($iid); ?>">
+<input type="hidden" name="iso" value="<?php echo htmlspecialchars($iso); ?>">
+<input type="hidden" name="cid" value="<?php echo htmlspecialchars($cid); ?>">
+<input type="hidden" name="cname" value="<?php echo htmlspecialchars($cname); ?>">
 <input type="hidden" name="confirm" value="yes">
-<input type="hidden" name="referrer" value="<?php echo $referrer ?>">
+<input type="hidden" name="referrer" value="<?php echo htmlspecialchars($referrer); ?>">
 <input type="submit" value="Yes" style="font-weight:bold">
 </form>
 </td><td>
-<form method="post" action="<?php echo $referrer ?>">
-<input type="hidden" name="iid" value="<?php echo $iid ?>">
-<input type="hidden" name="iso" value="<?php echo $iso ?>">
-<input type="hidden" name="cid" value="<?php echo $cid ?>">
-<input type="hidden" name="cname" value="<?php echo $cname ?>">
+<form method="post" action="<?php echo htmlspecialchars($referrer); ?>">
+<input type="hidden" name="iid" value="<?php echo htmlspecialchars($iid); ?>">
+<input type="hidden" name="iso" value="<?php echo htmlspecialchars($iso); ?>">
+<input type="hidden" name="cid" value="<?php echo htmlspecialchars($cid); ?>">
+<input type="hidden" name="cname" value="<?php echo htmlspecialchars($cname); ?>">
 <input type="submit" value="Cancel" style="font-weight:bold">
 </form>
 </td></tr></table>

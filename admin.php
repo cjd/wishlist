@@ -14,17 +14,20 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 
-if(isset($_REQUEST['setup'])){
-  // if true then we need to setup the phpWishList environment
-  // for the first time
+$config_exists = file_exists(__DIR__ . "/config.php");
+
+if ($config_exists) {
+  include "funcLib.php";
+  if (!isset($_SESSION['admin']) || $_SESSION['admin'] != 1) {
+    die("Unauthorized access.");
+  }
+  if (isset($_REQUEST['setup'])) {
+    createConfig();
+    exit;
+  }
+} else {
+  // First-time setup when config.php does not exist yet
   createConfig();
-  exit;
-}
-
-include "funcLib.php";
-
-if($_SESSION['admin'] != 1){
-  print "Shame on you";
   exit;
 }
 
@@ -35,8 +38,9 @@ if(!isset($_REQUEST["action"])) {
 $message = "<h2>Admin Page</h2>";
 
 if($_REQUEST["action"] == "commitDelete"){
-  $delUserid = $_REQUEST["userid"];
-  if($_REQUEST["confirm"] == "Yes"){
+  verifyCsrfOrDie();
+  $delUserid = $_REQUEST["deleteUserid"] ?? $_REQUEST["userid"] ?? "";
+  if(($_REQUEST["confirm"] ?? '') == "Yes"){
     $stmt = mysqli_prepare($link, "DELETE FROM viewList WHERE pid = ?");
     mysqli_stmt_bind_param($stmt, "s", $delUserid);
     mysqli_stmt_execute($stmt);
@@ -56,19 +60,21 @@ if($_REQUEST["action"] == "commitDelete"){
     $stmt = mysqli_prepare($link, "DELETE FROM purchaseHistory WHERE userid = ?");
     mysqli_stmt_bind_param($stmt, "s", $delUserid);
     mysqli_stmt_execute($stmt);
+
+    $stmt = mysqli_prepare($link, "DELETE FROM messages WHERE recipient_id = ? OR sender_id = ?");
+    mysqli_stmt_bind_param($stmt, "ss", $delUserid, $delUserid);
+    mysqli_stmt_execute($stmt);
+
+    $stmt = mysqli_prepare($link, "DELETE FROM accessRequests WHERE requesterId = ? OR targetId = ?");
+    mysqli_stmt_bind_param($stmt, "ss", $delUserid, $delUserid);
+    mysqli_stmt_execute($stmt);
     
     $stmt = mysqli_prepare($link, "SELECT iid FROM items, categories WHERE items.cid = categories.cid AND userid = ?");
     mysqli_stmt_bind_param($stmt, "s", $delUserid);
     mysqli_stmt_execute($stmt);
     $result = mysqli_stmt_get_result($stmt);
     while($row = mysqli_fetch_assoc($result)){
-      $stmt2 = mysqli_prepare($link, "DELETE FROM purchaseHistory WHERE iid = ?");
-      mysqli_stmt_bind_param($stmt2, "i", $row["iid"]);
-      mysqli_stmt_execute($stmt2);
-
-      $stmt2 = mysqli_prepare($link, "DELETE FROM items WHERE iid = ?");
-      mysqli_stmt_bind_param($stmt2, "i", $row["iid"]);
-      mysqli_stmt_execute($stmt2);
+      deleteItem($row["iid"], $delUserid, "", $base_dir);
     }
     
     $stmt = mysqli_prepare($link, "DELETE FROM categories WHERE userid = ?");
@@ -83,8 +89,9 @@ if($_REQUEST["action"] == "commitDelete"){
   }
 }
 elseif($_REQUEST["action"] == "commitEdit"){
-  $oldUserid = $_REQUEST["oldUserid"];
-  $newUserid = $_REQUEST["newUserid"];
+  verifyCsrfOrDie();
+  $oldUserid = $_REQUEST["oldUserid"] ?? "";
+  $newUserid = $_REQUEST["newUserid"] ?? "";
 
   if($oldUserid != "" and $newUserid != "" and $oldUserid != $newUserid){
 
@@ -107,6 +114,22 @@ elseif($_REQUEST["action"] == "commitEdit"){
     $stmt = mysqli_prepare($link, "UPDATE purchaseHistory SET userid = ? WHERE userid = ?");
     mysqli_stmt_bind_param($stmt, "ss", $newUserid, $oldUserid);
     mysqli_stmt_execute($stmt);
+
+    $stmt = mysqli_prepare($link, "UPDATE messages SET sender_id = ? WHERE sender_id = ?");
+    mysqli_stmt_bind_param($stmt, "ss", $newUserid, $oldUserid);
+    mysqli_stmt_execute($stmt);
+
+    $stmt = mysqli_prepare($link, "UPDATE messages SET recipient_id = ? WHERE recipient_id = ?");
+    mysqli_stmt_bind_param($stmt, "ss", $newUserid, $oldUserid);
+    mysqli_stmt_execute($stmt);
+
+    $stmt = mysqli_prepare($link, "UPDATE accessRequests SET requesterId = ? WHERE requesterId = ?");
+    mysqli_stmt_bind_param($stmt, "ss", $newUserid, $oldUserid);
+    mysqli_stmt_execute($stmt);
+
+    $stmt = mysqli_prepare($link, "UPDATE accessRequests SET targetId = ? WHERE targetId = ?");
+    mysqli_stmt_bind_param($stmt, "ss", $newUserid, $oldUserid);
+    mysqli_stmt_execute($stmt);
     
     $stmt = mysqli_prepare($link, "UPDATE categories SET userid = ? WHERE userid = ?");
     mysqli_stmt_bind_param($stmt, "ss", $newUserid, $oldUserid);
@@ -115,9 +138,12 @@ elseif($_REQUEST["action"] == "commitEdit"){
     $stmt = mysqli_prepare($link, "UPDATE people SET userid = ? WHERE userid = ?");
     mysqli_stmt_bind_param($stmt, "ss", $newUserid, $oldUserid);
     mysqli_stmt_execute($stmt);
+
+    $message = "<h2>User " . htmlspecialchars($oldUserid) . " has been changed to " . htmlspecialchars($newUserid) . "</h2>";
   }
 }
 elseif($_REQUEST["action"] == "commitAdd"){
+  verifyCsrfOrDie();
   $fname = convertString($_REQUEST["fname"]);
   $lname = convertString($_REQUEST["lname"]);
   $suffix = convertString($_REQUEST["suffix"] ?? '');
@@ -165,13 +191,14 @@ elseif($_REQUEST["action"] == "commitAdd"){
     $subject = "WishList Account Created";
     $email_message = "<b>WishList Account Created</b><br><br><b>Userid:</b> " . $desiredUserid . "<br><b>Password:</b> " . $password . "<br><br>In order to change your password, login to the WishList site with the password provided above.  Once logged in, click on the <b><font color=navy>Update Your Account</font></b> button located at the bottom of the homepage.  On the page that opens, click on the <b><font color=navy>Change Password</font></b> button.";
     sendEmail($desiredUserid, $_SESSION['userid'], $subject, $email_message, 0);
-    $message = "<h2>Account created - Password = " . $password . "</h2><p>A message has been sent to the user with their login details.</p>";
+    $message = "<h2>Account created - Password = " . htmlspecialchars($password) . "</h2><p>A message has been sent to the user with their login details.</p>";
   }
   else{
     $message = "<h2> The userid cannot be empty!</h2>";
   }
 }
 elseif($_REQUEST["action"] == "changeAdmin"){
+  verifyCsrfOrDie();
 
   if(!empty($_REQUEST["grantAdmin"])){
     $grantAdmin = $_REQUEST["grantAdmin"];
@@ -187,13 +214,11 @@ elseif($_REQUEST["action"] == "changeAdmin"){
     $stmt = mysqli_prepare($link, "UPDATE people SET admin = '0' WHERE userid NOT IN ($placeholders)");
     mysqli_stmt_bind_param($stmt, $types, ...$grantAdmin);
     mysqli_stmt_execute($stmt);
+    $message = "<h2>Admin privileges updated</h2>";
   }
   else{
-    // Unset admin flag for all users if none are selected
-    $query = "update people set admin='0'";
-    $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+    $message = "<h2 style='color:red;'>Error: You cannot remove all administrators. At least one admin must remain.</h2>";
   }
-  $message = "<h2>Admin privileges changes</h2>";
 }
 ?>
 
@@ -223,7 +248,8 @@ print $message;
 if($_REQUEST["action"] == "add"){
 ?>
 <form method=post>
-<input type=hidden name="action" value="commitAdd" value=1>
+<input type=hidden name="action" value="commitAdd">
+<input type="hidden" name="csrf_token" value="<?php echo getCsrfToken(); ?>">
 <table style="border-collapse: collapse;" border="1" bordercolor="#111111" cellpadding="2" cellspacing="0" bgcolor=lightYellow>
 <tr><td colspan=2 align=center bgcolor="#6702cc"><font size=3 color=white><b>Add new user</b></font></td></tr>
 
@@ -254,26 +280,28 @@ if($_REQUEST["action"] == "add"){
 <?php
 }
 elseif($_REQUEST["action"] == "edit"){
-  $editUserid = $_REQUEST["userid"];
+  $editUserid = $_REQUEST["userid"] ?? "";
   print "<form method=post>";
   print "<input type=hidden name=action value=commitEdit>";
-  print "<input type=hidden name=oldUserid value=" . $editUserid . ">";
+  print "<input type=hidden name=csrf_token value=\"" . htmlspecialchars(getCsrfToken(), ENT_QUOTES) . "\">";
+  print "<input type=hidden name=oldUserid value=\"" . htmlspecialchars($editUserid, ENT_QUOTES) . "\">";
   print "<table style=\"border-collapse: collapse;\" id=\"AutoNumber1\" border=\"1\" bordercolor=\"#111111\" cellpadding=\"2\" cellspacing=\"0\" bgcolor=lightYellow>";
   print "<tr><td colspan=2 align=center bgcolor=\"#6702cc\"><font size=3 color=white><b>Change Userid</b></font></td></tr>";
-  print "<tr><td><b>Old Userid</b></td><td>" . $editUserid . "</td></tr>";
+  print "<tr><td><b>Old Userid</b></td><td>" . htmlspecialchars($editUserid) . "</td></tr>";
   print "<tr><td><b>New Userid</b></td><td><input type=text name=newUserid></td>";
   print "<tr><td align=center colspan=2 bgcolor=\"#c0c0c0\"><input type=submit value=\"Update \" style=\"font-weight:bold\"></td>";
   print "</tr></table>";
   print "</form>";
 }
 elseif($_REQUEST["action"] == "delete"){
-  $deleteUserid = $_REQUEST["userid"];
+  $deleteUserid = $_REQUEST["userid"] ?? "";
   print "<form method=post>";
   print "<input type=hidden name=action value=commitDelete>";
-  print "<input type=hidden name=deleteUserid value=" . $editUserid . ">";
+  print "<input type=hidden name=csrf_token value=\"" . htmlspecialchars(getCsrfToken(), ENT_QUOTES) . "\">";
+  print "<input type=hidden name=deleteUserid value=\"" . htmlspecialchars($deleteUserid, ENT_QUOTES) . "\">";
   print "<table style=\"border-collapse: collapse;\" id=\"AutoNumber1\" border=\"1\" bordercolor=\"#111111\" cellpadding=\"2\" cellspacing=\"0\" bgcolor=lightYellow>";
   print "<tr><td colspan=2 align=center bgcolor=\"#6702cc\"><font size=3 color=white><b>Confirm Delete</b></font></td></tr>";
-  print "<tr><td>Are you sure you want to delete <b>" . $deleteUserid . "</b>?";
+  print "<tr><td>Are you sure you want to delete <b>" . htmlspecialchars($deleteUserid) . "</b>?";
   print "<p>Everything relating to this user will be deleted";
   print "<tr><td align=center colspan=2 bgcolor=\"#c0c0c0\"><input type=submit name=confirm value=Yes style=\"font-weight:bold\"> <input type=submit name=confirm value=No style=\"font-weight:bold\"></td>";
   print "</tr></table>";
@@ -284,6 +312,7 @@ elseif($_REQUEST["action"] == "delete"){
 
 <form method="post" action="admin.php">
 <input type=hidden name=action value=changeAdmin>
+<input type="hidden" name="csrf_token" value="<?php echo getCsrfToken(); ?>">
 
 <table style="border-collapse: collapse;" id="AutoNumber1" border="1" bordercolor="#111111" cellpadding="2" cellspacing="0">
 <tr><td colspan="5" align="center" bgcolor="#6702cc">
@@ -310,12 +339,14 @@ $query = "select * from people order by lastname, firstname";
 $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
 
 while($row = mysqli_fetch_assoc($result)){
+  $u_escaped = htmlspecialchars($row["userid"], ENT_QUOTES);
+  $u_encoded = urlencode($row["userid"]);
   print "<tr>";
-  print "<td><a href=\"admin.php?action=edit&userid=" . $row["userid"] . "\">[edit]</a> <a href=\"admin.php?action=delete&userid=" . $row["userid"] . "\">[del]</a> <a href=\"./updateAccount/changePassword.php?userid=" . $row["userid"] . "\">[pwd]</a> <a href=\"./updateAccount/updateAccount.php?target_userid=" . $row["userid"] . "\">[account]</a> " . $row["userid"] . "</td>";
-  print "<td>" . $row["firstname"] . ' ' . $row["lastname"] . ' ' . $row["suffix"] . "</td>";
+  print "<td><a href=\"admin.php?action=edit&userid=" . $u_encoded . "\">[edit]</a> <a href=\"admin.php?action=delete&userid=" . $u_encoded . "\">[del]</a> <a href=\"./updateAccount/changePassword.php?userid=" . $u_encoded . "\">[pwd]</a> <a href=\"./updateAccount/updateAccount.php?target_userid=" . $u_encoded . "\">[account]</a> " . $u_escaped . "</td>";
+  print "<td>" . htmlspecialchars($row["firstname"] . ' ' . $row["lastname"] . ' ' . $row["suffix"]) . "</td>";
   print "<td><font face=Courier>" . parseDate($row["lastLoginDate"], 1) . "</font></td>";
-  print "<td align=center><input type=checkbox name=grantAdmin[] value=" . $row["userid"] . " " . ($row["admin"] == 1 ? "checked" : "") . "></td>";
-  print "<td>" . $row["email"] . "</td>";
+  print "<td align=center><input type=checkbox name=grantAdmin[] value=\"" . $u_escaped . "\" " . ($row["admin"] == 1 ? "checked" : "") . "></td>";
+  print "<td>" . htmlspecialchars($row["email"]) . "</td>";
   print "</tr>";
 }
 ?>
@@ -359,6 +390,22 @@ function createConfig(){
   $allowUpdate = false;
   $show_root_form = false;
 
+  // --- PERMISSION CHECK ---
+  if (file_exists(__DIR__ . "/config.php")) {
+    if (session_status() === PHP_SESSION_NONE) {
+      session_name("WishListSite");
+      session_start();
+    }
+    if (!isset($_SESSION["admin"]) || $_SESSION["admin"] != 1) {
+      die("Unauthorized access.");
+    }
+    $allowUpdate = true;
+  } else {
+    $doingSetup = true;
+    $ignoreSession = true;
+    $allowUpdate = true;
+  }
+
   // --- 2. HANDLE ROOT CREDENTIAL SUBMISSION ---
   if (isset($_REQUEST['updateValues']) && isset($_REQUEST['db_root_pass']) && $_REQUEST['db_root_pass'] != '') {
       $root_user = $_REQUEST['db_root_user'];
@@ -367,22 +414,26 @@ function createConfig(){
       try {
           $root_link = mysqli_connect($new_db_loc, $root_user, $root_pass);
 
-          $query_create_db = "CREATE DATABASE IF NOT EXISTS `$new_db_name`";
+          $escaped_db_name = str_replace('`', '``', $new_db_name);
+          $escaped_db_userid = mysqli_real_escape_string($root_link, $new_db_userid);
+          $escaped_db_pass = mysqli_real_escape_string($root_link, $new_db_pass);
+
+          $query_create_db = "CREATE DATABASE IF NOT EXISTS `$escaped_db_name`";
           if (!mysqli_query($root_link, $query_create_db)) {
               throw new Exception("Could not create database: " . mysqli_error($root_link));
           }
 
           // Drop user in case they exist with a different password. Requires MySQL 5.7.8+
-          @mysqli_query($root_link, "DROP USER IF EXISTS '$new_db_userid'@'%'");
+          @mysqli_query($root_link, "DROP USER IF EXISTS '$escaped_db_userid'@'%'");
 
           // Create the user with the new password
-          $create_user_query = "CREATE USER '$new_db_userid'@'%' IDENTIFIED BY '$new_db_pass'";
+          $create_user_query = "CREATE USER '$escaped_db_userid'@'%' IDENTIFIED BY '$escaped_db_pass'";
           if (!mysqli_query($root_link, $create_user_query)) {
               throw new Exception("Could not create user: " . mysqli_error($root_link));
           }
 
           // Grant privileges
-          $query_grant = "GRANT ALL PRIVILEGES ON `$new_db_name`.* TO '$new_db_userid'@'%'";
+          $query_grant = "GRANT ALL PRIVILEGES ON `$escaped_db_name`.* TO '$escaped_db_userid'@'%'";
           if (!mysqli_query($root_link, $query_grant)) {
               throw new Exception("Could not grant privileges: " . mysqli_error($root_link));
           }
@@ -398,27 +449,7 @@ function createConfig(){
       }
   }
 
-
-  // --- 3. SESSION AND PERMISSION SETUP ---
-  session_name("WishListSite");
-  session_start();
-
-  if((file_exists($base_dir . "/config.php") || file_exists("config.php"))){
-    if(!isset($_SESSION["admin"]) || $_SESSION["admin"] != 1){
-      print "Stop that!!!";
-      exit;
-    }
-    else{
-      $allowUpdate = true;
-    }
-  }
-  else{
-    $doingSetup = true;
-    $ignoreSession = true;
-    $allowUpdate = true;
-  }
-
-  include 'funcLib.php';
+  include_once 'funcLib.php';
 
   if(!isset($_REQUEST['updateValues'])){
     $allowUpdate = false;
@@ -456,13 +487,13 @@ function createConfig(){
     $fh = fopen($base_dir . "/config.php", 'w');
     if($fh){
       fwrite($fh, "<?php\r\n");
-      fwrite($fh, "\$base_dir = '$new_base_dir';\r\n");
-      fwrite($fh, "\$base_url = '$new_base_url';\r\n\r\n");
-      fwrite($fh, "\$admin_email = '$new_admin_email';\r\n\r\n");
-      fwrite($fh, "\$db_loc = '$new_db_loc';\r\n");
-      fwrite($fh, "\$db_name = '$new_db_name';\r\n");
-      fwrite($fh, "\$db_userid = '$new_db_userid';\r\n");
-      fwrite($fh, "\$db_pass = '$new_db_pass';\r\n\r\n");
+      fwrite($fh, "\$base_dir = " . var_export($new_base_dir, true) . ";\r\n");
+      fwrite($fh, "\$base_url = " . var_export($new_base_url, true) . ";\r\n\r\n");
+      fwrite($fh, "\$admin_email = " . var_export($new_admin_email, true) . ";\r\n\r\n");
+      fwrite($fh, "\$db_loc = " . var_export($new_db_loc, true) . ";\r\n");
+      fwrite($fh, "\$db_name = " . var_export($new_db_name, true) . ";\r\n");
+      fwrite($fh, "\$db_userid = " . var_export($new_db_userid, true) . ";\r\n");
+      fwrite($fh, "\$db_pass = " . var_export($new_db_pass, true) . ";\r\n\r\n");
       fwrite($fh, "?>\r\n");
       fclose($fh);
 

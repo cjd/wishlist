@@ -13,6 +13,15 @@ if(!isset($base_dir)){
 }
 
 if(!isset($_SESSION)){
+  if (PHP_VERSION_ID >= 70300) {
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path' => '/',
+        'httponly' => true,
+        'samesite' => 'Lax',
+        'secure' => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+    ]);
+  }
   session_name("WishListSite");
   session_start();
 
@@ -35,8 +44,8 @@ if(!isset($_SESSION)){
 if(!isset($doingSetup)){
   $link = @(mysqli_connect($db_loc, $db_userid, $db_pass));
   if(!$link){
-    sendEmail($admin_email, "", "Database is dead", "umm, the database is dead", 0);
-    die("<p><font size=6>Danger Will Robinson!!!!  It looks like the database is dead.<p>Try back at the top of the hour.</big>");
+    error_log("Database connection failed: " . mysqli_connect_error());
+    die("<p><font size=6>Danger Will Robinson! It looks like the database is down.<p>Please try again later.</font>");
   }
   else{
     mysqli_select_db($link,$db_name);
@@ -134,26 +143,18 @@ function getFullPath($url) {
  * All dates should be passed through this function before display
  */
 function parseDate($date, $shortMonth=0, $clientLoc = 3){
-  $date = date_create($date);
+  if (empty($date) || $date == '0000-00-00 00:00:00' || $date == '0000-00-00') {
+    return "";
+  }
+  $dt = date_create($date);
+  if (!$dt) {
+    return "";
+  }
   if($shortMonth) {
-    return date_format($date, "M d, Y g:ia");
+    return date_format($dt, "M d, Y g:ia");
   }
   else{
-    return date_format($date, "F d, Y g:ia");
-  }
-  $serverLoc = -16; // timezone difference between server and clients
-
-  preg_match("/([0-9]{4})-([0-9]{1,2})-([0-9]{1,2}) ([0-9]{2}):([0-9]{2}):([0-9]{2})/", $date, $regs);
-
-  // now we need to localize the time.  This would be much better if we knew the time
-  // zone of the user and then added/subtracted the approiate amount dynamically
-  $dateCon = date_create(mktime ($regs[4] + ($clientLoc - $serverLoc), $regs[5],$regs[6],$regs[2],$regs[3],$regs[1]));
-
-  if($shortMonth){
-    return strftime("%b %d, %Y at %I:%M%p", $dateCon);
-  }
-  else{
-    return strftime("%B %d, %Y at %I:%M%p", $dateCon);
+    return date_format($dt, "F d, Y g:ia");
   }
 }
 
@@ -701,8 +702,8 @@ function printItem($row2, $name, $quantity, $bought, $createDateFormatted){
   print $text;  
 
   // Only show info icon if createDate is later than 2020
-  if (strtotime($row2['createDate']) > strtotime('2020-12-31')) {
-    print "<span class='info-icon' data-create-date='" . $row2['createDateFormatted'] . "'>&#9432;</span>";
+  if (!empty($row2['createDate']) && strtotime($row2['createDate']) > strtotime('2020-12-31')) {
+    print "<span class='info-icon' data-create-date='" . ($row2['createDateFormatted'] ?? '') . "'>&#9432;</span>";
   }
 
   //if($row2["userid"] != null and 
@@ -766,8 +767,15 @@ function deleteItem($iid, $userid, $fullname, $base_dir){
     $sendMail = 1;
   }
   
+  // fetch item image before deleting
+  $item_stmt = mysqli_prepare($link, "SELECT image, itemSortOrder, cid FROM items WHERE iid = ?");
+  mysqli_stmt_bind_param($item_stmt, "i", $iid);
+  mysqli_stmt_execute($item_stmt);
+  $item_res = mysqli_stmt_get_result($item_stmt);
+  $item_row = mysqli_fetch_assoc($item_res);
+
   // delete image
-  if ($item_row['image'] != "") {
+  if (!empty($item_row['image'])) {
     $uploadDir = $base_dir.'/uploads/';
     $uploadFile = $uploadDir.$item_row['image'];
     if (is_file($uploadFile)) {
@@ -785,9 +793,11 @@ function deleteItem($iid, $userid, $fullname, $base_dir){
   mysqli_stmt_bind_param($stmt, "i", $iid);
   mysqli_stmt_execute($stmt);
   
-  $stmt = mysqli_prepare($link, "UPDATE items SET itemSortOrder = itemSortOrder - 1 WHERE itemSortOrder > ? AND cid = ?");
-  mysqli_stmt_bind_param($stmt, "ii", $item_row["iso"], $item_row["cid"]);
-  mysqli_stmt_execute($stmt);
+  if ($item_row) {
+    $stmt = mysqli_prepare($link, "UPDATE items SET itemSortOrder = itemSortOrder - 1 WHERE itemSortOrder > ? AND cid = ?");
+    mysqli_stmt_bind_param($stmt, "ii", $item_row["itemSortOrder"], $item_row["cid"]);
+    mysqli_stmt_execute($stmt);
+  }
   
   $stmt = mysqli_prepare($link, "UPDATE people SET lastModDate=NOW() WHERE userid = ?");
   mysqli_stmt_bind_param($stmt, "s", $userid);
@@ -899,8 +909,10 @@ function generate_image_thumbnail($source_image_path, $thumbnail_image_path)
     $thumbnail_gd_image = imagecreatetruecolor($thumbnail_image_width, $thumbnail_image_height);
     imagecopyresampled($thumbnail_gd_image, $source_gd_image, 0, 0, 0, 0, $thumbnail_image_width, $thumbnail_image_height, $source_image_width, $source_image_height);
     imagejpeg($thumbnail_gd_image, $thumbnail_image_path, 90);
-    imagedestroy($source_gd_image);
-    imagedestroy($thumbnail_gd_image);
+    if (PHP_VERSION_ID < 80000) {
+        imagedestroy($source_gd_image);
+        imagedestroy($thumbnail_gd_image);
+    }
     return true;
 }
 
@@ -930,6 +942,38 @@ function process_image_upload($field,$destination)
         $result = generate_image_thumbnail($temp_image_path, $destination);
     }
     return $result ? array($temp_image_path, $destination) : false;
+}
+
+/**
+ * CSRF Protection Functions
+ */
+function getCsrfToken() {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_name("WishListSite");
+        session_start();
+    }
+    if (empty($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+    return $_SESSION['csrf_token'];
+}
+
+function validateCsrfToken($token) {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_name("WishListSite");
+        session_start();
+    }
+    if (empty($token) || empty($_SESSION['csrf_token'])) {
+        return false;
+    }
+    return hash_equals($_SESSION['csrf_token'], $token);
+}
+
+function verifyCsrfOrDie() {
+    $token = $_POST['csrf_token'] ?? $_GET['csrf_token'] ?? '';
+    if (!validateCsrfToken($token)) {
+        die("Security validation failed: Invalid or missing CSRF token. Please refresh the page and try again.");
+    }
 }
 
 

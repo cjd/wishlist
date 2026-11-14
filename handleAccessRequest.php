@@ -16,7 +16,8 @@
 include "funcLib.php";
 
 if (isset($_POST['requestId']) && isset($_POST['requesterId']) && isset($_POST['decision'])) {
-    $requestId = $_POST['requestId'];
+    verifyCsrfOrDie();
+    $requestId = intval($_POST['requestId']);
     $requesterId = $_POST['requesterId'];
     $decision = $_POST['decision'];
     

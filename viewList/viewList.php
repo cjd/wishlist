@@ -26,6 +26,7 @@ if (isset($_REQUEST["confirm"])) {
 if ($confirm == "Go Home" || $confirm == "Ho Home") {
     unset($_SESSION["euserid"]);
     header("Location: " . getFullPath("../home.php"));
+    exit;
 }
 ?>
 <HTML>
@@ -98,26 +99,39 @@ if ($confirm == "Go Home" || $confirm == "Ho Home") {
     </script>
 </head>
 
-<title><?php echo $name ?>'s WishList</title>
+<title><?php echo htmlspecialchars($name); ?>'s WishList</title>
 
 <?php
 // Alert $userid if new comments have been added to $recip's list since the
 // last time $userid viewed it (unless $recip == $userid of course)
 $userid = $_SESSION["userid"];
-$query = "DELETE FROM comments WHERE date < DATE_SUB(NOW(), INTERVAL 4 MONTH) and userid = '".$recip."'";
-$rs = mysqli_query($link, $query) or die("Could not query: " . mysqli_error($link));
-if ($recip != $userid) {
-    $query = "select allowEdit from viewList where viewList.viewer = '".$userid."' and viewList.pid='".$recip."'";
-    $rs = mysqli_query($link, $query) or die("Could not query: " . mysqli_error($link));
-    $allowEdit = 0;
-    while ($row = mysqli_fetch_assoc($rs)) {
-        if ($row["allowEdit"] == "1") {
-            $allowEdit = 1;
-        }
-    }
-    $query = "select lastViewDate from comments, viewList where comments.userid=viewList.pid and pid='" . $recip . "' and viewer='" . $userid . "' and comment_userid!='" . $userid . "' and date > lastViewDate";
 
-    $rs = mysqli_query($link, $query) or die("Could not query: " . mysqli_error($link));
+$stmt_del = mysqli_prepare($link, "DELETE FROM comments WHERE date < DATE_SUB(NOW(), INTERVAL 4 MONTH) AND userid = ?");
+mysqli_stmt_bind_param($stmt_del, "s", $recip);
+mysqli_stmt_execute($stmt_del);
+
+if ($recip != $userid) {
+    $stmt_perm = mysqli_prepare($link, "SELECT allowEdit FROM viewList WHERE viewer = ? AND pid = ?");
+    mysqli_stmt_bind_param($stmt_perm, "ss", $userid, $recip);
+    mysqli_stmt_execute($stmt_perm);
+    $rs_perm = mysqli_stmt_get_result($stmt_perm);
+
+    if ($row_perm = mysqli_fetch_assoc($rs_perm)) {
+        $allowEdit = ($row_perm["allowEdit"] == '1') ? 1 : 0;
+    } elseif (isset($_SESSION['admin']) && $_SESSION['admin'] == 1) {
+        $allowEdit = 1;
+    } else {
+        print "</head><body><table class='pagetable'><tr><td>";
+        createNavBar("../home.php:Home|:View List");
+        print "<h2><center><font color=red>You do not have permission to view this wishlist.</font></center></h2>";
+        print "</td></tr></table></body></html>";
+        exit;
+    }
+
+    $stmt_comm = mysqli_prepare($link, "SELECT lastViewDate FROM comments, viewList WHERE comments.userid = viewList.pid AND pid = ? AND viewer = ? AND comment_userid != ? AND date > lastViewDate");
+    mysqli_stmt_bind_param($stmt_comm, "sss", $recip, $userid, $userid);
+    mysqli_stmt_execute($stmt_comm);
+    $rs = mysqli_stmt_get_result($stmt_comm);
 
     if (mysqli_num_rows($rs) > 0) {
         $alert = "onLoad=\"javascript:alert('New comments have been added since the last time you viewed this list')\"";
@@ -160,30 +174,31 @@ function displayWishlist($recip, $userid, $name, $allowEdit, $link)
 
         ?>
 <?php
-        $query = "select commentId, comment_userid, firstname, lastname, suffix, comment, date from comments, people where comments.userid='" . $recip . "' and comments.comment_userid=people.userid order by date desc";
-
-        $rs = mysqli_query($link, $query) or die("Could not query: " . mysqli_error($link));
+        $stmt_comm = mysqli_prepare($link, "SELECT commentId, comment_userid, firstname, lastname, suffix, comment, date FROM comments, people WHERE comments.userid = ? AND comments.comment_userid = people.userid ORDER BY date DESC");
+        mysqli_stmt_bind_param($stmt_comm, "s", $recip);
+        mysqli_stmt_execute($stmt_comm);
+        $rs = mysqli_stmt_get_result($stmt_comm);
 
         while ($row = mysqli_fetch_assoc($rs)) {
             ?>
-<font color="navy"><?php echo $row["firstname"] . ' ' . $row["lastname"] . ' ' . $row["suffix"] ?> made the following comments on <?php echo parseDate($row["date"], 1) ?></font>
+<font color="navy"><?php echo htmlspecialchars($row["firstname"] . ' ' . $row["lastname"] . ' ' . $row["suffix"]) ?> made the following comments on <?php echo parseDate($row["date"], 1) ?></font>
 <?php
               if ($_SESSION["userid"] == $row["comment_userid"]) {
                   ?>
-    <b><a class="menuLink" href="deleteComment.php?commentId=<?php echo $row["commentId"] ?>&recip=<?php echo $recip ?>&name=<?php echo $name ?>"  >[Remove Comment]</a></b>
+    <b><a class="menuLink" href="deleteComment.php?commentId=<?php echo intval($row["commentId"]); ?>&recip=<?php echo urlencode($recip); ?>&name=<?php echo urlencode($name); ?>&csrf_token=<?php echo getCsrfToken(); ?>">[Remove Comment]</a></b>
 <?php
               }
             ?>
   
 <br>
-<?php echo $row["comment"] ?><p>
+<?php echo cleanString($row["comment"]); ?><p>
 
 <?php
         }
         ?>
 <form method="post" action="addComment.php">
-<input type="hidden" name="recip" value="<?php echo $recip ?>">
-<input type="hidden" name="name" value="<?php echo $name ?>">
+<input type="hidden" name="recip" value="<?php echo htmlspecialchars($recip); ?>">
+<input type="hidden" name="name" value="<?php echo htmlspecialchars($name); ?>">
 <input type="submit" value="Add New Comment" class="buttonstyle">
 </form>
 
@@ -207,15 +222,15 @@ function displayWishlist($recip, $userid, $name, $allowEdit, $link)
 
 <?php
 
-    $query = "select lastModDate from people where userid='" . $recip . "'";
-
-    $rs = mysqli_query($link, $query) or die("Could not query: " . mysqli_error($link));
-
+    $stmt_mod = mysqli_prepare($link, "SELECT lastModDate FROM people WHERE userid = ?");
+    mysqli_stmt_bind_param($stmt_mod, "s", $recip);
+    mysqli_stmt_execute($stmt_mod);
+    $rs = mysqli_stmt_get_result($stmt_mod);
 
     if ($row = mysqli_fetch_assoc($rs)) {
         ?>
 <font size=2>
-<font color=indianred><?php echo $name ?></font> last modified this list on <font color=navy><?php echo parseDate($row["lastModDate"], 1) ?></font></font>
+<font color=indianred><?php echo htmlspecialchars($name) ?></font> last modified this list on <font color=navy><?php echo parseDate($row["lastModDate"], 1) ?></font></font>
 <?php
     }
     ?>
@@ -225,9 +240,9 @@ function displayWishlist($recip, $userid, $name, $allowEdit, $link)
 <div id="sendMessageModal" class="modal">
   <div class="modal-content">
     <span class="close-send-message">&times;</span>
-    <h2>Send a message to <?php echo $name; ?></h2>
+    <h2>Send a message to <?php echo htmlspecialchars($name); ?></h2>
     <form id="sendMessageForm">
-      <input type="hidden" name="recipient_id" value="<?php echo $recip; ?>">
+      <input type="hidden" name="recipient_id" value="<?php echo htmlspecialchars($recip); ?>">
       <input type="text" name="subject" placeholder="Subject" required><br><br>
       <textarea name="body" rows="5" cols="50" placeholder="Message" required></textarea><br><br>
       <input type="submit" value="Send Message" class="buttonstyle">
@@ -252,7 +267,7 @@ function displayWishlist($recip, $userid, $name, $allowEdit, $link)
 <td valign="top">
 
 <?php
-createNavBar("../home.php:Home|:View List - " . $_REQUEST["name"], false, "viewOther");
+createNavBar("../home.php:Home|:View List - " . htmlspecialchars($_REQUEST["name"] ?? ''), false, "viewOther");
 ?>
 
 <br>
@@ -263,8 +278,10 @@ createNavBar("../home.php:Home|:View List - " . $_REQUEST["name"], false, "viewO
 <?php
 
   $canEdit = false;
-$query = "select allowEdit from viewList where pid = '" . $recip . "' and viewer = '" . $_SESSION["userid"] . "'";
-$rs_edit = mysqli_query($link, $query) or die("Could not query: " . mysqli_error($link));
+$stmt_edit = mysqli_prepare($link, "SELECT allowEdit FROM viewList WHERE pid = ? AND viewer = ?");
+mysqli_stmt_bind_param($stmt_edit, "ss", $recip, $_SESSION["userid"]);
+mysqli_stmt_execute($stmt_edit);
+$rs_edit = mysqli_stmt_get_result($stmt_edit);
 if ($row_edit = mysqli_fetch_assoc($rs_edit)) {
     if ($row_edit["allowEdit"] == '1') {
         $canEdit = true;
@@ -284,7 +301,7 @@ if (($recip == $_SESSION["userid"] || $canEdit) and $confirm == "Edit List") {
 if (($recip == $_SESSION["userid"] || $canEdit) and $confirm != "View List") {
 
     print "<center><p>&nbsp;<form method=post>";
-    print "<b>Are you sure you want to view the list of ".$_REQUEST["name"]."?<br>You will be able to see any purchases that may have been made!<br>This could ruin the surprise</b>";
+    print "<b>Are you sure you want to view the list of ".htmlspecialchars($_REQUEST["name"] ?? '')."?<br>You will be able to see any purchases that may have been made!<br>This could ruin the surprise</b>";
     print "<p><input type=submit name=confirm value=\"View List\" class=\"buttonstyle\"> <input type=submit name=confirm value=\"Edit List\" class=\"buttonstyle\"> <input type=submit name=confirm value=\"Go Home\" class=\"buttonstyle\">";
     print "</form>\n";
     print "</center>";
@@ -299,8 +316,8 @@ if (($recip == $_SESSION["userid"] || $canEdit) and $confirm != "View List") {
 
 <?php
 
-$query = "update viewList set lastViewDate=NOW() where pid='" . $recip . "' and viewer='" . $userid . "'";
-
-$rs = mysqli_query($link, $query) or die("Could not query: " . mysqli_error($link));
+$stmt_view = mysqli_prepare($link, "UPDATE viewList SET lastViewDate = NOW() WHERE pid = ? AND viewer = ?");
+mysqli_stmt_bind_param($stmt_view, "ss", $recip, $userid);
+mysqli_stmt_execute($stmt_view);
 
 ?>

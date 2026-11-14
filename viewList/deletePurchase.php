@@ -15,59 +15,57 @@
 
 include "../funcLib.php";
 
-$name = $_REQUEST["name"];
-$recip = $_REQUEST["recip"];
+$name = $_REQUEST["name"] ?? "";
+$recip = $_REQUEST["recip"] ?? "";
 $userid = $_SESSION["userid"];
 
-$purchaseId = $_REQUEST["purchaseId"];
-$confirm = $_REQUEST["confirm"];
+$purchaseId = intval($_REQUEST["purchaseId"] ?? 0);
+$confirm = $_REQUEST["confirm"] ?? "";
 
-if($confirm == "yes"){
+if ($confirm == "yes") {
+  verifyCsrfOrDie();
+  if ($purchaseId > 0) {
+     $stmt = mysqli_prepare($link, "DELETE FROM purchaseHistory WHERE purchaseId = ? AND userid = ?");
+     mysqli_stmt_bind_param($stmt, "is", $purchaseId, $userid);
+     mysqli_stmt_execute($stmt);
 
-  if($purchaseId != ""){
-     $query = "delete from purchaseHistory where purchaseId=" . $purchaseId;
+     $stmt_email = mysqli_prepare($link, "SELECT email FROM viewList JOIN people ON viewer = userid WHERE pid = ? AND viewer != ?");
+     mysqli_stmt_bind_param($stmt_email, "ss", $recip, $recip);
+     mysqli_stmt_execute($stmt_email);
+     $rs_email = mysqli_stmt_get_result($stmt_email);
 
-     $rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
-
-     header("Location: " . getFullPath("../viewPurchases.php"));
-
-     $query = "select email from viewList, people where viewer=userid and pid='" . $recip . "' and viewer!='" . $recip . "'";
-
-     $rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
-
-     while($row = mysqli_fetch_assoc($rs)){
-       $to .= $row["email"] .", ";
+     $to = "";
+     while ($row = mysqli_fetch_assoc($rs_email)) {
+       $to .= $row["email"] . ",";
      }
+     $to = rtrim($to, ",");
 
      $from = "";
-
      $subject = $name . "'s WishList has been modified by " . 
        $_SESSION["fullname"];
-
-     $desc = $_REQUEST["desc"];
-
+     $desc = $_REQUEST["desc"] ?? "";
      $message = "<font color=indianred><b>" . $_SESSION["fullname"] . 
        "</b></font>" . 
        " has decided not to get the following purchase from " . 
        $name . "'s WishList" .
        "<br><dir>" . $desc . "</dir>";
 
-     print $to . "<br>";
-     print $from . "<br>";
-     print $subject . "<br>";
-     print $message . "<br>";;
+     if (!empty($to)) {
+       sendEmail($to, $from, $subject, $message, 0);
+     }
 
-     sendEmail($to, $from, $subject, $message, 0);
+     header("Location: " . getFullPath("../viewPurchases.php"));
+     exit;
   }
 }
 else{
-
-  $query = "select * from items, purchaseHistory where items.iid=purchaseHistory.iid and purchaseHistory.userid='" . $userid . "' and purchaseId=" . $purchaseId;
-
-  $rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+  $stmt = mysqli_prepare($link, "SELECT * FROM items JOIN purchaseHistory ON items.iid = purchaseHistory.iid WHERE purchaseHistory.userid = ? AND purchaseId = ?");
+  mysqli_stmt_bind_param($stmt, "si", $userid, $purchaseId);
+  mysqli_stmt_execute($stmt);
+  $rs = mysqli_stmt_get_result($stmt);
 
   if($row = mysqli_fetch_assoc($rs)){
-    $desc = ($row["purchaseHistory.quantity"] != "1" ? "<font color=red>Bought " . $row["quantity"] . "</font> " : "") . "<i>" . $row["title"] . "</i> - " . $row["description"]; 
+    $desc = ($row["quantity"] != "1" ? "<font color=red>Bought " . $row["quantity"] . "</font> " : "") . "<i>" . $row["title"] . "</i> - " . $row["description"]; 
 
 ?>
 <HTML>
@@ -97,17 +95,18 @@ createNavBar("../home.php:Home|viewList.php?recip=" . $recip . "&name=" . $name 
 <h3>Are you sure you want to delete this purchase?</h3>
 </td><td>
 <form method="post" action="deletePurchase.php">
-<input type="hidden" name="purchaseId" value="<?php echo $purchaseId ?>">
-<input type="hidden" name="desc" value="<?php echo $desc ?>">
-<input type="hidden" name="name" value="<?php echo $name ?>">
-<input type="hidden" name="recip" value="<?php echo $recip ?>">
+<input type="hidden" name="csrf_token" value="<?php echo getCsrfToken(); ?>">
+<input type="hidden" name="purchaseId" value="<?php echo intval($purchaseId); ?>">
+<input type="hidden" name="desc" value="<?php echo htmlspecialchars($desc, ENT_QUOTES); ?>">
+<input type="hidden" name="name" value="<?php echo htmlspecialchars($name, ENT_QUOTES); ?>">
+<input type="hidden" name="recip" value="<?php echo htmlspecialchars($recip, ENT_QUOTES); ?>">
 <input type="hidden" name="confirm" value="yes">
 <input type="submit" value="Yes">
 </form>
 </td><td>
 <form method="post" action="viewLog.php">
-<input type="hidden" name="name" value="<?php echo $name ?>">
-<input type="hidden" name="recip" value="<?php echo $recip ?>">
+<input type="hidden" name="name" value="<?php echo htmlspecialchars($name, ENT_QUOTES); ?>">
+<input type="hidden" name="recip" value="<?php echo htmlspecialchars($recip, ENT_QUOTES); ?>">
 <input type="submit" value="No">
 </form>
 </td></tr>

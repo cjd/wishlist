@@ -15,11 +15,15 @@
 
 include "../funcLib.php";
 
+$target_user = $_SESSION['userid'];
 if($_SESSION['admin'] == 1){
-  if(isset($_REQUEST['userid'])) {
-    $userid=$_REQUEST['userid'];
+  if(!empty($_REQUEST['userid'])) {
+    $target_user = $_REQUEST['userid'];
+  } elseif(!empty($_SESSION['euserid'])) {
+    $target_user = $_SESSION['euserid'];
   }
 }
+$userid = $target_user;
 
 ?>
 
@@ -43,14 +47,15 @@ function validate(form) {
 </script>
 
 <?php
-createNavBar("../home.php:Home|updateAccount.php:Update Account|:Change Password for " . $userid, false, "password");
+createNavBar("../home.php:Home|updateAccount.php:Update Account|:Change Password for " . htmlspecialchars($userid), false, "password");
 ?>
 
 <?php
   if(isset($_REQUEST['password'])){
+    verifyCsrfOrDie();
     if ($_REQUEST['password'] != $_REQUEST['challenge']) {
         print "<p><center><h2>Passwords do not match</h2>";
-        print "<b><a href=\"changePassword.php?userid=" . $userid . "\">Back</a></center></b>";
+        print "<b><a href=\"changePassword.php?userid=" . urlencode($userid) . "\">Back</a></center></b>";
     } else {
         $password_hash = password_hash($_REQUEST['password'], PASSWORD_DEFAULT);
         $stmt = mysqli_prepare($link, "UPDATE people SET password = ? WHERE userid = ?");
@@ -66,7 +71,9 @@ createNavBar("../home.php:Home|updateAccount.php:Update Account|:Change Password
 <center>
 <p>
 <form name="theForm" method="post" onSubmit="return validate(this);">
-<table width="70%"><tr><td><b>Your password will be securely hashed before being stored in the database.</b></td</tr></table><p>
+<input type="hidden" name="csrf_token" value="<?php echo getCsrfToken(); ?>">
+<input type="hidden" name="userid" value="<?php echo htmlspecialchars($userid); ?>">
+<table width="70%"><tr><td><b>Your password will be securely hashed before being stored in the database.</b></td></tr></table><p>
 
 <table style="border-collapse: collapse;" id="AutoNumber1" border="0" bordercolor="#111111" cellpadding="2" cellspacing="0" bgcolor=lightYellow>
 <tr><td colspan="2" align="center" bgcolor="#6702cc">
@@ -75,7 +82,7 @@ createNavBar("../home.php:Home|updateAccount.php:Update Account|:Change Password
 <tr><td align=right><b>Password</b></td>
 <td><input type=password name=password></td></tr>
 <tr><td align=right><b>Reenter Password</b></td>
-<td><input type=password name=challenge></tr></tr>
+<td><input type=password name=challenge></td></tr>
 <tr><td align="center" colspan="2" bgcolor="#c0c0c0">
 <input type="submit" value="Submit" style="font-weight:bold">
 </td></tr></table>

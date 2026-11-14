@@ -1,6 +1,8 @@
 <?php
 include "funcLib.php";
 
+verifyCsrfOrDie();
+
 if (isset($_POST['message_id']) && isset($_POST['status']) && isset($_SESSION['userid'])) {
     $message_id = $_POST['message_id'];
     $status = $_POST['status'];

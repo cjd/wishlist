@@ -3,7 +3,7 @@ include "funcLib.php";
 
 // Fetch all messages for the current user
 $user_id = $_SESSION['userid'];
-$messages_query = "SELECT m.*, p.firstname, p.lastname FROM messages m LEFT JOIN people p ON m.sender_id = p.userid WHERE m.recipient_id = ? ORDER BY m.timestamp DESC";
+$messages_query = "SELECT m.*, p.firstname, p.lastname FROM messages m LEFT JOIN people p ON m.sender_id = p.userid WHERE m.recipient_id = ? AND m.recipient_deleted = 0 ORDER BY m.timestamp DESC";
 $stmt = mysqli_prepare($link, $messages_query);
 mysqli_stmt_bind_param($stmt, "s", $user_id);
 mysqli_stmt_execute($stmt);
@@ -47,12 +47,14 @@ $users_result = mysqli_stmt_get_result($stmt_users);
         <td><?php echo $message['is_read'] ? 'Read' : 'Unread'; ?></td>
         <td>
             <form action="updateMessageStatus.php" method="post" style="display:inline-block;">
-                <input type="hidden" name="message_id" value="<?php echo $message['message_id']; ?>">
+                <input type="hidden" name="csrf_token" value="<?php echo getCsrfToken(); ?>">
+                <input type="hidden" name="message_id" value="<?php echo intval($message['message_id']); ?>">
                 <input type="hidden" name="status" value="<?php echo $message['is_read'] ? 0 : 1; ?>">
                 <button type="submit" class="actionButton"><?php echo $message['is_read'] ? 'Mark as Unread' : 'Mark as Read'; ?></button>
             </form>
             <form action="deleteMessage.php" method="post" style="display:inline-block;">
-                <input type="hidden" name="message_id" value="<?php echo $message['message_id']; ?>">
+                <input type="hidden" name="csrf_token" value="<?php echo getCsrfToken(); ?>">
+                <input type="hidden" name="message_id" value="<?php echo intval($message['message_id']); ?>">
                 <button type="submit" class="actionButtonRed">Delete</button>
             </form>
         </td>
@@ -77,7 +79,7 @@ $users_result = mysqli_stmt_get_result($stmt_users);
     </tr>
     <?php
     // Fetch sent messages
-    $sent_messages_query = "SELECT m.*, p.firstname, p.lastname FROM messages m LEFT JOIN people p ON m.recipient_id = p.userid WHERE m.sender_id = ? ORDER BY m.timestamp DESC";
+    $sent_messages_query = "SELECT m.*, p.firstname, p.lastname FROM messages m LEFT JOIN people p ON m.recipient_id = p.userid WHERE m.sender_id = ? AND m.sender_deleted = 0 ORDER BY m.timestamp DESC";
     $stmt_sent = mysqli_prepare($link, $sent_messages_query);
     mysqli_stmt_bind_param($stmt_sent, "s", $user_id);
     mysqli_stmt_execute($stmt_sent);
@@ -103,6 +105,7 @@ $users_result = mysqli_stmt_get_result($stmt_users);
 
 <h2>Send a New Message</h2>
 <form action="sendMessage.php" method="post">
+    <input type="hidden" name="csrf_token" value="<?php echo getCsrfToken(); ?>">
     <table border=0>
         <tr>
             <td>Recipient(s):</td>

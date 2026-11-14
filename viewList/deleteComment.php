@@ -15,16 +15,26 @@
 
 include "../funcLib.php";
 
-$name = $_REQUEST["name"];
-$recip = $_REQUEST["recip"];
+verifyCsrfOrDie();
 
-$bad = $_REQUEST["commentId"];
+$name = $_REQUEST["name"] ?? "";
+$recip = $_REQUEST["recip"] ?? "";
+$bad = intval($_REQUEST["commentId"] ?? 0);
+$userid = $_SESSION["userid"];
 
-$query = "delete from comments where commentId=" . $bad;
+if ($bad > 0) {
+    if (isset($_SESSION['admin']) && $_SESSION['admin'] == 1) {
+        $stmt = mysqli_prepare($link, "DELETE FROM comments WHERE commentId = ?");
+        mysqli_stmt_bind_param($stmt, "i", $bad);
+    } else {
+        $stmt = mysqli_prepare($link, "DELETE FROM comments WHERE commentId = ? AND (comment_userid = ? OR userid = ?)");
+        mysqli_stmt_bind_param($stmt, "iss", $bad, $userid, $userid);
+    }
+    mysqli_stmt_execute($stmt);
+}
 
-$rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
-
-header("Location: " . getFullPath("viewList.php?recip=" . $recip . "&name=" . $name));
+header("Location: " . getFullPath("viewList.php?recip=" . urlencode($recip) . "&name=" . urlencode($name)));
+exit;
 
 
 ?>
