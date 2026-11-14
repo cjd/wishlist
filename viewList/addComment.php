@@ -31,6 +31,7 @@ if (isset ($_REQUEST["confirm"])) {
 }
 
 if($confirm != ""){
+  verifyCsrfOrDie();
 
 $recip = convertString($_REQUEST["recip"] ?? '');
 $comment_userid = convertString($_SESSION["userid"] ?? '');
@@ -73,6 +74,7 @@ createNavBar("../home.php:Home|viewList.php?recip=" . $_REQUEST["recip"] . "&nam
 
 <table><tr><td>
 <form name="theForm" method=post action=addComment.php>
+<input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(getCsrfToken(), ENT_QUOTES); ?>">
 <p>
 <b>Comment</b><br> <textarea ROWS='5' COLS='90' name=comment 
 onFocus="javascript:if(this.value=='Type comment here') this.value='';">Type comment here</textarea>

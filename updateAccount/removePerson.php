@@ -15,6 +15,8 @@
 
 include "../funcLib.php";
 
+verifyCsrfOrDie();
+
 $bad = $_REQUEST["bad"] ?? "";
 if (!empty($bad)) {
     $stmt = mysqli_prepare($link, "DELETE FROM viewList WHERE pid = ? AND viewer = ?");

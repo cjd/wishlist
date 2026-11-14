@@ -15,6 +15,8 @@
 
 include "../funcLib.php";
 
+verifyCsrfOrDie();
+
 if (!empty($_REQUEST["person"])) {
     $person = $_REQUEST["person"];
     $check_stmt = mysqli_prepare($link, "SELECT viewer FROM viewList WHERE pid = ? AND viewer = ?");

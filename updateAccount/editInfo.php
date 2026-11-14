@@ -45,6 +45,7 @@ $rs = mysqli_fetch_assoc($result) ?? [];
 ?>
 
 <form method="post" action="validate_editInfo.php">
+<input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(getCsrfToken(), ENT_QUOTES); ?>">
 <input type="hidden" name="target_userid" value="<?php echo htmlspecialchars($userid); ?>">
 <table style="border-collapse: collapse;" id="AutoNumber1" border="1" bordercolor="#111111" cellpadding="2" cellspacing="0">
 <tr><td colspan="2" align="center" bgcolor="#6702cc"> <b><font size=3 color="#ffffff">

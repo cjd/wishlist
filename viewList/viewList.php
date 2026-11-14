@@ -146,6 +146,7 @@ function displayWishlist($recip, $userid, $name, $allowEdit, $link)
 {
     ?>
 <form method="post" action="validate_purchase.php" name="wishlist">
+<input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(getCsrfToken(), ENT_QUOTES); ?>">
 <input type="hidden" name="receiverUserid" value="<?php echo $recip ?>">
 <input type="hidden" name="receiverName" value="<?php echo $name ?>">
 

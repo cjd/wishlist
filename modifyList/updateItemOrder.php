@@ -16,6 +16,7 @@
 include "../funcLib.php";
 
 if (isset($_POST['itemId']) && isset($_POST['fromCategoryId']) && isset($_POST['toCategoryId']) && isset($_POST['newIndex'])) {
+    verifyCsrfOrDie();
     $itemId = intval($_POST['itemId']);
     $fromCategoryId = intval($_POST['fromCategoryId']);
     $toCategoryId = intval($_POST['toCategoryId']);

@@ -15,6 +15,8 @@
 
 include "../funcLib.php";
 
+verifyCsrfOrDie();
+
 $dir = mysqli_escape_string($link,$_REQUEST["dir"] ?? '');
 $cid = intval($_REQUEST["cid"] ?? 0);
 $iid = intval($_REQUEST["iid"] ?? 0);

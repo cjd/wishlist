@@ -15,6 +15,8 @@
 
 include "../funcLib.php";
 
+verifyCsrfOrDie();
+
 $receiverName = $_REQUEST["receiverName"] ?? "";
 $receiverUserid = $_REQUEST["receiverUserid"] ?? "";
 $userid = $_SESSION["userid"];

@@ -15,6 +15,8 @@
 
 include "../funcLib.php";
 
+verifyCsrfOrDie();
+
 $iid = $_REQUEST["iid"];
 $cid = $_REQUEST["cid"];
 $movecid = $_REQUEST["movecid"];

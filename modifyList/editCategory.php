@@ -63,6 +63,7 @@ if($row = mysqli_fetch_assoc($rs)){
 </td></tr>
 
 <form method="post" action="validate_editCategory.php" id="editCategoryForm">
+<input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(getCsrfToken(), ENT_QUOTES); ?>">
 <input type="hidden" name="cid" value="<?php echo htmlspecialchars($cid); ?>"> 
 
 <tr><td align="right">
@@ -110,6 +111,7 @@ if($row = mysqli_fetch_assoc($rs)){
 </form>
 
 <form id="deleteCategoryForm" method="post" action="deleteCategory.php">
+<input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(getCsrfToken(), ENT_QUOTES); ?>">
 <input type="hidden" name="cid" value="<?php echo htmlspecialchars($cid); ?>">
 <input type="hidden" name="cname" value="<?php echo htmlspecialchars($cname); ?>">
 <input type="hidden" name="cso" value="<?php echo htmlspecialchars($_REQUEST["cso"] ?? ''); ?>">

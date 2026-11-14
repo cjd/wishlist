@@ -21,6 +21,7 @@ $referrer = "modifyList.php";
 // check if either are null
 
 if($confirm == "yes"){
+  verifyCsrfOrDie();
 
   $stmt = mysqli_prepare($link, "SELECT items.iid as iid FROM items,categories,purchaseHistory WHERE categories.userid= ? AND categories.cid=items.cid AND purchaseHistory.iid=items.iid");
   mysqli_stmt_bind_param($stmt, "s", $userid);
@@ -63,6 +64,7 @@ createNavBar("../home.php:Home|modifyList.php:Modify WishList|:Remove Crossed Of
 <h3>Are you sure you want to remove all the crossed off items?</h3>
 </td><td>
 <form method="post" action="removeCrossedItems.php">
+<input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(getCsrfToken(), ENT_QUOTES); ?>">
 <input type="hidden" name="confirm" value="yes">
 <input type="hidden" name="referrer" value="<?php echo $referrer ?>">
 <input type="submit" value="Yes" style="font-weight:bold">

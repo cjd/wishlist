@@ -36,6 +36,7 @@ createNavBar("../home.php:Home|modifyList.php:Modify WishList|:Add Category");
 <p>&nbsp;
 
 <form method="post" action="validate_addCategory.php">
+<input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(getCsrfToken(), ENT_QUOTES); ?>">
 
 <table style="border-collapse: collapse;" id="AutoNumber1" border="1" bordercolor="#11111" cellpadding="2" cellspacing="0" bgcolor="lightyellow">
 <tr><td colspan="2" align="center" bgcolor="#6702cc"> <b><font size=3 color="#ffffff">

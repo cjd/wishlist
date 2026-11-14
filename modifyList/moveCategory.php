@@ -15,6 +15,8 @@
 
 include "../funcLib.php";
 
+verifyCsrfOrDie();
+
 $dir = $_REQUEST["dir"] ?? "";
 $cid = intval($_REQUEST["cid"] ?? 0);
 $cso = intval($_REQUEST["cso"] ?? 0);

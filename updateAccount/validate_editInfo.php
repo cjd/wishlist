@@ -15,6 +15,8 @@
 
 include "../funcLib.php";
 
+verifyCsrfOrDie();
+
 $actual_userid = $_SESSION["userid"];
 $requested_userid = $_REQUEST["target_userid"] ?? ($_SESSION["euserid"] ?? "");
 if (!empty($requested_userid) && $requested_userid != $_SESSION["userid"]) {

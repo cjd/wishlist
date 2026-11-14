@@ -113,6 +113,7 @@ printModifyList($userid);
 <center>
 <input type="button" value="Edit Account" class="buttonstyle" onclick="location.href='../updateAccount/updateAccount.php'">
 <form method="post" action="removeCrossedItems.php">
+<input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(getCsrfToken(), ENT_QUOTES); ?>">
 <input type="submit" value="Remove Crossed Off Items" class="buttonstyle">
 </form>
 </center>
@@ -151,6 +152,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     url: 'updateItemOrder.php',
                     type: 'POST',
                     data: {
+                        csrf_token: '<?php echo getCsrfToken(); ?>',
                         itemId: itemId,
                         fromCategoryId: fromCategoryId,
                         toCategoryId: toCategoryId,

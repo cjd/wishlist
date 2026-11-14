@@ -48,6 +48,7 @@ createNavBar("../home.php:Home|modifyList.php:Modify WishList|:Add Item");
 <center>
 <p>&nbsp;
 <form method="post" name="theForm" action="validate_addItem.php" enctype="multipart/form-data">
+<input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(getCsrfToken(), ENT_QUOTES); ?>">
 <input type="hidden" name="MAX_FILE_SIZE" value="10000000" />
 <input type="hidden" size="30" name="cid" value="<?php echo htmlspecialchars($cid); ?>">
 

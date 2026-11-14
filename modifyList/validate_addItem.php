@@ -15,6 +15,8 @@
 
 include "../funcLib.php";
 
+verifyCsrfOrDie();
+
 $cid = $_REQUEST["cid"];
 
 $title= convertString($_REQUEST["title"]);

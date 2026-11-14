@@ -50,6 +50,7 @@ createNavBar("../home.php:Home|modifyList.php:Modify WishList|:Edit Item", false
 <p>&nbsp;
 <center>
 <form method="post" action="validate_editItem.php" style="page-break-after:" enctype="multipart/form-data">
+<input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(getCsrfToken(), ENT_QUOTES); ?>">
 <input type="hidden" name="iid" value="<?php echo htmlspecialchars($iid, ENT_QUOTES); ?>">
 <input type="hidden" name="iso" value="<?php echo htmlspecialchars($iso, ENT_QUOTES); ?>">
 <input type="hidden" name="cid" value="<?php echo htmlspecialchars($cid, ENT_QUOTES); ?>">
@@ -184,6 +185,7 @@ if($row["addStar"] == "1")
 </form>
 
 <form id="deleteItemForm" method="post" action="deleteItem.php">
+<input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(getCsrfToken(), ENT_QUOTES); ?>">
 <input type="hidden" name="iso" value="<?php echo htmlspecialchars($iso); ?>">
 <input type="hidden" name="iid" value="<?php echo htmlspecialchars($iid); ?>">
 <input type="hidden" name="cid" value="<?php echo htmlspecialchars($cid); ?>">

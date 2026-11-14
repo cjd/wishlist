@@ -450,11 +450,11 @@ function printCategory($row, $name, $displayPurchases, $readOnly, $modifyList, $
     }
     else{
       if ($i != 0){
-        print "<a href=\"moveCategory.php?dir=up&cid=" . $row["cid"] . "&cso=" . $row["catSortOrder"] . "\"><img width=13px height=13px border=0 src=\"../images/up_arrow_lightBlue.gif\" title=\"Click this arrow to move the category up\"></a>";
+        print "<a href=\"moveCategory.php?dir=up&cid=" . $row["cid"] . "&cso=" . $row["catSortOrder"] . "&csrf_token=" . urlencode(getCsrfToken()) . "\"><img width=13px height=13px border=0 src=\"../images/up_arrow_lightBlue.gif\" title=\"Click this arrow to move the category up\"></a>";
       }
       
       if($i != $last - 1){
-        print "<a href=\"moveCategory.php?dir=down&cid=" . $row["cid"] . "&cso=" . $row["catSortOrder"] . "\"><img width=13px height=13px border=0 src=\"../images/down_arrow_lightBlue.gif\" title=\"Click this arrow to move the category down\"></a>";
+        print "<a href=\"moveCategory.php?dir=down&cid=" . $row["cid"] . "&cso=" . $row["catSortOrder"] . "&csrf_token=" . urlencode(getCsrfToken()) . "\"><img width=13px height=13px border=0 src=\"../images/down_arrow_lightBlue.gif\" title=\"Click this arrow to move the category down\"></a>";
         if($i == 0){
           print "<img width=13px height=13px src=\"../images/space.GIF\">";
         }

@@ -15,6 +15,8 @@
 
 include "../funcLib.php";
 
+verifyCsrfOrDie();
+
 $cname = convertString($_REQUEST["cname"]);
 $description = convertString($_REQUEST["description"]);
 $linkname = convertString($_REQUEST["linkname"]);
