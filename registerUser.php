@@ -36,19 +36,19 @@ $stop = true;
 <center>
 <?php
 
-if($_REQUEST["fname"] != ""){
+if (!empty($_REQUEST["fname"])){
 if($stop){
   return;                      
 }
-  $fname = convertString($_REQUEST["fname"]);
-  $lname = convertString($_REQUEST["lname"]);
-  $suffix = convertString($_REQUEST["suffix"]);
-  $userid = convertString($_REQUEST["userid"]);
-  $email = convertString($_REQUEST["email"]);
-  $comment = convertString($_REQUEST["comment"]);
+  $fname = convertString($_REQUEST["fname"] ?? '');
+  $lname = convertString($_REQUEST["lname"] ?? '');
+  $suffix = convertString($_REQUEST["suffix"] ?? '');
+  $userid = convertString($_REQUEST["userid"] ?? '');
+  $email = convertString($_REQUEST["email"] ?? '');
+  $comment = convertString($_REQUEST["comment"] ?? '');
 
   // send a message to all the admins
-  $query = "select userid from people where admin=1";
+  $query = "SELECT userid FROM people WHERE admin = '1'";
   $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));  
 
   $to = "";
@@ -64,7 +64,7 @@ if($stop){
   $result = sendEmail($to, "", $subject, $message, 0);
 
   if($result == 1)
-    print "<h2>Thank you. You should receive an email shortly with your account details</h2>";
+    print "<h2>Thank you. Your request has been submitted to the administrator for approval.</h2>";
   else
     print "<h1>An unexpected error has occured</h1>";
 
@@ -118,7 +118,7 @@ created.
 
 <tr>
 <td align=right><b>Comment</b></td>
-<td><textarea name=comment rows=3 cols=60 onfocus="this.value=''"></textarea></td>
+<td><textarea name=comment rows=3 cols=60></textarea></td>
 </tr>
 
 <tr><td align="center" colspan="2" bgcolor="#c0c0c0">

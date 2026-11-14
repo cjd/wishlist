@@ -15,7 +15,7 @@
 
 include "../funcLib.php";
 
-$confirm = $_REQUEST["confirm"];
+$confirm = $_REQUEST["confirm"] ?? "";
 $referrer = "modifyList.php";
 
 // check if either are null
@@ -30,6 +30,7 @@ if($confirm == "yes"){
     deleteItem($row["iid"], $userid, $_SESSION["fullname"], $base_dir);
   }
   header("Location: " . getFullPath("modifyList.php"));
+  exit;
 }
 else{
 
@@ -59,9 +60,7 @@ createNavBar("../home.php:Home|modifyList.php:Modify WishList|:Remove Crossed Of
 
 <table bgcolor="indianred">
 <tr><td>
-<h3>Are you sure you want to remove all the crosses off items?</h3>
-
-<?php print "DELETE FROM items,categories,purchaseHistory WHERE categories.userid='".$userid."' and categories.cid=items.cid and purchaseHistory.iid=items.iid"; ?>
+<h3>Are you sure you want to remove all the crossed off items?</h3>
 </td><td>
 <form method="post" action="removeCrossedItems.php">
 <input type="hidden" name="confirm" value="yes">

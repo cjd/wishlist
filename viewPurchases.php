@@ -43,7 +43,7 @@ If you want to include any additional people in this list then request that they
 <tr><th class=headerCell>List</th><th class=headerCell>Gift/Comment</th><th class=headerCell>$</th><th class=headerCell>Buyer</th><th class=headerCell>Bought @</th><th class=headerCell>Action</th></tr>
 
 <?php
-$query = "(SELECT 'item' as type,CONCAT(p1.firstname,' ',p1.lastname) AS recipient,
+$query = "(SELECT 'item' as type, CONCAT(p1.firstname,' ',p1.lastname) AS recipient,
 CONCAT(p2.firstname,' ',p2.lastname) AS buyer,
 p1.userid, boughtDate, purchaseHistory.purchaseId, items.title,
 purchaseHistory.quantity, items.description, items.price,
@@ -53,26 +53,28 @@ WHERE p1.userid=categories.userid
 AND p2.userid=purchaseHistory.userid
 AND purchaseHistory.iid=items.iid
 AND items.cid=categories.cid
-AND (purchaseHistory.userid='".$userid."'
-OR purchaseHistory.userid IN (SELECT pid FROM viewList WHERE viewer='".$userid."' AND allowEdit=1)
+AND (purchaseHistory.userid = ?
+OR purchaseHistory.userid IN (SELECT pid FROM viewList WHERE viewer = ? AND allowEdit = 1)
 )
-AND categories.userid!='".$userid."')
+AND categories.userid != ?)
 UNION
-(SELECT 'comment' as type, concat(p1.firstname,' ',p1.lastname) as recipient,
-concat(p2.firstname,' ',p2.lastname) as buyer, p1.userid,
+(SELECT 'comment' as type, CONCAT(p1.firstname,' ',p1.lastname) as recipient,
+CONCAT(p2.firstname,' ',p2.lastname) as buyer, p1.userid,
 comments.date,comments.commentId,comments.comment,
 0,'',0,
 p1.firstname as firstname, p1.lastname as lastname
 FROM people as p1, people as p2, comments
-WHERE p1.userid=comments.userid
-AND p2.userid=comments.comment_userid
-AND (comments.comment_userid='".$userid."'
-OR comments.comment_userid IN (select pid from viewList where viewer='".$userid."' and allowEdit=1)
-AND comments.userid!='".$userid."'))
+WHERE p1.userid = comments.userid
+AND p2.userid = comments.comment_userid
+AND (comments.comment_userid = ?
+OR comments.comment_userid IN (SELECT pid FROM viewList WHERE viewer = ? AND allowEdit = 1))
+AND comments.userid != ?)
 ORDER BY lastname,firstname;";
 
-
-$rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+$stmt = mysqli_prepare($link, $query);
+mysqli_stmt_bind_param($stmt, "ssssss", $userid, $userid, $userid, $userid, $userid, $userid);
+mysqli_stmt_execute($stmt);
+$rs = mysqli_stmt_get_result($stmt);
 $style="viewpurchases1";
 $oldrecip="";
 $oldlast="";
@@ -88,7 +90,7 @@ while($row = mysqli_fetch_assoc($rs)){
     }
     echo "<tr><td colspan=6 class=viewpurchaseshead></td></tr>";
     $style="viewpurchases1";
-    echo "<tr><td class=".$style."><b><a href=\"viewList/viewList.php?recip=".$row[userid]."&name=".$row["recipient"]."\">".$row["recipient"]."</a></b></td>";
+    echo "<tr><td class=".$style."><b><a href=\"viewList/viewList.php?recip=".urlencode($row["userid"])."&name=".urlencode($row["recipient"])."\">".htmlspecialchars($row["recipient"])."</a></b></td>";
   } else {
     echo "<tr><td class=".$style."></td>";
   }
@@ -96,18 +98,18 @@ while($row = mysqli_fetch_assoc($rs)){
   if ($row["quantity"] > 0) {
     echo $row["quantity"]." x ";
   }
-  echo $row["title"]."</td>";
+  echo htmlspecialchars($row["title"])."</td>";
   echo "<td class=".$style.">";
   if ($row["price"]*$row["quantity"] > 0) {
     echo $row["price"]*$row["quantity"];
   }
   echo "</td>";
-  echo "<td class=".$style.">".$row["buyer"]."</td>";
+  echo "<td class=".$style.">".htmlspecialchars($row["buyer"])."</td>";
   echo "<td class=".$style.">".parseDate($row["boughtDate"],1)."</td>\n";
   if ($row["type"] == "item") {
-    echo "<td class=".$style."><b><a href=\"viewList/deletePurchase.php?recip=".$userid."&name=".$row["recipient"]."&purchaseId=".$row["purchaseId"]."\">[Undo this purchase]</a></b></td>";
+    echo "<td class=".$style."><b><a href=\"viewList/deletePurchase.php?recip=".urlencode($row["userid"])."&name=".urlencode($row["recipient"])."&purchaseId=".intval($row["purchaseId"])."\">[Undo this purchase]</a></b></td>";
   } else {
-    echo "<td class=".$style."><b><a href=\"viewList/deleteComment.php?commentId=".$row["purchaseId"]."&recip=".$row["userid"]."&name=".$row["recipient"]."\">[Delete this comment]</a></b></td>";
+    echo "<td class=".$style."><b><a href=\"viewList/deleteComment.php?commentId=".intval($row["purchaseId"])."&recip=".urlencode($row["userid"])."&name=".urlencode($row["recipient"])."\">[Delete this comment]</a></b></td>";
 
   }
   echo "</tr>\n";

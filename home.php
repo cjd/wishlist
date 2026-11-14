@@ -153,7 +153,6 @@ if ($season == 1) {
 } else {
     $image = "waving_santa2.gif";
 }
-$image = "wishlist.png";
 ?>
 <script type="text/javascript">
   if (screen.width <= 1000) {
@@ -247,8 +246,11 @@ if ($_SESSION["admin"] == 1) {
 
 <?php
 // Fetch unread messages for the current user
-$unread_messages_query = "SELECT m.message_id, m.sender_id, m.subject, m.body, m.timestamp, p.firstname, p.lastname FROM messages m LEFT JOIN people p ON m.sender_id = p.userid WHERE m.recipient_id = '" . $_SESSION['userid'] . "' AND m.is_read = 0 ORDER BY m.timestamp DESC";
-$unread_messages_result = mysqli_query($link, $unread_messages_query);
+$unread_messages_query = "SELECT m.message_id, m.sender_id, m.subject, m.body, m.timestamp, p.firstname, p.lastname FROM messages m LEFT JOIN people p ON m.sender_id = p.userid WHERE m.recipient_id = ? AND m.is_read = 0 AND m.recipient_deleted = 0 ORDER BY m.timestamp DESC";
+$stmt_unread = mysqli_prepare($link, $unread_messages_query);
+mysqli_stmt_bind_param($stmt_unread, "s", $_SESSION['userid']);
+mysqli_stmt_execute($stmt_unread);
+$unread_messages_result = mysqli_stmt_get_result($stmt_unread);
 
 if (mysqli_num_rows($unread_messages_result) > 0) {
     $_SESSION['messages'] = [];
@@ -322,10 +324,11 @@ $(document).ready(function() {
     <h2>Access Requests</h2>
     <?php while ($request = mysqli_fetch_assoc($pending_requests_result)): ?>
       <div class="request">
-        <p><b><?php echo $request['firstname'] . ' ' . $request['lastname']; ?></b> would like to view your wishlist.</p>
+        <p><b><?php echo htmlspecialchars($request['firstname'] . ' ' . $request['lastname']); ?></b> would like to view your wishlist.</p>
         <form action="handleAccessRequest.php" method="post">
-          <input type="hidden" name="requestId" value="<?php echo $request['id']; ?>">
-          <input type="hidden" name="requesterId" value="<?php echo $request['requesterId']; ?>">
+          <input type="hidden" name="csrf_token" value="<?php echo getCsrfToken(); ?>">
+          <input type="hidden" name="requestId" value="<?php echo intval($request['id']); ?>">
+          <input type="hidden" name="requesterId" value="<?php echo htmlspecialchars($request['requesterId']); ?>">
           <button type="submit" name="decision" value="approve_readonly" class="buttonstyle">Approve (Read-Only)</button>
           <button type="submit" name="decision" value="approve_contact" class="buttonstyle">Approve (with List Access)</button>
           <button type="submit" name="decision" value="deny" class="buttonstyle">Deny</button>
