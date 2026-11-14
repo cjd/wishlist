@@ -169,7 +169,7 @@ CREATE TABLE `viewList` (
   `allowEdit` char(1) NOT NULL DEFAULT '0'
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
-DROP TABLE IF EXISTS `viewList`;
+DROP TABLE IF EXISTS `schema_version`;
 CREATE TABLE `schema_version` (
   `version` int(11) NOT NULL
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
