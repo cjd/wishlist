@@ -1,5 +1,6 @@
 .stfolder
-uploads
+uploads/*
+!uploads/.htaccess
 config.php
 GEMINI.md
 testing

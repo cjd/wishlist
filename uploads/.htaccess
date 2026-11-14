@@ -1,0 +1,9 @@
+# Disable PHP and script execution in the uploads directory
+<FilesMatch "(?i)\.(php|phtml|php3|php4|php5|php7|php8|phar|pl|py|cgi|sh|bash)$">
+    Require all denied
+</FilesMatch>
+
+# Prevent override of handler and ensure static serving only
+RemoveHandler .php .phtml .php3 .php4 .php5 .php7 .php8 .phar
+SetHandler default-handler
+Options -ExecCGI -Indexes
