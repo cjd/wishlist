@@ -15,9 +15,21 @@
 
 include "../funcLib.php";
 
-$recip = $_REQUEST["recip"];
-$name = $_REQUEST["name"];
-$userid = $_SESSION["userid"];
+$recip = $_REQUEST["recip"] ?? "";
+$name = $_REQUEST["name"] ?? "";
+$userid = $_SESSION["userid"] ?? "";
+
+// Check authorization to view this log: must be list owner, admin, or have view permissions
+if (!isset($_SESSION["admin"]) || $_SESSION["admin"] != 1) {
+    $stmt_perm = mysqli_prepare($link, "SELECT 1 FROM viewList WHERE viewer = ? AND pid = ?");
+    mysqli_stmt_bind_param($stmt_perm, "ss", $userid, $recip);
+    mysqli_stmt_execute($stmt_perm);
+    $perm_res = mysqli_stmt_get_result($stmt_perm);
+    if (!mysqli_fetch_row($perm_res) && $recip != $userid) {
+        header("Location: ../home.php");
+        exit;
+    }
+}
 
 ?>
 <HTML>
@@ -26,14 +38,14 @@ $userid = $_SESSION["userid"];
 
 <link rel=stylesheet href=../style.css type=text/css>
 
-<title><?php echo $name ?>'s WishList Change Log</title>
+<title><?php echo htmlspecialchars($name); ?>'s WishList Change Log</title>
 <BODY>
 <table cellspacing="0" cellpadding="5" width="100%" height="100%" bgcolor="#FFFFFF" nosave border="0" style="border: 1px solid rgb(128,255,128)">
 <tr>
 <td valign="top" >
 
 <?php
-createNavBar("../home.php:Home|viewList.php?recip=" . $recip . "&name=" . $name . ":View List - " . $name . "|:View Log " . $name, false, "");
+createNavBar("../home.php:Home|viewList.php?recip=" . urlencode($recip) . "&name=" . urlencode($name) . ":View List - " . htmlspecialchars($name) . "|:View Log " . htmlspecialchars($name), false, "");
 ?>
 
 <p>
@@ -41,26 +53,28 @@ createNavBar("../home.php:Home|viewList.php?recip=" . $recip . "&name=" . $name 
 
 <?php
 
-$query = 
-  "select firstname, lastname, suffix, purchaseHistory.userid, purchaseHistory.boughtDate, purchaseHistory.quantity, title, items.description, purchaseId from items, categories, people, purchaseHistory where items.iid=purchaseHistory.iid and categories.cid=items.cid and people.userid=purchaseHistory.userid and categories.userid='" . $recip . "' and (people.userid='" .$userid."' OR people.userid in (SELECT pid FROM viewList WHERE viewer='".$userid."' AND allowEdit=1)) order by purchaseHistory.boughtDate desc";
+$query = "SELECT firstname, lastname, suffix, purchaseHistory.userid, purchaseHistory.boughtDate, purchaseHistory.quantity, title, items.description, purchaseId FROM items, categories, people, purchaseHistory WHERE items.iid=purchaseHistory.iid AND categories.cid=items.cid AND people.userid=purchaseHistory.userid AND categories.userid = ? AND (people.userid = ? OR people.userid IN (SELECT pid FROM viewList WHERE viewer = ? AND allowEdit=1)) ORDER BY purchaseHistory.boughtDate DESC";
 
-$rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+$stmt_log = mysqli_prepare($link, $query);
+mysqli_stmt_bind_param($stmt_log, "sss", $recip, $userid, $userid);
+mysqli_stmt_execute($stmt_log);
+$rs = mysqli_stmt_get_result($stmt_log);
  
 while($row = mysqli_fetch_assoc($rs)){
 ?>
 
   On <font color="indianred"><?php echo parseDate($row["boughtDate"],1) ?></font>, 
-  <font color="navy"><?php echo $row["firstname"] . ' ' . $row["lastname"] . ' ' . $row["suffix"] ?></font> made the following changes
+  <font color="navy"><?php echo htmlspecialchars($row["firstname"] . ' ' . $row["lastname"] . ' ' . $row["suffix"]) ?></font> made the following changes
 <?php
   if($row["userid"] == $userid){ 
-?>    <b><a href="deletePurchase.php?recip=<?php echo $recip ?>&name=<?php echo $name?>&purchaseId=<?php echo $row["purchaseId"] ?>">[Undo this purchase]</a></b>
+?>    <b><a href="deletePurchase.php?recip=<?php echo urlencode($recip); ?>&name=<?php echo urlencode($name); ?>&purchaseId=<?php echo intval($row["purchaseId"]); ?>">[Undo this purchase]</a></b>
 <?php
 }
 ?>
   <br>
   <?php 
-    print $row["quantity"] != "1" ? "<font color=red>Bought " . $row["quantity"] . "</font> " : "" ?><i><?php echo $row["title"] ?></i> 
-  - <?php echo $row["description"] ?> 
+    print $row["quantity"] != "1" ? "<font color=red>Bought " . htmlspecialchars($row["quantity"]) . "</font> " : "" ?><i><?php echo htmlspecialchars($row["title"]); ?></i> 
+  - <?php echo cleanString($row["description"]); ?> 
 
   <p>
 <?php

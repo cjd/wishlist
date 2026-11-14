@@ -15,13 +15,17 @@
 
 include "../funcLib.php";
 
-$dir = mysqli_escape_string($link,$_REQUEST["dir"]);
+$dir = mysqli_escape_string($link,$_REQUEST["dir"] ?? '');
+$cid = intval($_REQUEST["cid"] ?? 0);
+$iid = intval($_REQUEST["iid"] ?? 0);
+$iso = intval($_REQUEST["iso"] ?? 0);
 
-$cid = mysqli_escape_string($link,$_REQUEST["cid"]);
-
-$iid = mysqli_escape_string($link,$_REQUEST["iid"]);
-
-$iso = mysqli_escape_string($link,$_REQUEST["iso"]);
+$check = mysqli_prepare($link, "SELECT items.iid FROM items JOIN categories ON items.cid = categories.cid WHERE items.iid = ? AND categories.userid = ?");
+mysqli_stmt_bind_param($check, "is", $iid, $userid);
+mysqli_stmt_execute($check);
+if (mysqli_num_rows(mysqli_stmt_get_result($check)) == 0) {
+    die("Unauthorized: That item does not belong to you.");
+}
 
 if($dir == "down"){
   $stmt = mysqli_prepare($link, "UPDATE items SET itemSortOrder = itemSortOrder - 1 WHERE itemSortOrder = ? AND cid = ?");
@@ -44,8 +48,9 @@ else{
   mysqli_stmt_execute($stmt);
 }
 
-  header("Location: " . getFullPath("modifyList.php"));
-
   $stmt = mysqli_prepare($link, "UPDATE people SET lastModDate=NOW() WHERE userid = ?");
   mysqli_stmt_bind_param($stmt, "s", $userid);
   mysqli_stmt_execute($stmt);
+
+  header("Location: " . getFullPath("modifyList.php"));
+  exit;

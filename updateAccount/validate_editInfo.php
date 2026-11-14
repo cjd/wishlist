@@ -16,48 +16,45 @@
 include "../funcLib.php";
 
 $actual_userid = $_SESSION["userid"];
-if (isset($_REQUEST["target_userid"])) {
-    $actual_userid = $_REQUEST["target_userid"];
-} else if (isset($_SESSION["euserid"])) {
-    $actual_userid = $_SESSION["euserid"];
+$requested_userid = $_REQUEST["target_userid"] ?? ($_SESSION["euserid"] ?? "");
+if (!empty($requested_userid) && $requested_userid != $_SESSION["userid"]) {
+    if (isset($_SESSION["admin"]) && $_SESSION["admin"] == 1) {
+        $actual_userid = $requested_userid;
+    } else {
+        $check_perm = mysqli_prepare($link, "SELECT allowEdit FROM viewList WHERE pid = ? AND viewer = ?");
+        mysqli_stmt_bind_param($check_perm, "ss", $requested_userid, $_SESSION["userid"]);
+        mysqli_stmt_execute($check_perm);
+        $res_perm = mysqli_stmt_get_result($check_perm);
+        if ($prow = mysqli_fetch_assoc($res_perm)) {
+            if ($prow["allowEdit"] == '1') {
+                $actual_userid = $requested_userid;
+            } else {
+                die("Unauthorized: You do not have permission to edit this account.");
+            }
+        } else {
+            die("Unauthorized: You do not have permission to edit this account.");
+        }
+    }
 }
 
-$firstname= convertString($_REQUEST["firstname"]);
-$lastname= convertString($_REQUEST["lastname"]);
-$suffix= convertString($_REQUEST["suffix"]);
-$street = convertString($_REQUEST["street"]);
-$city = convertString($_REQUEST["city"]);
-$state = convertString($_REQUEST["state"]);
-$zip = $_REQUEST["zip"];
-$phone = convertString($_REQUEST["phone"]);
-$mobilephone = convertString($_REQUEST["mobilephone"]);
-$email = convertString($_REQUEST["email"]);
-$bmonth = convertString($_REQUEST["bmonth"]);
-$bday = $_REQUEST["bday"];
-$url = convertString($_REQUEST["url"]);
+$firstname= convertString($_REQUEST["firstname"] ?? '');
+$lastname= convertString($_REQUEST["lastname"] ?? '');
+$suffix= convertString($_REQUEST["suffix"] ?? '');
+$street = convertString($_REQUEST["street"] ?? '');
+$city = convertString($_REQUEST["city"] ?? '');
+$state = convertString($_REQUEST["state"] ?? '');
+$zip = intval($_REQUEST["zip"] ?? 0);
+$phone = convertString($_REQUEST["phone"] ?? '');
+$mobilephone = convertString($_REQUEST["mobilephone"] ?? '');
+$email = convertString($_REQUEST["email"] ?? '');
+$bmonth = convertString($_REQUEST["bmonth"] ?? '');
+$bday = intval($_REQUEST["bday"] ?? 1);
+$url = convertString($_REQUEST["url"] ?? '');
 
-if(!is_numeric($zip))
-  $zip = 0;
+$stmt = mysqli_prepare($link, "UPDATE people SET firstname = ?, lastname = ?, suffix = ?, street = ?, city = ?, state = ?, zip = ?, email = ?, phone = ?, mobilephone = ?, url = ?, bmonth = ?, bday = ? WHERE userid = ?");
+mysqli_stmt_bind_param($stmt, "ssssssisssssis", $firstname, $lastname, $suffix, $street, $city, $state, $zip, $email, $phone, $mobilephone, $url, $bmonth, $bday, $actual_userid);
+mysqli_stmt_execute($stmt);
 
-if(!is_numeric($bday))
-  $bday = 1;
-
-$query = "update people set firstname = '" . $firstname . "', " .
-       "lastname = '" . $lastname . "', " .
-       "suffix = '" . $suffix . "', " .
-       "street = '" . $street . "', " .
-       "city = '" . $city . "', " . 
-       "state = '" . $state . "', " . 
-       "zip = " . $zip . ", " . 
-       "email = '" . $email . "', " . 
-       "phone = '" . $phone . "', " . 
-       "mobilephone = '" . $mobilephone . "', " . 
-       "url = '" . $url . "', " .
-       "bmonth = '" . $bmonth . "', " .
-       "bday = " . $bday . " " .
-       "where userid = '" . $actual_userid . "'";
-
-$result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
-
-header("Location: " . getFullPath("updateAccount.php?target_userid=" . $actual_userid));
+header("Location: " . getFullPath("updateAccount.php?target_userid=" . urlencode($actual_userid)));
+exit;
 ?>

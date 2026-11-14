@@ -15,11 +15,25 @@
 
 include "../funcLib.php";
 
-if (isset($_POST['itemId']) && isset($_POST['toCategoryId']) && isset($_POST['newIndex'])) {
-    $itemId = $_POST['itemId'];
-    $fromCategoryId = $_POST['fromCategoryId'];
-    $toCategoryId = $_POST['toCategoryId'];
-    $newIndex = $_POST['newIndex'];
+if (isset($_POST['itemId']) && isset($_POST['fromCategoryId']) && isset($_POST['toCategoryId']) && isset($_POST['newIndex'])) {
+    $itemId = intval($_POST['itemId']);
+    $fromCategoryId = intval($_POST['fromCategoryId']);
+    $toCategoryId = intval($_POST['toCategoryId']);
+    $newIndex = intval($_POST['newIndex']);
+
+    $check = mysqli_prepare($link, "SELECT items.iid FROM items JOIN categories ON items.cid = categories.cid WHERE items.iid = ? AND categories.userid = ?");
+    mysqli_stmt_bind_param($check, "is", $itemId, $userid);
+    mysqli_stmt_execute($check);
+    if (mysqli_num_rows(mysqli_stmt_get_result($check)) == 0) {
+        die("Unauthorized: That item does not belong to you.");
+    }
+
+    $check_to = mysqli_prepare($link, "SELECT cid FROM categories WHERE cid = ? AND userid = ?");
+    mysqli_stmt_bind_param($check_to, "is", $toCategoryId, $userid);
+    mysqli_stmt_execute($check_to);
+    if (mysqli_num_rows(mysqli_stmt_get_result($check_to)) == 0) {
+        die("Unauthorized: Destination category does not belong to you.");
+    }
 
     mysqli_begin_transaction($link);
 

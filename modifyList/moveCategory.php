@@ -15,11 +15,17 @@
 
 include "../funcLib.php";
 
-$dir = mysqli_escape_string($link,$_REQUEST["dir"]);
+$dir = $_REQUEST["dir"] ?? "";
+$cid = intval($_REQUEST["cid"] ?? 0);
+$cso = intval($_REQUEST["cso"] ?? 0);
 
-$cid = mysqli_escape_string($link,$_REQUEST["cid"]);
-
-$cso = mysqli_escape_string($link,$_REQUEST["cso"]);
+$check = mysqli_prepare($link, "SELECT cid FROM categories WHERE cid = ? AND userid = ?");
+mysqli_stmt_bind_param($check, "is", $cid, $userid);
+mysqli_stmt_execute($check);
+$res = mysqli_stmt_get_result($check);
+if (mysqli_num_rows($res) == 0) {
+    die("Unauthorized: Category does not belong to you.");
+}
 
 if($dir == "down"){
   $stmt = mysqli_prepare($link, "UPDATE categories SET catSortOrder = catSortOrder - 1 WHERE catSortOrder = ? AND userid = ?");
@@ -27,8 +33,8 @@ if($dir == "down"){
   mysqli_stmt_bind_param($stmt, "is", $new_cso, $userid);
   mysqli_stmt_execute($stmt);
 
-  $stmt = mysqli_prepare($link, "UPDATE categories SET catSortOrder = catSortOrder + 1 WHERE cid = ?");
-  mysqli_stmt_bind_param($stmt, "i", $cid);
+  $stmt = mysqli_prepare($link, "UPDATE categories SET catSortOrder = catSortOrder + 1 WHERE cid = ? AND userid = ?");
+  mysqli_stmt_bind_param($stmt, "is", $cid, $userid);
   mysqli_stmt_execute($stmt);
 
 }
@@ -39,13 +45,14 @@ else
   mysqli_stmt_bind_param($stmt, "is", $new_cso, $userid);
   mysqli_stmt_execute($stmt);
 
-  $stmt = mysqli_prepare($link, "UPDATE categories SET catSortOrder = catSortOrder - 1 WHERE cid = ?");
-  mysqli_stmt_bind_param($stmt, "i", $cid);
+  $stmt = mysqli_prepare($link, "UPDATE categories SET catSortOrder = catSortOrder - 1 WHERE cid = ? AND userid = ?");
+  mysqli_stmt_bind_param($stmt, "is", $cid, $userid);
   mysqli_stmt_execute($stmt);
 }
 
-  header("Location: " . getFullPath("modifyList.php"));
+$stmt = mysqli_prepare($link, "UPDATE people SET lastModDate=NOW() WHERE userid = ?");
+mysqli_stmt_bind_param($stmt, "s", $userid);
+mysqli_stmt_execute($stmt);
 
-  $stmt = mysqli_prepare($link, "UPDATE people SET lastModDate=NOW() WHERE userid = ?");
-  mysqli_stmt_bind_param($stmt, "s", $userid);
-  mysqli_stmt_execute($stmt);
+header("Location: " . getFullPath("modifyList.php"));
+exit;
