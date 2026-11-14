@@ -62,29 +62,29 @@ if($row = mysqli_fetch_assoc($rs)){
 <br>
 </td></tr>
 
-<form method="post" action="validate_editCategory.php">
-<input type="hidden" name="cid" value="<?php echo $cid ?>"> 
+<form method="post" action="validate_editCategory.php" id="editCategoryForm">
+<input type="hidden" name="cid" value="<?php echo htmlspecialchars($cid); ?>"> 
 
 <tr><td align="right">
 <b>Category Name</b>
 </td><td bgcolor="#eeeeee">
-<input type="text" size="50" name="name" value="<?php echo $row["name"] ?>">
+<input type="text" size="50" name="name" value="<?php echo htmlspecialchars($row["name"]); ?>">
 </td></tr>
 <tr><td align="right">  
 <b>Category Description</b>
 </td><td bgcolor="#eeeeee">
-<input type="text" size="50" name="description" value="<?php echo $row["description"] ?>">
+<input type="text" size="50" name="description" value="<?php echo htmlspecialchars($row["description"]); ?>">
 </td></tr>
 <tr><td align="right">
 <table><tr><td align="right">
 <b>Link Name</b>
-</tr><tr><td  align="right">
+</td></tr><tr><td  align="right">
 <b>URL</b>
 </td></tr></table>
 </td><td bgcolor="#eeeeee">
-<input type="text" size="50" name="linkname" value="<?php echo $row["linkname"] ?>">
+<input type="text" size="50" name="linkname" value="<?php echo htmlspecialchars($row["linkname"]); ?>">
 <br>
-<input type="text" size="100" name="linkurl" value="<?php echo $row["linkurl"] ?>">
+<input type="text" size="100" name="linkurl" value="<?php echo htmlspecialchars($row["linkurl"]); ?>">
 </td></tr>
 
 <tr><td align="right">
@@ -98,22 +98,23 @@ if($row = mysqli_fetch_assoc($rs)){
     <table width="100%">
     <tr><td align=center valign="center">
     <input type="submit" value="Update Category" style="font-weight:bold">
-    </form>
   </td>
 
   <td align=center valign="center">
-    <FORM METHOD="POST" ACTION="deleteCategory.php">
-    <input type="hidden" name="cid" value="<?php echo $_REQUEST["cid"] ?>">
-    <input type="hidden" name="cname" value="<?php echo $cname ?>">
-    <input type="hidden" name="cso" value="<?php echo $_REQUEST["cso"] ?>">
-    <input type="hidden" name="referrer" value="editCategory.php">
-    <input type="submit" value="Delete Category" style="font-weight:bold; color:red">
-    </form>
+    <button type="submit" form="deleteCategoryForm" style="font-weight:bold; color:red">Delete Category</button>
   </td></tr>
   </table>
 
 </td></tr>
 </table>
+</form>
+
+<form id="deleteCategoryForm" method="post" action="deleteCategory.php">
+<input type="hidden" name="cid" value="<?php echo htmlspecialchars($cid); ?>">
+<input type="hidden" name="cname" value="<?php echo htmlspecialchars($cname); ?>">
+<input type="hidden" name="cso" value="<?php echo htmlspecialchars($_REQUEST["cso"] ?? ''); ?>">
+<input type="hidden" name="referrer" value="editCategory.php">
+</form>
 
 <?php
 }

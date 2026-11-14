@@ -16,26 +16,32 @@
 include "../funcLib.php";
 
 if(isset($_REQUEST["delete"]) && ($_REQUEST["delete"] != "")){
+  verifyCsrfOrDie();
   $stmt = mysqli_prepare($link, "UPDATE categories SET catSubDescription='' WHERE userid = ? AND catSortOrder=-1000");
   mysqli_stmt_bind_param($stmt, "s", $_SESSION["userid"]);
   mysqli_stmt_execute($stmt);
   header("Location: " . getFullPath("modifyList.php"));
+  exit;
 }
 
 if(isset($_REQUEST["update"]) && ($_REQUEST["update"] != "")){
+  verifyCsrfOrDie();
   $catSubDescription = convertString($_REQUEST["catSubDescription"]);
   $stmt = mysqli_prepare($link, "UPDATE categories SET catSubDescription = ? WHERE userid = ? AND catSortOrder=-1000");
   mysqli_stmt_bind_param($stmt, "ss", $catSubDescription, $_SESSION["userid"]);
   mysqli_stmt_execute($stmt);
- header("Location: " . getFullPath("modifyList.php"));
+  header("Location: " . getFullPath("modifyList.php"));
+  exit;
 }
 
 if(isset($_REQUEST["add"]) && ($_REQUEST["add"] != "")){
+  verifyCsrfOrDie();
   $catSubDescription = convertString($_REQUEST["catSubDescription"]);
   $stmt = mysqli_prepare($link, "INSERT INTO categories (userid, catSortOrder, catSubDescription) VALUES (?, -1000, ?)");
   mysqli_stmt_bind_param($stmt, "ss", $_SESSION["userid"], $catSubDescription);
   mysqli_stmt_execute($stmt);
   header("Location: " . getFullPath("modifyList.php"));
+  exit;
 }
 
 ?>
@@ -74,17 +80,18 @@ if($row = mysqli_fetch_assoc($rs)){
 ?>
 <tr><td colspan="2" align=center>
 <br>
-<?php echo $row["catSubDescription"] ?>
+<?php echo htmlspecialchars($row["catSubDescription"] ?? ''); ?>
 <br>&nbsp;
 </td></tr>
 
 <form method="post" action="editListComment.php">
+<input type="hidden" name="csrf_token" value="<?php echo getCsrfToken(); ?>">
 
 <tr><td align="right">
 <b>List Comment</b>
 </td>
 <td bgcolor="#eeeeee">
-<textarea name="catSubDescription" cols="75" rows="5"><?php echo str_replace("<br>", "\r\n", $row["catSubDescription"]) ?></textarea>
+<textarea name="catSubDescription" cols="75" rows="5"><?php echo htmlspecialchars(str_replace("<br>", "\r\n", $row["catSubDescription"] ?? ''), ENT_QUOTES); ?></textarea>
 </td></tr>
 
 <tr><td colspan="2" bgcolor="#c0c0c0">
@@ -106,6 +113,7 @@ if($row = mysqli_fetch_assoc($rs)){
 } else {
 ?>
 <form method="post" action="editListComment.php">
+<input type="hidden" name="csrf_token" value="<?php echo getCsrfToken(); ?>">
 
 <tr><td align="right">
 <b>List Comment</b>

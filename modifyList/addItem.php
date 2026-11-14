@@ -15,8 +15,16 @@
 
 include "../funcLib.php";
 
-$cid = $_REQUEST["cid"];
-$cname = $_REQUEST["cname"];
+$cid = intval($_REQUEST["cid"] ?? 0);
+$stmt = mysqli_prepare($link, "SELECT name FROM categories WHERE cid = ? AND userid = ?");
+mysqli_stmt_bind_param($stmt, "is", $cid, $userid);
+mysqli_stmt_execute($stmt);
+$res = mysqli_stmt_get_result($stmt);
+if ($row = mysqli_fetch_assoc($res)) {
+    $cname = $row["name"];
+} else {
+    die("Category not found or access denied.");
+}
 
 ?>
 <HTML>
@@ -41,11 +49,11 @@ createNavBar("../home.php:Home|modifyList.php:Modify WishList|:Add Item");
 <p>&nbsp;
 <form method="post" name="theForm" action="validate_addItem.php" enctype="multipart/form-data">
 <input type="hidden" name="MAX_FILE_SIZE" value="10000000" />
-<input type="hidden" size="30" name="cid" value="<?php echo $cid; ?>">
+<input type="hidden" size="30" name="cid" value="<?php echo htmlspecialchars($cid); ?>">
 
 <table style="border-collapse: collapse;" id="AutoNumber1" border="1" bordercolor="#11111" cellpadding="2" cellspacing="0" bgcolor="lightyellow">
 <tr><td colspan="2" align="center" bgcolor="#6702cc"> <b><font size=3 color="#ffffff">
-Add new item to "<?php echo $cname; ?>" category
+Add new item to "<?php echo htmlspecialchars($cname); ?>" category
 </td></tr>
 
   <tr><td align="right">

@@ -15,10 +15,21 @@
 
 include "../funcLib.php";
 
-$iid = $_REQUEST["iid"];
-$iso = $_REQUEST["iso"];
-$cid =  $_REQUEST["cid"];
-$cname = $_REQUEST["cname"];
+$iid = intval($_REQUEST["iid"] ?? 0);
+$iso = intval($_REQUEST["iso"] ?? 0);
+$cid = intval($_REQUEST["cid"] ?? 0);
+$cname = $_REQUEST["cname"] ?? '';
+
+// Verify category name from database if not set
+if (empty($cname) && $cid > 0) {
+    $stmt_cat = mysqli_prepare($link, "SELECT name FROM categories WHERE cid = ? AND userid = ?");
+    mysqli_stmt_bind_param($stmt_cat, "is", $cid, $userid);
+    mysqli_stmt_execute($stmt_cat);
+    $res_cat = mysqli_stmt_get_result($stmt_cat);
+    if ($row_cat = mysqli_fetch_assoc($res_cat)) {
+        $cname = $row_cat["name"];
+    }
+}
 ?>
 <HTML>
 <head><meta name="viewport" content="width=device-width, initial-scale=1.0" /></head>
@@ -39,14 +50,14 @@ createNavBar("../home.php:Home|modifyList.php:Modify WishList|:Edit Item", false
 <p>&nbsp;
 <center>
 <form method="post" action="validate_editItem.php" style="page-break-after:" enctype="multipart/form-data">
-<input type="hidden" name="iid" value="<?php echo $iid; ?>">
-<input type="hidden" name="iso" value="<?php echo $iso; ?>">
-<input type="hidden" name="cid" value="<?php echo $cid; ?>">
-<input type="hidden" name="cname" value="<?php echo $cname; ?>">
+<input type="hidden" name="iid" value="<?php echo htmlspecialchars($iid, ENT_QUOTES); ?>">
+<input type="hidden" name="iso" value="<?php echo htmlspecialchars($iso, ENT_QUOTES); ?>">
+<input type="hidden" name="cid" value="<?php echo htmlspecialchars($cid, ENT_QUOTES); ?>">
+<input type="hidden" name="cname" value="<?php echo htmlspecialchars($cname, ENT_QUOTES); ?>">
 
 <table style="border-collapse: collapse;" id="AutoNumber1" border="1" bordercolor="#11111" cellpadding="2" cellspacing="0" bgcolor="lightyellow">
 <tr><td colspan="2" align="center" bgcolor="#6702cc"> <b><font size=3 color="#ffffff">
-Edit Item from <?php echo $cname; ?> Category
+Edit Item from <?php echo htmlspecialchars($cname); ?> Category
 </td></tr>
 
   <tr><td align="right">
@@ -67,7 +78,7 @@ Edit Item from <?php echo $cname; ?> Category
     else
       $val = "";
 
-    print "<option value=" . $row["cid"] . " " . $val . ">" . $row["name"] . "</option>";
+    print "<option value=\"" . htmlspecialchars($row["cid"]) . "\" " . $val . ">" . htmlspecialchars($row["name"]) . "</option>";
   }
   print "</select>";
 
@@ -83,22 +94,22 @@ while($row = mysqli_fetch_assoc($rs)){
   <tr><td align="right">
     <b>Title</b>
   </td><td bgcolor="#eeeeee">
-    <input type="text" size="100" name="title" value="<?php echo $row["title"] ?>">
+    <input type="text" size="100" name="title" value="<?php echo htmlspecialchars($row["title"] ?? '', ENT_QUOTES); ?>">
   </td></tr>
   <tr><td align="right">
     <b>Description</b>
   </td><td bgcolor="#eeeeee">
-    <input type="text" size="100" name="desc" value="<?php echo $row["description"] ?>">
+    <input type="text" size="100" name="desc" value="<?php echo htmlspecialchars($row["description"] ?? '', ENT_QUOTES); ?>">
   </td></tr>
   <tr><td align="right">
     <b>Price</b>
   </td><td bgcolor="#eeeeee">
-    <input type="text" size="7" name="price" value="<?php echo $row["price"] ?>">
+    <input type="text" size="7" name="price" value="<?php echo htmlspecialchars($row["price"] ?? '', ENT_QUOTES); ?>">
   </td></tr>
   <tr><td align="right">
     <b>Quantity</b>
   </td><td bgcolor="#eeeeee">
-    <input type="text" size="7" name="quantity" value="<?php echo $row["quantity"] ?>">
+    <input type="text" size="7" name="quantity" value="<?php echo htmlspecialchars($row["quantity"] ?? '', ENT_QUOTES); ?>">
   </td></tr>
   <tr><td align="right">
     <table>
@@ -114,17 +125,17 @@ while($row = mysqli_fetch_assoc($rs)){
       </tr>
     </table>
   </td><td bgcolor="#eeeeee">
-    <input type="text" size="50" name="link1" value="<?php echo $row["link1"] ?>">
+    <input type="text" size="50" name="link1" value="<?php echo htmlspecialchars($row["link1"] ?? '', ENT_QUOTES); ?>">
     <br>
-    <input type="text" size="100" name="link1url" value="<?php echo $row["link1url"] ?>">
+    <input type="text" size="100" name="link1url" value="<?php echo htmlspecialchars($row["link1url"] ?? '', ENT_QUOTES); ?>">
   </td></tr>
 
   <tr><td align="right">
     <b>Image</b>
   </td><td bgcolor="#eeeeee">
     <?php 
-    if ($row["image"] != "") {
-        print "<IMG SRC=\"".$base_url."/uploads/".$row["image"]."\"><br>";
+    if (!empty($row["image"])) {
+        print "<IMG SRC=\"" . htmlspecialchars($base_url . "/uploads/" . $row["image"]) . "\"><br>";
     }
     ?>
     <input type="file" style="width:100%;" name="image" value="">
@@ -135,7 +146,7 @@ while($row = mysqli_fetch_assoc($rs)){
   <tr><td align="right">
     <b>Additional<br>Information</b>
   </td><td bgcolor="#eeeeee">
-    <textarea ROWS='3' COLS='80' name="subdesc"><?php echo str_replace("<br>", "\r\n", $row["subdesc"]) ?></textarea>
+    <textarea ROWS='3' COLS='80' name="subdesc"><?php echo htmlspecialchars(str_replace("<br>", "\r\n", $row["subdesc"] ?? ''), ENT_QUOTES); ?></textarea>
   </td></tr>
   <tr><td align="center" colspan="2">
     <b>Allow people to check this item off</b>
@@ -163,23 +174,23 @@ if($row["addStar"] == "1")
 <table width="100%">
 <tr><td align=center valign="center">
 <input type="submit" value="Update Item" style="font-weight:bold">
-</form>
 </td>
 
 <td align=center valign="center">
-<form method="post" action="deleteItem.php" style="page-break-after : ">
-<input type="hidden" name="iso" value="<?php echo $iso; ?>">
-<input type="hidden" name="iid" value="<?php echo $iid; ?>">
-<input type="hidden" name="cid" value="<?php echo $cid; ?>">
-<input type="hidden" name="cname" value="<?php echo $cname; ?>">
-<input type="hidden" name="referrer" value=editItem.php>
-<input type="submit" value="Delete Item" style="font-weight:bold; color:red">
-</form>
-
+<button type="submit" form="deleteItemForm" style="font-weight:bold; color:red">Delete Item</button>
 </td></tr></table>
 </td></tr>
 </table>
+</form>
 
-</tr></td></table>
+<form id="deleteItemForm" method="post" action="deleteItem.php">
+<input type="hidden" name="iso" value="<?php echo htmlspecialchars($iso); ?>">
+<input type="hidden" name="iid" value="<?php echo htmlspecialchars($iid); ?>">
+<input type="hidden" name="cid" value="<?php echo htmlspecialchars($cid); ?>">
+<input type="hidden" name="cname" value="<?php echo htmlspecialchars($cname); ?>">
+<input type="hidden" name="referrer" value="editItem.php">
+</form>
+
+</td></tr></table>
 </body>
 </html>

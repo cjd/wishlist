@@ -57,12 +57,12 @@ createNavBar("../home.php:Home|modifyList.php:Modify WishList|:Add Category");
   <table>
     <tr><td align="right">
       <b>Link Name</b>
-    </tr>
+    </td></tr>
     <tr>
     <td  align="right">
       <b>URL</b>
     </td></tr>
-  </table
+  </table>
 </td><td bgcolor="#eeeeee">
 <input type="text" size="30" name="linkname" value="">
 <br>
