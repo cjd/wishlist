@@ -505,3 +505,63 @@ input[type=checkbox] {
   opacity: 0.7; /* Visual cue for disabled */
   box-sizing: border-box; /* Include padding and border in the element's total width and height */
 }
+
+/* Wishlist Search & Filter Styles */
+.wishlist-search-container {
+  display: flex;
+  align-items: center;
+  position: relative;
+  max-width: 420px;
+  margin: 12px 0 16px 0;
+}
+
+.wishlist-search-input {
+  width: 100%;
+  padding: 8px 32px 8px 34px;
+  font-size: 14px;
+  border: 1px solid #c0c0c0;
+  border-radius: 6px;
+  background-color: #ffffff;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.wishlist-search-input:focus {
+  border-color: #6702cc;
+  box-shadow: 0 0 5px rgba(103, 2, 204, 0.3);
+}
+
+.wishlist-search-icon {
+  position: absolute;
+  left: 10px;
+  font-size: 14px;
+  color: #777;
+  pointer-events: none;
+}
+
+.wishlist-search-clear {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #999;
+  cursor: pointer;
+  display: none;
+  line-height: 1;
+  padding: 2px 6px;
+}
+
+.wishlist-search-clear:hover {
+  color: #333;
+}
+
+.wishlist-search-count {
+  margin-left: 12px;
+  font-size: 13px;
+  color: #666;
+  white-space: nowrap;
+  display: none;
+}
+

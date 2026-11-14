@@ -37,6 +37,7 @@ if ($confirm == "Go Home" || $confirm == "Ho Home") {
     <link rel=stylesheet href=../css/featherlight.min.css type=text/css>
     <script type="text/javascript" src="../js/jquery-3.7.1.min.js"></script>
     <script type="text/javascript" src="../js/featherlight.min.js"></script>
+    <script type="text/javascript" src="../js/wishlist-filter.js"></script>
     <script type="text/javascript">
     $(document).ready(function() {
         var sendMessageModal = document.getElementById("sendMessageModal");
@@ -146,6 +147,12 @@ function displayWishlist($recip, $userid, $name, $allowEdit, $link)
 {
     ?>
 <form method="post" action="validate_purchase.php" name="wishlist">
+<div class="wishlist-search-container">
+  <span class="wishlist-search-icon">&#128269;</span>
+  <input type="text" id="wishlistSearch" class="wishlist-search-input" placeholder="Search items by name, store, or details..." oninput="filterWishlist(this.value)">
+  <button type="button" id="wishlistSearchClear" class="wishlist-search-clear" onclick="clearWishlistFilter()" title="Clear search">&times;</button>
+  <span id="wishlistSearchCount" class="wishlist-search-count"></span>
+</div>
 <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(getCsrfToken(), ENT_QUOTES); ?>">
 <input type="hidden" name="receiverUserid" value="<?php echo $recip ?>">
 <input type="hidden" name="receiverName" value="<?php echo $name ?>">

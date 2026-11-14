@@ -233,25 +233,22 @@ function sendEmail($to, $from, $subject, $message, $debug){
  * into the database
  */
 function cleanString($str){
-  return str_replace("\\'", "'", str_replace("\\\\", "\\", str_replace("\\\"", "\"", $str)));
+  if ($str === null) return "";
+  return str_replace("\\'", "'", str_replace("\\\\", "\\", str_replace("\\\"", "\"", (string)$str)));
 }
 
-/* convertString - a primitive method of form validation.  This needs more work
- * 
- * $str : the string to convert
+/* convertString - normalize strings for storage.
+ * Note: With prepared statements (mysqli_stmt_bind_param), strings are bound
+ * natively without manual SQL escaping, preventing double-escaped slashes.
  */
 function convertString($str){
-  // the server I am hosting this on automatically escapes single and
-  // double quotes.  Since this may not be the case on all servers, I
-  // explictily remove the escaping
-  global $link;
+  if ($str === null) return "";
   $str = cleanString($str);
-
-  return trim(mysqli_escape_string($link,str_replace(chr(34), "&quot;", (str_replace("\r\n", "<br>" , $str)))));
+  return trim(str_replace(chr(34), "&quot;", str_replace("\r\n", "<br>", (string)$str)));
 }
 
 function convertString_no_escape($str){
-  return trim(str_replace(chr(34), "&quot;", (str_replace("\r\n", "<br>" , $str))));
+  return convertString($str);
 }
 
 function formatMessage($body) {
@@ -438,7 +435,8 @@ function printCategory($row, $name, $displayPurchases, $readOnly, $modifyList, $
       return;
   }
 
-  print "\n<table width=100% border=0 cellpadding=0 cellspacing=0><tr>\n";
+  print "\n<div class='wishlist-category-block'>\n";
+  print "<table width=100% border=0 cellpadding=0 cellspacing=0><tr>\n";
 
   print "<td valign=top class=\"categoryHeader\">";
 
@@ -672,6 +670,7 @@ function printCategory($row, $name, $displayPurchases, $readOnly, $modifyList, $
   else{
     print "<div>&nbsp;</div>"; // blank line
   }
+  print "</div>\n"; // end wishlist-category-block
 }
 
 

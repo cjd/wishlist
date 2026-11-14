@@ -26,6 +26,7 @@ include "../funcLib.php";
 <link rel=stylesheet href=../css/featherlight.min.css type=text/css>
 <script type="text/javascript" src="../js/jquery-3.7.1.min.js"></script>
 <script type="text/javascript" src="../js/featherlight.min.js"></script>
+<script type="text/javascript" src="../js/wishlist-filter.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 
 <head>
@@ -83,6 +84,13 @@ others to see"; }
 
 print "</td></tr></table><p>";
 ?>
+
+<div class="wishlist-search-container">
+  <span class="wishlist-search-icon">&#128269;</span>
+  <input type="text" id="wishlistSearch" class="wishlist-search-input" placeholder="Search your list by title, store, or details..." oninput="filterWishlist(this.value)">
+  <button type="button" id="wishlistSearchClear" class="wishlist-search-clear" onclick="clearWishlistFilter()" title="Clear search">&times;</button>
+  <span id="wishlistSearchCount" class="wishlist-search-count"></span>
+</div>
 
 <?php 
 
