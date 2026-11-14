@@ -15,11 +15,18 @@
 
 include "../funcLib.php";
 
-if($_REQUEST["person"] != ""){
-
-    $query = "insert into viewList values ('" . $userid . "', '" . $_REQUEST["person"] . "')";
-
-    $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+if (!empty($_REQUEST["person"])) {
+    $person = $_REQUEST["person"];
+    $check_stmt = mysqli_prepare($link, "SELECT viewer FROM viewList WHERE pid = ? AND viewer = ?");
+    mysqli_stmt_bind_param($check_stmt, "ss", $userid, $person);
+    mysqli_stmt_execute($check_stmt);
+    $check_res = mysqli_stmt_get_result($check_stmt);
+    if (mysqli_num_rows($check_res) == 0) {
+        $stmt = mysqli_prepare($link, "INSERT INTO viewList (viewContactInfo, readOnly, allowEdit, pid, viewer, lastViewDate) VALUES (0, 1, 0, ?, ?, NOW())");
+        mysqli_stmt_bind_param($stmt, "ss", $userid, $person);
+        mysqli_stmt_execute($stmt);
+    }
 }
 
 header("Location: " . getFullPath("updateAccount.php"));
+exit;

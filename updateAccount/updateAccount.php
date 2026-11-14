@@ -27,8 +27,10 @@ if (isset($_REQUEST["target_userid"])) {
         $_SESSION["euserid"] = $target_userid;
     } else {
         // Check if the logged-in user has edit access to the requested user's list
-    $query_check_access = "SELECT allowEdit FROM viewList WHERE pid = '" . $requested_userid . "' AND viewer = '" . $_SESSION["userid"] . "'";
-    $result_check_access = mysqli_query($link, $query_check_access) or die("Could not query: " . mysqli_error($link));
+        $stmt_check_access = mysqli_prepare($link, "SELECT allowEdit FROM viewList WHERE pid = ? AND viewer = ?");
+        mysqli_stmt_bind_param($stmt_check_access, "ss", $requested_userid, $_SESSION["userid"]);
+        mysqli_stmt_execute($stmt_check_access);
+        $result_check_access = mysqli_stmt_get_result($stmt_check_access);
 
         if ($row_check_access = mysqli_fetch_assoc($result_check_access)) {
             if ($row_check_access["allowEdit"] == '1') {
@@ -48,8 +50,10 @@ if (isset($_REQUEST["target_userid"])) {
 } else if (isset($_SESSION["euserid"])) {    // If no target_userid is specified, but euserid is set, use euserid
     $target_userid = $_SESSION["euserid"];
     // Re-check access in case session was manipulated or permissions changed
-    $query_check_access = "SELECT allowEdit FROM viewList WHERE pid = '" . $target_userid . "' AND viewer = '" . $_SESSION["userid"] . "'";
-    $result_check_access = mysqli_query($link, $query_check_access) or die("Could not query: " . mysqli_error($link));
+    $stmt_check_access = mysqli_prepare($link, "SELECT allowEdit FROM viewList WHERE pid = ? AND viewer = ?");
+    mysqli_stmt_bind_param($stmt_check_access, "ss", $target_userid, $_SESSION["userid"]);
+    mysqli_stmt_execute($stmt_check_access);
+    $result_check_access = mysqli_stmt_get_result($stmt_check_access);
     if (!($row_check_access = mysqli_fetch_assoc($result_check_access)) || $row_check_access["allowEdit"] != '1') {
         unset($_SESSION["euserid"]);
         $target_userid = $_SESSION["userid"];
@@ -67,64 +71,74 @@ if (!isset($_REQUEST["action"])) {
 $action = $_REQUEST["action"];
 
 if($action == "stopViewOther"){
-  $removeuserid = $_REQUEST["userid"];
+  verifyCsrfOrDie();
+  $removeuserid = $_REQUEST["userid"] ?? "";
 
-  $query = "delete from viewList where pid='" . $removeuserid . "' and viewer='" . $userid . "'";
-
-  $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
-  $message = "<h2>Successfully stopped viewing " . $removeuserid . " for " . $userid . "</h2>";
+  $stmt = mysqli_prepare($link, "DELETE FROM viewList WHERE pid = ? AND viewer = ?");
+  mysqli_stmt_bind_param($stmt, "ss", $removeuserid, $userid);
+  mysqli_stmt_execute($stmt);
+  $message = "<h2>Successfully stopped viewing " . htmlspecialchars($removeuserid) . " for " . htmlspecialchars($userid) . "</h2>";
 }
 elseif ($action == "stopViewMine"){
+  verifyCsrfOrDie();
+  $removeuserid = $_REQUEST["userid"] ?? "";
 
-  $removeuserid = $_REQUEST["userid"];
-
-  $query = "delete from viewList where pid='" . $userid . "' and viewer='" . $removeuserid . "'";
-
-  $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
-  $message = "<h2>Successfully stopped " . $removeuserid . " from viewing list of " . $userid . "</h2>";
+  $stmt = mysqli_prepare($link, "DELETE FROM viewList WHERE pid = ? AND viewer = ?");
+  mysqli_stmt_bind_param($stmt, "ss", $userid, $removeuserid);
+  mysqli_stmt_execute($stmt);
+  $message = "<h2>Successfully stopped " . htmlspecialchars($removeuserid) . " from viewing list of " . htmlspecialchars($userid) . "</h2>";
 
 }
 elseif ($action == "startViewOther"){
-  $adduserid = $_REQUEST["userid"]; // This is the target user
+  verifyCsrfOrDie();
+  $adduserid = $_REQUEST["userid"] ?? ""; // This is the target user
   $requesterId = $userid; // This is the current user
 
   // Check if a request already exists
-  $query = "select id from accessRequests where requesterId='" . $requesterId . "' and targetId='" . $adduserid . "'";
-  $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+  $stmt = mysqli_prepare($link, "SELECT id FROM accessRequests WHERE requesterId = ? AND targetId = ?");
+  mysqli_stmt_bind_param($stmt, "ss", $requesterId, $adduserid);
+  mysqli_stmt_execute($stmt);
+  $result = mysqli_stmt_get_result($stmt);
   
   if(mysqli_num_rows($result) > 0){
     $message = "<h2>You have already sent an access request to this person.</h2>";
   }
   else{
     // Insert a new access request
-    $query = "insert into accessRequests (requesterId, targetId, status) values ('" . $requesterId . "', '" . $adduserid . "', 'pending')";
-    
-    $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+    $stmt_ins = mysqli_prepare($link, "INSERT INTO accessRequests (requesterId, targetId, status) VALUES (?, ?, 'pending')");
+    mysqli_stmt_bind_param($stmt_ins, "ss", $requesterId, $adduserid);
+    mysqli_stmt_execute($stmt_ins);
     $message = "<h2>Your request to view this person's list has been sent. You will be notified when they respond.</h2>";
   }
 }
 elseif ($action == "startViewMine"){
-  $adduserid = $_REQUEST["userid"];
+  verifyCsrfOrDie();
+  $adduserid = $_REQUEST["userid"] ?? "";
 
-  $query = "select viewer from viewList where viewer='" . $adduserid . "' and pid='" . $userid . "'";
-  $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+  $stmt = mysqli_prepare($link, "SELECT viewer FROM viewList WHERE viewer = ? AND pid = ?");
+  mysqli_stmt_bind_param($stmt, "ss", $adduserid, $userid);
+  mysqli_stmt_execute($stmt);
+  $result = mysqli_stmt_get_result($stmt);
   
   if(mysqli_num_rows($result) > 0){
     $message = "<h2>That person can already view your list</h2>";
   }
   else{
     // need to add new field
-    $query = "insert into viewList (viewContactInfo, readOnly, allowEdit, pid, viewer, lastViewDate) " .
-      "values (0, 1, 0, '" . $userid . "', '" . $adduserid . "', now())";
-    
-    $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+    $stmt_ins = mysqli_prepare($link, "INSERT INTO viewList (viewContactInfo, readOnly, allowEdit, pid, viewer, lastViewDate) VALUES (0, 1, 0, ?, ?, NOW())");
+    mysqli_stmt_bind_param($stmt_ins, "ss", $userid, $adduserid);
+    mysqli_stmt_execute($stmt_ins);
     $message = "<h2>Person added</h2>";
   }
 }
 elseif ($action == "hideContactInfo"){
-  
-  $query = "select viewer from viewList where pid='" . $userid . "'";
-  $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+  verifyCsrfOrDie();
+  $stmt_viewers = mysqli_prepare($link, "SELECT viewer FROM viewList WHERE pid = ?");
+  mysqli_stmt_bind_param($stmt_viewers, "s", $userid);
+  mysqli_stmt_execute($stmt_viewers);
+  $result = mysqli_stmt_get_result($stmt_viewers);
+
+  $stmt_upd = mysqli_prepare($link, "UPDATE viewList SET viewContactInfo = ?, readOnly = ?, allowEdit = ? WHERE viewer = ? AND pid = ?");
 
   while($row = mysqli_fetch_assoc($result)){
     $viewerId = $row['viewer'];
@@ -138,8 +152,8 @@ elseif ($action == "hideContactInfo"){
         $readOnly = 0;
     }
 
-    $update_query = "UPDATE viewList SET viewContactInfo = '$viewContactInfo', readOnly = '$readOnly', allowEdit = '$allowEdit' WHERE viewer = '$viewerId' AND pid = '$userid'";
-    mysqli_query($link, $update_query) or die("Could not query: " . mysqli_error($link));
+    mysqli_stmt_bind_param($stmt_upd, "iiiss", $viewContactInfo, $readOnly, $allowEdit, $viewerId, $userid);
+    mysqli_stmt_execute($stmt_upd);
   }
 
   $message = "<h2>Privileges changed</h2>";
@@ -167,11 +181,12 @@ createNavBar("../home.php:Home|:Update Account", false, "listAccess");
 
 <?php
 
-$query = "select * from people where userid='" . $userid . "'";
+$stmt_info = mysqli_prepare($link, "SELECT * FROM people WHERE userid = ?");
+mysqli_stmt_bind_param($stmt_info, "s", $userid);
+mysqli_stmt_execute($stmt_info);
+$result = mysqli_stmt_get_result($stmt_info);
 
-$result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
-
-$row = mysqli_fetch_assoc($result);
+$row = mysqli_fetch_assoc($result) ?? [];
 
 ?>
 
@@ -189,17 +204,17 @@ $row = mysqli_fetch_assoc($result);
 <tr><td align="right">
 <b>Name</b>
 </td><td bgcolor="white">
-<?php echo $row['firstname'] . ' ' . $row['lastname'] . ' ' . $row['suffix'] ?>
+<?php echo htmlspecialchars(($row['firstname'] ?? '') . ' ' . ($row['lastname'] ?? '') . ' ' . ($row['suffix'] ?? '')); ?>
 </td></tr>
 <tr><td align="right">
 <b>Email</b>
 </td><td bgcolor=white>
-<?php echo $row["email"] ?>
+<?php echo htmlspecialchars($row["email"] ?? ''); ?>
 </td></tr>
 <tr><td align="right">
 <b>Birthday</b>
 </td><td bgcolor=white>
-<?php echo $row["bmonth"] . " " . $row["bday"] ?>
+<?php echo htmlspecialchars(($row["bmonth"] ?? '') . " " . ($row["bday"] ?? '')); ?>
 </td></tr>
 <tr><td align="center" colspan="2" bgcolor="#c0c0c0">
 <input type="submit" value="Edit Personal Info" class="buttonstyle">
@@ -219,15 +234,6 @@ $row = mysqli_fetch_assoc($result);
 <table border=0 width=90%>
 <tr>
 <td align=center width=50%>
-
-
-
-<form action="updateAccount.php" method=post>
-<input type=hidden name=action value="hideContactInfo">
-<input type=hidden name=target_userid value="<?php echo $userid; ?>">
-
-
-
 
 <table bgcolor=lightyellow style="border-collapse: collapse;" border="0" bordercolor="#111111" cellPadding="0" cellSpacing="0">
 <tr>
@@ -257,22 +263,24 @@ Enter the person's userid or e-mail:<br>
 <?php
 
 if($_REQUEST["action"] == "addUser"){
-  $email = $_REQUEST["email"];
+  $email = $_REQUEST["email"] ?? "";
   
   $pos = strpos($email, "@");
 
-  // Note our use of ===.  Simply == would not work as expected
-  // because the position of 'a' was the 0th (first) character.
   if ($pos === false) {
-    $query = "select firstname, lastname, suffix, userid from people where userid like '%" . $email . "%'";
+    $search = "%" . $email . "%";
+    $stmt_add = mysqli_prepare($link, "SELECT firstname, lastname, suffix, userid FROM people WHERE userid LIKE ?");
+    mysqli_stmt_bind_param($stmt_add, "s", $search);
   }
   else{
-    $query = "select firstname,lastname, suffix, userid from people where email='" . $email . "'";
+    $stmt_add = mysqli_prepare($link, "SELECT firstname, lastname, suffix, userid FROM people WHERE email = ?");
+    mysqli_stmt_bind_param($stmt_add, "s", $email);
   }
 
-  $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+  mysqli_stmt_execute($stmt_add);
+  $result = mysqli_stmt_get_result($stmt_add);
   while ($row = mysqli_fetch_assoc($result)){
-    print "<a class='menuLink' href=\"updateAccount.php?action=startViewMine&userid=" . $row["userid"] . ($userid != $_SESSION["userid"] ? "&target_userid=" . $userid : "") . "\">[Add]</a> " . $row["firstname"] . " " . $row["lastname"] . ' ' . $row["suffix"] . "<br>";
+    print "<a class='menuLink' href=\"updateAccount.php?action=startViewMine&userid=" . urlencode($row["userid"]) . ($userid != $_SESSION["userid"] ? "&target_userid=" . urlencode($userid) : "") . "&csrf_token=" . urlencode(getCsrfToken()) . "\">[Add]</a> " . htmlspecialchars($row["firstname"] . " " . $row["lastname"] . ' ' . $row["suffix"]) . "<br>";
   }
     
 }
@@ -282,7 +290,8 @@ if($_REQUEST["action"] == "addUser"){
 </table>
 <form action="updateAccount.php" method=post>
 <input type=hidden name=action value="hideContactInfo">
-<input type=hidden name=target_userid value="<?php echo $userid; ?>">
+<input type="hidden" name="csrf_token" value="<?php echo getCsrfToken(); ?>">
+<input type=hidden name=target_userid value="<?php echo htmlspecialchars($userid); ?>">
 <table style="border-collapse: collapse;" id="AutoNumber1" border="0" bordercolor="#111111" cellPadding="2" cellSpacing="0">
 <tr>
 <td colspan=6 align="center" bgcolor="#6702cc">
@@ -299,25 +308,26 @@ if($_REQUEST["action"] == "addUser"){
 <td align=center><b>Edit<br>Access</b></td>
 </tr>
 <?php
-$query = "select viewer, firstname, lastname, suffix, userid, viewContactInfo, readOnly, allowEdit from viewList, people where viewList.viewer = people.userid and viewList.pid = '" . $userid . "'" . " order by lastname, firstname";
-
-$result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+$stmt_viewers_list = mysqli_prepare($link, "SELECT viewer, firstname, lastname, suffix, userid, viewContactInfo, readOnly, allowEdit FROM viewList, people WHERE viewList.viewer = people.userid AND viewList.pid = ? ORDER BY lastname, firstname");
+mysqli_stmt_bind_param($stmt_viewers_list, "s", $userid);
+mysqli_stmt_execute($stmt_viewers_list);
+$result = mysqli_stmt_get_result($stmt_viewers_list);
 
 $list = "";
 
 while($row = mysqli_fetch_assoc($result)){
   $list .= $row["userid"] . ",";
  
-  print "<tr><td><a class=\"menuLink\" href=updateAccount.php?action=stopViewMine&userid=" . $row["userid"] . ($userid != $_SESSION["userid"] ? "&target_userid=" . $userid : "") . ">[Remove]</a></td><td>&nbsp;</td><td>" . $row["firstname"] . " " . $row["lastname"] . ' ' . $row["suffix"] . "</td><td align=center><input name=admin[] value=" . $row["userid"] . " type='checkbox' ";
+  print "<tr><td><a class=\"menuLink\" href=\"updateAccount.php?action=stopViewMine&userid=" . urlencode($row["userid"]) . ($userid != $_SESSION["userid"] ? "&target_userid=" . urlencode($userid) : "") . "&csrf_token=" . urlencode(getCsrfToken()) . "\">[Remove]</a></td><td>&nbsp;</td><td>" . htmlspecialchars($row["firstname"] . " " . $row["lastname"] . ' ' . $row["suffix"]) . "</td><td align=center><input name=admin[] value=\"" . htmlspecialchars($row["userid"]) . "\" type='checkbox' ";
   print $row["viewContactInfo"] ? "checked" : "";
   print "></td>";
-  print "<td align=center><input name=readOnly[] type=checkbox value=" . $row["userid"];
+  print "<td align=center><input name=readOnly[] type=checkbox value=\"" . htmlspecialchars($row["userid"]) . "\"";
   print $row["readOnly"] ? " checked" : "";
-  print "></td><td align=center><input name=allowEdit[] type=checkbox value=" . $row["userid"];
+  print "></td><td align=center><input name=allowEdit[] type=checkbox value=\"" . htmlspecialchars($row["userid"]) . "\"";
   print $row["allowEdit"] ? " checked" : "";
   print "></td></tr>";
 }
-print "<input type=hidden name=listUsers value=" . $list . ">";
+print "<input type=hidden name=listUsers value=\"" . htmlspecialchars($list) . "\">";
 ?>
 <tr><td colspan=6 align="center" bgcolor="#c0c0c0">
 <input type=submit value="Make Changes"  style="font-weight:bold">
@@ -383,14 +393,13 @@ Enter the person's userid or e-mail:<br>
 <td>
 
 <?php 
-$query = "select viewer, firstname, lastname, suffix, userid from viewList, people where viewList.viewer = '" . $userid . "' and viewList.pid = people.userid order by lastname, firstname";
-
-//$query = "select * from people where userid='" . $userid . "'";
-
-$result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+$stmt_viewable = mysqli_prepare($link, "SELECT viewer, firstname, lastname, suffix, userid FROM viewList, people WHERE viewList.viewer = ? AND viewList.pid = people.userid ORDER BY lastname, firstname");
+mysqli_stmt_bind_param($stmt_viewable, "s", $userid);
+mysqli_stmt_execute($stmt_viewable);
+$result = mysqli_stmt_get_result($stmt_viewable);
 
 while($row = mysqli_fetch_assoc($result)){
-  print "<tr><td><a class=\"menuLink\" href=updateAccount.php?action=stopViewOther&userid=" . $row["userid"] . ($userid != $_SESSION["userid"] ? "&target_userid=" . $userid : "") . ">[Remove]</a></td><td>" . $row["firstname"] . " " . $row["lastname"] . ' ' . $row["suffix"] . "</td></tr>";
+  print "<tr><td><a class=\"menuLink\" href=\"updateAccount.php?action=stopViewOther&userid=" . urlencode($row["userid"]) . ($userid != $_SESSION["userid"] ? "&target_userid=" . urlencode($userid) : "") . "&csrf_token=" . urlencode(getCsrfToken()) . "\">[Remove]</a></td><td>" . htmlspecialchars($row["firstname"] . " " . $row["lastname"] . ' ' . $row["suffix"]) . "</td></tr>";
 }
 ?>
 </table>
@@ -402,23 +411,25 @@ while($row = mysqli_fetch_assoc($result)){
 <?php
 
 if($_REQUEST["action"] == "findUser"){
-  $email = $_REQUEST["email"];
+  $email = $_REQUEST["email"] ?? "";
 
   $pos = strpos($email, "@");
 
-  // Note our use of ===.  Simply == would not work as expected
-  // because the position of 'a' was the 0th (first) character.
   if ($pos === false) {
-    $query = "select firstname, lastname, suffix, userid from people where userid like '%" . $email . "%'";
+    $search = "%" . $email . "%";
+    $stmt_find = mysqli_prepare($link, "SELECT firstname, lastname, suffix, userid FROM people WHERE userid LIKE ?");
+    mysqli_stmt_bind_param($stmt_find, "s", $search);
   }
   else{
-    $query = "select firstname,lastname, suffix, userid from people where email='" . $email . "'";
+    $stmt_find = mysqli_prepare($link, "SELECT firstname, lastname, suffix, userid FROM people WHERE email = ?");
+    mysqli_stmt_bind_param($stmt_find, "s", $email);
   }
 
-  $result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+  mysqli_stmt_execute($stmt_find);
+  $result = mysqli_stmt_get_result($stmt_find);
 
   while ($row = mysqli_fetch_assoc($result)){
-    print "<a href=\"updateAccount.php?action=startViewOther&userid=" . $row["userid"] . ($userid != $_SESSION["userid"] ? "&target_userid=" . $userid : "") . "\">[Add]</a> " . $row["firstname"] . " " . $row["lastname"] . ' ' . $row["suffix"] . "<br>";
+    print "<a href=\"updateAccount.php?action=startViewOther&userid=" . urlencode($row["userid"]) . ($userid != $_SESSION["userid"] ? "&target_userid=" . urlencode($userid) : "") . "&csrf_token=" . urlencode(getCsrfToken()) . "\">[Add]</a> " . htmlspecialchars($row["firstname"] . " " . $row["lastname"] . ' ' . $row["suffix"]) . "<br>";
   }
     
 }

@@ -29,12 +29,13 @@ if($linkurl != "" && strpos($linkurl, "http") === false){
     $linkurl = "https://" . $linkurl;
 }                
 
-$stmt = mysqli_prepare($link, "UPDATE categories SET name = ?, description = ?, linkname = ?, linkurl = ?, catSubDescription = ? WHERE cid = ?");
-mysqli_stmt_bind_param($stmt, "sssssi", $name, $description, $linkname, $linkurl, $catSubDescription, $cid);
+$stmt = mysqli_prepare($link, "UPDATE categories SET name = ?, description = ?, linkname = ?, linkurl = ?, catSubDescription = ? WHERE cid = ? AND userid = ?");
+mysqli_stmt_bind_param($stmt, "sssssis", $name, $description, $linkname, $linkurl, $catSubDescription, $cid, $userid);
 mysqli_stmt_execute($stmt);
-
-header("Location: " . getFullPath("modifyList.php"));
 
 $stmt = mysqli_prepare($link, "UPDATE people SET lastModDate=NOW() WHERE userid = ?");
 mysqli_stmt_bind_param($stmt, "s", $userid);
 mysqli_stmt_execute($stmt);
+
+header("Location: " . getFullPath("modifyList.php"));
+exit;

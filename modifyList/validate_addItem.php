@@ -71,6 +71,12 @@ if($addStar == "")
 else
   $addStar = '1';
 
+$check_cat = mysqli_prepare($link, "SELECT cid FROM categories WHERE cid = ? AND userid = ?");
+mysqli_stmt_bind_param($check_cat, "is", $cid, $userid);
+mysqli_stmt_execute($check_cat);
+if (mysqli_num_rows(mysqli_stmt_get_result($check_cat)) == 0) {
+    die("Unauthorized: Category does not belong to you.");
+}
 
 $stmt = mysqli_prepare($link, "SELECT max(itemSortOrder) as iso FROM items WHERE cid = ?");
 mysqli_stmt_bind_param($stmt, "i", $cid);
@@ -102,8 +108,10 @@ if (isset($_FILES['image']) && ($_FILES['image']['error']==0)) {
     }
 }
 
-header("Location: " . getFullPath("modifyList.php"));
 $stmt = mysqli_prepare($link, "UPDATE people SET lastModDate=NOW() WHERE userid = ?");
 mysqli_stmt_bind_param($stmt, "s", $userid);
 mysqli_stmt_execute($stmt) or die("Could not execute statement: " . mysqli_stmt_error($stmt));
+
+header("Location: " . getFullPath("modifyList.php"));
+exit;
 

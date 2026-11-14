@@ -12,36 +12,42 @@ if (isset($_SESSION["userid"])) {
 else {
   $displayLogin = 1;
   $errorMessage = "Please Sign In";
-  $userid = $_REQUEST["userid"];
-  $password = $_REQUEST["password"];
+  $userid = $_REQUEST["userid"] ?? "";
+  $password = $_REQUEST["password"] ?? "";
 
   if($userid != "" and $password != ""){
 
-    $query = "select * from people where userid='" . $userid . "'"; 
-    $rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));    
+    $stmt_user = mysqli_prepare($link, "SELECT * FROM people WHERE userid = ?");
+    mysqli_stmt_bind_param($stmt_user, "s", $userid);
+    mysqli_stmt_execute($stmt_user);
+    $rs = mysqli_stmt_get_result($stmt_user);    
     $userValidate = 0;
     $passValidate = 0;
-    
-    $myuserid = " ";
 
     if($row = mysqli_fetch_assoc($rs)){    
       $userValidate = 1;
 
-      if ($password == $row["password"]){
+      if (password_verify($password, $row["password"])) {
         $passValidate = 1;
+      } elseif (md5($password) === $row["password"] || $password === $row["password"]) {
+        $passValidate = 1;
+        $new_hash = password_hash($password, PASSWORD_DEFAULT);
+        $up = mysqli_prepare($link, "UPDATE people SET password = ? WHERE userid = ?");
+        mysqli_stmt_bind_param($up, "ss", $new_hash, $row["userid"]);
+        mysqli_stmt_execute($up);
       }
     }
 
-    if ($userValidate== 1 and  $passValidate == 1){
+    if ($userValidate == 1 and $passValidate == 1){
       $_SESSION["userid"] = $row["userid"];
       $_SESSION["fullname"] = $row["firstname"] . ' ' . $row["lastname"] . ' ' . $row["suffix"];
       $_SESSION["admin"] = $row["admin"];
-       $query = "update people set lastLoginDate=NOW() where userid='" .
-         $row["userid"] . "'";
-       mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+      $stmt_login = mysqli_prepare($link, "UPDATE people SET lastLoginDate = NOW() WHERE userid = ?");
+      mysqli_stmt_bind_param($stmt_login, "s", $row["userid"]);
+      mysqli_stmt_execute($stmt_login);
 
-       createPage();
-       $displayLogin=0;
+      createPage();
+      $displayLogin = 0;
      }
     elseif($userValidate == 1 and $passValidate == 0){
       $errorMessage = "Password Error! Please Try Again";
@@ -293,7 +299,7 @@ You will have a chance to modify this after you sign in
 <b>Name</b>
 </td>
 <td bgcolor=white>
-<input size=50 type=text name=wldesc value="<?php echo $_REQUEST["wldesc"] ?>">
+<input size=50 type=text name=wldesc value="<?php echo htmlspecialchars($_REQUEST["wldesc"] ?? '', ENT_QUOTES); ?>">
 </td></tr>
 
   <tr><td align="right">
@@ -310,9 +316,9 @@ You will have a chance to modify this after you sign in
       </tr>
     </table>
   </td><td bgcolor="#eeeeee">
-  <input size=50 type=text name=wlurlname value="<?php echo str_replace("www.", "", substr($name, $pos+2, $len)) ?>">
+  <input size=50 type=text name=wlurlname value="<?php echo htmlspecialchars(str_replace("www.", "", substr($name ?? '', ($pos ?? 0)+2, $len ?? 0)), ENT_QUOTES); ?>">
   <br>
-  <input type=text size=50 name=wlurl value="<?php echo $_REQUEST["wlurl"] ?>">
+  <input type=text size=50 name=wlurl value="<?php echo htmlspecialchars($_REQUEST["wlurl"] ?? '', ENT_QUOTES); ?>">
   </td></tr>
 </table>
 <p>
@@ -341,8 +347,10 @@ You will have a chance to modify this after you sign in
 
 function createPage(){
   global $link;
-  $query = "Select * from categories where userid='" . $_SESSION["userid"] . "' and catSortOrder!=-1000 order by name"; 
-  $rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+  $stmt_cat = mysqli_prepare($link, "SELECT * FROM categories WHERE userid = ? AND catSortOrder != -1000 ORDER BY name");
+  mysqli_stmt_bind_param($stmt_cat, "s", $_SESSION["userid"]);
+  mysqli_stmt_execute($stmt_cat);
+  $rs = mysqli_stmt_get_result($stmt_cat);
 
   if(!($row = mysqli_fetch_assoc($rs))){
     print "You have not created any categories yet.  Please do so and then try again";
@@ -401,11 +409,10 @@ createNavBar("../home.php:Home|modifyList.php:Modify WishList|:Add Item From Web
           $considerCid = $row["cid"];
         }
         else{
-          print "<option value=" . $row["cid"];
-          print ">" . $row["name"] . "</option>\n";
+          print "<option value=\"" . htmlspecialchars($row["cid"], ENT_QUOTES) . "\">" . htmlspecialchars($row["name"]) . "</option>\n";
         }
       }
-      print "<option value=" . $considerCid;
+      print "<option value=\"" . htmlspecialchars($considerCid ?? '', ENT_QUOTES) . "\"";
       if(!$select){
         print " selected";
       }
@@ -422,8 +429,7 @@ createNavBar("../home.php:Home|modifyList.php:Modify WishList|:Add Item From Web
       </b>  
       </td>
       <td bgcolor="#eeeeee">    
-      <input type="text" size="50" name="title" value="
-<?php echo $_REQUEST["wldesc"]; ?>">  
+      <input type="text" size="50" name="title" value="<?php echo htmlspecialchars($_REQUEST["wldesc"] ?? '', ENT_QUOTES); ?>">  
       </td>
       </tr>  
       <tr>
@@ -441,7 +447,7 @@ createNavBar("../home.php:Home|modifyList.php:Modify WishList|:Add Item From Web
       </b>  
       </td>
       <td bgcolor="#eeeeee">    
-      <input type="text" size="7" name="price" value="<?php echo $OurPrice ?>">  
+      <input type="text" size="7" name="price" value="<?php echo htmlspecialchars($OurPrice ?? '', ENT_QUOTES); ?>">  
       </td>
       </tr>  
       <tr>
@@ -473,15 +479,15 @@ createNavBar("../home.php:Home|modifyList.php:Modify WishList|:Add Item From Web
       <td bgcolor="#eeeeee">    
 
 <?php
-        $url=$_REQUEST["wlurl"];
+        $url = $_REQUEST["wlurl"] ?? '';
         $pos = strpos($url, "//");
-        $len = strpos($url, "/", $pos+2) - ($pos + 2);
-        $urlName = str_replace("www.", "", substr($url, $pos+2,$len));
+        $len = ($pos !== false) ? (strpos($url, "/", $pos+2) - ($pos + 2)) : 0;
+        $urlName = ($pos !== false && $len > 0) ? str_replace("www.", "", substr($url, $pos+2, $len)) : '';
 ?>
 
-      <input type="text" size="50" name="link1" value="<?php echo $urlName?>">
+      <input type="text" size="50" name="link1" value="<?php echo htmlspecialchars($urlName, ENT_QUOTES); ?>">
       <br>    
-      <input type="text" size="50" name="link1url" value="<?php echo $url ?>">  
+      <input type="text" size="50" name="link1url" value="<?php echo htmlspecialchars($url, ENT_QUOTES); ?>">  
       </td>
       </tr>  
       <tr>

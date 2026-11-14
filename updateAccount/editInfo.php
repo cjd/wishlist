@@ -35,16 +35,17 @@ createNavBar("../home.php:Home|updateAccount.php:Update Account|:Edit Personal I
 <p>&nbsp;
 
 <?php
-$query = "select * from people where userid='" . $userid . "'";
+$stmt = mysqli_prepare($link, "SELECT * FROM people WHERE userid = ?");
+mysqli_stmt_bind_param($stmt, "s", $userid);
+mysqli_stmt_execute($stmt);
+$result = mysqli_stmt_get_result($stmt);
 
-$result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
-
-$rs = mysqli_fetch_assoc($result);
+$rs = mysqli_fetch_assoc($result) ?? [];
 
 ?>
 
 <form method="post" action="validate_editInfo.php">
-<input type="hidden" name="target_userid" value="<?php echo $userid ?>">
+<input type="hidden" name="target_userid" value="<?php echo htmlspecialchars($userid); ?>">
 <table style="border-collapse: collapse;" id="AutoNumber1" border="1" bordercolor="#111111" cellpadding="2" cellspacing="0">
 <tr><td colspan="2" align="center" bgcolor="#6702cc"> <b><font size=3 color="#ffffff">
 Information on File</font>
@@ -53,70 +54,61 @@ Information on File</font>
 <tr><td class="lightYellow" align="right">
 <b>First Name</b>
 </td><td bgcolor="#eeeeee">
-<input type=text size="30" name="firstname" value="
-<?php echo $rs['firstname'] ?>">
+<input type=text size="30" name="firstname" value="<?php echo htmlspecialchars($rs['firstname'] ?? ''); ?>">
 </td></tr>
 
 <tr><td class="lightYellow" align="right">
 <b>Last Name</b>
 </td><td bgcolor="#eeeeee">
-<input type=text size="30" name="lastname" value="
-<?php echo $rs['lastname'] ?>">
+<input type=text size="30" name="lastname" value="<?php echo htmlspecialchars($rs['lastname'] ?? ''); ?>">
 </td></tr>
 
 <tr><td class="lightYellow" align="right">
 <b>Suffix</b>
 </td><td bgcolor="#eeeeee">
-<input type=text size="30" name="suffix" value="
-<?php echo $rs['suffix'] ?>">
+<input type=text size="30" name="suffix" value="<?php echo htmlspecialchars($rs['suffix'] ?? ''); ?>">
 </td></tr>
 
 <tr><td class="lightYellow" align="right">
 <b>Street</b>
 </td><td bgcolor="#eeeeee">
-<input type=text size = "30" name="street" value="
-<?php echo $rs['street'] ?>">
+<input type=text size = "30" name="street" value="<?php echo htmlspecialchars($rs['street'] ?? ''); ?>">
 </td></tr>
 
 <tr><td class="lightYellow" align="right">
 <b>City</b>
 </td><td bgcolor="#eeeeee">
-<input type=text size = "30" name="city" value="
-<?php echo $rs['city'] ?>">
+<input type=text size = "30" name="city" value="<?php echo htmlspecialchars($rs['city'] ?? ''); ?>">
 </td></tr>
 
 <tr><td class="lightYellow" align="right">
 <b>State</b>
 </td><td bgcolor="#eeeeee">
-<input type=text size = "30" name="state" value="
-<?php echo $rs['state'] ?>">
+<input type=text size = "30" name="state" value="<?php echo htmlspecialchars($rs['state'] ?? ''); ?>">
 </td></tr>
 
 <tr><td class="lightYellow" align="right">
 <b>Post Code</b>
 </td><td bgcolor="#eeeeee">
-<input type=text size = "10" name="zip" value="
-<?php echo $rs['zip'] != "0" ? $rs['zip'] : "" ?>">
+<input type=text size = "10" name="zip" value="<?php echo htmlspecialchars(($rs['zip'] ?? '') != "0" ? ($rs['zip'] ?? '') : ''); ?>">
 </td></tr>
 
 <tr><td class="lightYellow" align="right">
 <b>Home Phone</b>
 </td><td bgcolor="#eeeeee">
-<input type="text" name="phone" value="
-<?php echo $rs['phone'] ?>
-">
+<input type="text" name="phone" value="<?php echo htmlspecialchars($rs['phone'] ?? ''); ?>">
 </td></tr>
 
 <tr><td class="lightYellow" align="right">
 <b>Mobile Phone</b>
 </td><td bgcolor="#eeeeee">
-<input type="text" name="mobilephone" value="<?php echo $rs['mobilephone'] ?>">
+<input type="text" name="mobilephone" value="<?php echo htmlspecialchars($rs['mobilephone'] ?? ''); ?>">
 </td></tr>
 
 <tr><td class="lightYellow" align="right">
 <b>Email</b>
 </td><td bgcolor="#eeeeee">
-<input type="email" name="email" size="30" value="<?php echo $rs['email'] ?>">
+<input type="email" name="email" size="30" value="<?php echo htmlspecialchars($rs['email'] ?? ''); ?>">
 </td></tr>
 
 <tr><td class="lightYellow" align="right">
@@ -129,8 +121,8 @@ $month = array("January", "February", "March", "April", "May", "June", "July", "
 for($i=0; $i < count($month); $i++){
 
   print "<option ";
-  print $month[$i] == $rs['bmonth'] ? "selected" : ""; 
-  print " value=\"" . $month[$i] . "\">" . $month[$i] . "</option>";
+  print ($month[$i] == ($rs['bmonth'] ?? '')) ? "selected" : ""; 
+  print " value=\"" . htmlspecialchars($month[$i]) . "\">" . htmlspecialchars($month[$i]) . "</option>";
 }
 ?>
     </select>
@@ -139,7 +131,7 @@ for($i=0; $i < count($month); $i++){
 <?php
 for($i = 1; $i < 32; $i++){
    print "<option ";
-   print $i == $rs["bday"] ? "selected" : "";
+   print ($i == ($rs["bday"] ?? '')) ? "selected" : "";
    print " value=\"" . $i . "\">" . $i . "</option>";
 }
 ?>
@@ -151,7 +143,7 @@ for($i = 1; $i < 32; $i++){
 <tr><td class="lightYellow" align="right">
 <b>HomePage URL</b>
 </td><td bgcolor="#eeeeee">
-<input type="text" name="url" size="30" value="<?php echo $rs['url'] ?>">
+<input type="text" name="url" size="30" value="<?php echo htmlspecialchars($rs['url'] ?? ''); ?>">
 </td></tr>
 <tr><td colspan="2" align="center" bgcolor="#c0c0c0">
 <input type="submit" value="Update" class="buttonstyle">

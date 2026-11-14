@@ -46,8 +46,9 @@ $stmt = mysqli_prepare($link, "INSERT INTO categories (cid, userid, name, descri
 mysqli_stmt_bind_param($stmt, "sssssis", $userid, $cname, $description, $linkname, $linkurl, $cso, $catSubDescription);
 mysqli_stmt_execute($stmt);
 
-header("Location: " . getFullPath("modifyList.php"));
-
 $stmt = mysqli_prepare($link, "UPDATE people SET lastModDate=NOW() WHERE userid = ?");
 mysqli_stmt_bind_param($stmt, "s", $userid);
 mysqli_stmt_execute($stmt);
+
+header("Location: " . getFullPath("modifyList.php"));
+exit;

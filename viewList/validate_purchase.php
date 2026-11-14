@@ -15,66 +15,65 @@
 
 include "../funcLib.php";
 
-$receiverName = $_REQUEST["receiverName"];
-$receiverUserid = $_REQUEST["receiverUserid"];
+$receiverName = $_REQUEST["receiverName"] ?? "";
+$receiverUserid = $_REQUEST["receiverUserid"] ?? "";
 $userid = $_SESSION["userid"];
 
 $message = "<font color=indianred><b>" . $_SESSION["fullname"] .
 "</b></font> has checked off the following items from <b>" . $receiverName .
 "'s</b> WishList<dir>";
 
-reset ($_REQUEST);
 $ar = array();
+$insert_stmt = mysqli_prepare($link, "INSERT INTO purchaseHistory (iid, userid, quantity, boughtDate) VALUES (?, ?, ?, NOW())");
 
-foreach($_REQUEST as $iid => $value){
-  $$iid = $value;
-  if(substr($iid,0,3) != "wp-") {
-    $iid = substr($iid,3);
-  
-    if($value == "on"){
-    
-      array_push($ar, $iid . "=1");
-      $query = "insert into purchaseHistory (iid, userid, quantity, boughtDate) values (" .
-        $iid . ", '" . $userid . "', 1, NOW())";
-      
-      $rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
-      
+foreach ($_REQUEST as $key => $value) {
+  $prefix = substr($key, 0, 3);
+  if ($prefix === "chk" || $prefix === "sel") {
+    $iid = intval(substr($key, 3));
+    if ($iid <= 0) continue;
+
+    $bought = 0;
+    if ($prefix === "chk" && $value == "on") {
+      $bought = 1;
+    } elseif ($prefix === "sel" && is_numeric($value)) {
+      $bought = intval($value);
     }
-    elseif (is_numeric($value)) {
-      $bought = $value;
-      
-      if($bought > 0){
-        array_push($ar, $iid . "=" . $bought);
-        $query = "insert into purchaseHistory (iid, userid, quantity, boughtDate) values (" . 
-          $iid . ", '" . $userid . "', " . $bought . ", NOW())";
-        $rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
-      }         
+
+    if ($bought > 0) {
+      $ar[$iid] = $bought;
+      mysqli_stmt_bind_param($insert_stmt, "isi", $iid, $userid, $bought);
+      mysqli_stmt_execute($insert_stmt);
     }
   }
 }
 
-foreach($ar as $i){
-  $pos = strpos($i, "=");
-  $iid = substr($i, 0, $pos);
-  $value = substr($i, $pos+1, strlen($i));
-  
-  $query = "SELECT title, description FROM items WHERE iid=" . $iid;
-  
-  $rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
-  
-  if($row = mysqli_fetch_assoc($rs)){
-    $message .= "<font color=red>Bought " . $value . " of</font> <i>" . $row["title"] . 
-      "</i> - " . $row["description"] . "<p>";
-    
+if (!empty($ar)) {
+  $stmt_item = mysqli_prepare($link, "SELECT title, description FROM items WHERE iid = ?");
+  foreach ($ar as $iid => $qty) {
+    mysqli_stmt_bind_param($stmt_item, "i", $iid);
+    mysqli_stmt_execute($stmt_item);
+    $rs_item = mysqli_stmt_get_result($stmt_item);
+    if ($row = mysqli_fetch_assoc($rs_item)) {
+      $message .= "<font color=red>Bought " . $qty . " of</font> <i>" . $row["title"] . 
+        "</i> - " . $row["description"] . "<p>";
+    }
+  }
+  $message .= "</dir>";
+
+  $stmt_viewers = mysqli_prepare($link, "SELECT email FROM viewList JOIN people ON viewer = userid WHERE pid = ? AND viewer != ? AND viewer != ?");
+  mysqli_stmt_bind_param($stmt_viewers, "sss", $receiverUserid, $receiverUserid, $userid);
+  mysqli_stmt_execute($stmt_viewers);
+  $res_viewers = mysqli_stmt_get_result($stmt_viewers);
+  $to = "";
+  while ($vrow = mysqli_fetch_assoc($res_viewers)) {
+    $to .= $vrow["email"] . ",";
+  }
+  $to = rtrim($to, ",");
+  if (!empty($to)) {
+    $subject = $receiverName . "'s WishList has been modified by " . $_SESSION["fullname"];
+    sendEmail($to, "", $subject, $message, 0);
   }
 }
 
-header("Location: " . getFullPath("viewList.php?recip=". $receiverUserid ."&name=". $receiverName));
-?>
-<html>
-<head><meta name="viewport" content="width=device-width, initial-scale=1.0" /></head>
-
-<body>
-Hello
-</body>
-</html>
+header("Location: " . getFullPath("viewList.php?recip=". urlencode($receiverUserid) ."&name=". urlencode($receiverName)));
+exit;

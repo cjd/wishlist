@@ -32,33 +32,26 @@ if (isset ($_REQUEST["confirm"])) {
 
 if($confirm != ""){
 
-$recip = convertString($_REQUEST["recip"]);
-$comment_userid = convertString($_SESSION["userid"]);
-$comment = convertString($_REQUEST["comment"]);
-$name = convertString($_REQUEST["name"]);
+$recip = convertString($_REQUEST["recip"] ?? '');
+$comment_userid = convertString($_SESSION["userid"] ?? '');
+$comment = convertString($_REQUEST["comment"] ?? '');
+$name = convertString($_REQUEST["name"] ?? '');
 
-$query = "insert into comments (commentId, userid, comment_userid, comment, date) values (null, '" . $recip . "', '" . $comment_userid . "', '" . $comment . "', NOW())";
+$stmt = mysqli_prepare($link, "INSERT INTO comments (commentId, userid, comment_userid, comment, date) VALUES (null, ?, ?, ?, NOW())");
+mysqli_stmt_bind_param($stmt, "sss", $recip, $comment_userid, $comment);
+mysqli_stmt_execute($stmt);
 
-$rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
-
-  header("Location: " . getFullPath("viewList.php") . "?recip=" . $recip . "&name=" . $name);
-
-if (isset($_REQUEST["recipients"])) {
-    $recipients = $_REQUEST["recipients"];
-} else {
-    $recipients = array();
-}
-
-if(!empty($recipients)){
-
-  $to = implode(",", $recipients);
-
+if (isset($_REQUEST["recipients"]) && is_array($_REQUEST["recipients"])) {
+  $to = implode(",", $_REQUEST["recipients"]);
   $from = $_SESSION["userid"];
-  $subject = $_SESSION["fullname"] . " has added a comment to " . $_REQUEST["name"] . "'s list";
-  $message = "<b>Comment:</b><br>" . cleanString($_REQUEST["comment"]);
+  $subject = $_SESSION["fullname"] . " has added a comment to " . $name . "'s list";
+  $message = "<b>Comment:</b><br>" . cleanString($_REQUEST["comment"] ?? '');
 
   sendEmail($to, $from, $subject, $message, 0);
 }
+
+header("Location: " . getFullPath("viewList.php") . "?recip=" . urlencode($recip) . "&name=" . urlencode($name));
+exit;
 }
 else{
 ?>
@@ -101,14 +94,15 @@ Send Email?</font></b>
 <table><tr><td>
 <?php
 
-$query = "select * from people, viewList where pid = '" . $_REQUEST["recip"] . "' and viewer!='" . $_REQUEST["recip"] . "' and viewer = people.userid order by lastname, firstname";
-
-$rs = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+$stmt_recips = mysqli_prepare($link, "SELECT * FROM people, viewList WHERE pid = ? AND viewer != ? AND viewer = people.userid ORDER BY lastname, firstname");
+mysqli_stmt_bind_param($stmt_recips, "ss", $recip, $recip);
+mysqli_stmt_execute($stmt_recips);
+$rs = mysqli_stmt_get_result($stmt_recips);
 
 while($row = mysqli_fetch_assoc($rs)){
 ?>
 
-<input type=checkbox name=recipients[] value="<?php echo $row["userid"] ?>"><?php echo $row["firstname"] . ' ' . $row["lastname"] . ' ' . $row["suffix"] ?><br>
+<input type=checkbox name=recipients[] value="<?php echo htmlspecialchars($row["userid"]); ?>"><?php echo htmlspecialchars($row["firstname"] . ' ' . $row["lastname"] . ' ' . $row["suffix"]); ?><br>
 <?php
 }
 ?>
@@ -145,8 +139,8 @@ for (i = 0; i < this.document.theForm.elements['recipients[]'].length; i++)
 
 <br>
 <input type=hidden name=confirm value=yes>
-<input type=hidden name=recip value=<?php echo $_REQUEST["recip"] ?>>
-<input type=hidden name=name value="<?php echo $_REQUEST["name"] ?>">
+<input type=hidden name=recip value="<?php echo htmlspecialchars($recip); ?>">
+<input type=hidden name=name value="<?php echo htmlspecialchars($name); ?>">
 <input type=submit value="Add Comment" class="buttonstyle">
 
 </form>

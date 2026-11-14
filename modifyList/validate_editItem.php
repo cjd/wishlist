@@ -66,6 +66,19 @@ if($addStar == "")
 else
   $addStar = '1';
 
+$check_item = mysqli_prepare($link, "SELECT items.iid FROM items JOIN categories ON items.cid = categories.cid WHERE items.iid = ? AND categories.userid = ?");
+mysqli_stmt_bind_param($check_item, "is", $iid, $userid);
+mysqli_stmt_execute($check_item);
+if (mysqli_num_rows(mysqli_stmt_get_result($check_item)) == 0) {
+    die("Unauthorized: That item does not belong to you.");
+}
+
+$check_move = mysqli_prepare($link, "SELECT cid FROM categories WHERE cid = ? AND userid = ?");
+mysqli_stmt_bind_param($check_move, "is", $movecid, $userid);
+mysqli_stmt_execute($check_move);
+if (mysqli_num_rows(mysqli_stmt_get_result($check_move)) == 0) {
+    die("Unauthorized: Destination category does not belong to you.");
+}
 
 if($cid != $movecid){
   // moving to a different category so update iso
@@ -100,22 +113,20 @@ mysqli_stmt_execute($stmt);
 if (isset($_FILES['image']) && ($_FILES['image']['error']==0)) {
     $uploadDir = $base_dir.'/uploads/';
     $uploadFile = "image-" . $iid.".jpg";
-    if (is_file($uploadFile)) {
-      unlink($uploadFile);
+    if (is_file($uploadDir . $uploadFile)) {
+      unlink($uploadDir . $uploadFile);
     }
     $result = process_image_upload('image',$uploadDir.$uploadFile);
     if ($result) {
-        $stmt = mysqli_prepare($link, "UPDATE items SET image = ? WHERE iid = ?");
-        mysqli_stmt_bind_param($stmt, "si", $uploadFile, $iid);
-        mysqli_stmt_execute($stmt);
+        $stmt_img = mysqli_prepare($link, "UPDATE items SET image = ? WHERE iid = ?");
+        mysqli_stmt_bind_param($stmt_img, "si", $uploadFile, $iid);
+        mysqli_stmt_execute($stmt_img);
     }
 }
-
-//print $query . "<br>";
-mysqli_stmt_execute($stmt);
-
-header("Location: " . getFullPath("modifyList.php"));
 
 $stmt = mysqli_prepare($link, "UPDATE people SET lastModDate=NOW() WHERE userid = ?");
 mysqli_stmt_bind_param($stmt, "s", $userid);
 mysqli_stmt_execute($stmt);
+
+header("Location: " . getFullPath("modifyList.php"));
+exit;

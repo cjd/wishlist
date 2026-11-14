@@ -15,8 +15,12 @@
 
 include "../funcLib.php";
 
-$query = "delete from viewList where pid='" . $userid . "' and viewer='" . $_REQUEST["bad"] . "'";
-//print $query;
-$result = mysqli_query($link,$query) or die("Could not query: " . mysqli_error($link));
+$bad = $_REQUEST["bad"] ?? "";
+if (!empty($bad)) {
+    $stmt = mysqli_prepare($link, "DELETE FROM viewList WHERE pid = ? AND viewer = ?");
+    mysqli_stmt_bind_param($stmt, "ss", $userid, $bad);
+    mysqli_stmt_execute($stmt);
+}
 
 header("Location: " . getFullPath("updateAccount.php"));
+exit;
