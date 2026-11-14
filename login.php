@@ -13,6 +13,12 @@
 // along with this program; if not, write to the Free Software
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+if (!headers_sent()) {
+  header("X-Frame-Options: SAMEORIGIN");
+  header("X-Content-Type-Options: nosniff");
+  header("Referrer-Policy: strict-origin-when-cross-origin");
+}
+
 @(include 'config.php');
 
 if(!isset($base_dir)){
@@ -50,7 +56,15 @@ if(isset($_SESSION['userid'])){
 $displayError = True;
 $errorMessage = "Please Sign In";
 
-if (!empty($_REQUEST["userid"]) && !empty($_REQUEST["password"])) {
+// Check if user is temporarily locked out due to repeated failed logins
+if (!empty($_SESSION['login_lockout_until']) && time() < $_SESSION['login_lockout_until']) {
+    $remaining_minutes = ceil(($_SESSION['login_lockout_until'] - time()) / 60);
+    $errorMessage = "Too many failed login attempts. Please wait $remaining_minutes minute" . ($remaining_minutes > 1 ? "s" : "") . " before trying again.";
+} elseif (!empty($_REQUEST["userid"]) && !empty($_REQUEST["password"])) {
+    if (!empty($_SESSION['login_lockout_until']) && time() >= $_SESSION['login_lockout_until']) {
+        unset($_SESSION['login_attempts']);
+        unset($_SESSION['login_lockout_until']);
+    }
 
   $link = mysqli_connect($db_loc, $db_userid, $db_pass);
   if(!$link){
@@ -58,6 +72,7 @@ if (!empty($_REQUEST["userid"]) && !empty($_REQUEST["password"])) {
     die("<p><font size=+2>Danger Will Robinson! It looks like the database is down.<p>Please try again later.</font>");
   }
   mysqli_select_db($link,$db_name);
+  mysqli_set_charset($link, "utf8mb4");
 
   // Schema update check
   $query = "SELECT version FROM schema_version";
@@ -141,6 +156,8 @@ if (!empty($_REQUEST["userid"]) && !empty($_REQUEST["password"])) {
         session_start();
       }
       session_regenerate_id(true);
+      unset($_SESSION['login_attempts']);
+      unset($_SESSION['login_lockout_until']);
 
       $_SESSION["userid"] = $row["userid"];
       $_SESSION["fullname"] = $row["firstname"] . " " . $row["lastname"] . ' ' . $row["suffix"];
@@ -169,25 +186,21 @@ if (!empty($_REQUEST["userid"]) && !empty($_REQUEST["password"])) {
     }
   }
   
-  $errorMessage = "Invalid username or password.";
+  $_SESSION['login_attempts'] = ($_SESSION['login_attempts'] ?? 0) + 1;
+  if ($_SESSION['login_attempts'] >= 5) {
+      $_SESSION['login_lockout_until'] = time() + 300; // 5-minute cooldown
+      $errorMessage = "Too many failed login attempts. Please wait 5 minutes before trying again.";
+  } else {
+      $errorMessage = "Invalid username or password.";
+  }
 }
 ?>
-
+<!DOCTYPE html>
 <HTML>
 
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 </head>
-
-<script language="javascript">
-function valid_js() {
-   // anything that claims NS 4 or higher functionality better work 
-   if (navigator.userAgent.indexOf("Mozilla/") == 0) {
-      return (parseInt(navigator.appVersion) >= 4);
-   }
-   return false;
-}
-</script>
 
 <link rel=stylesheet href=style.css type=text/css>
 
