@@ -1,5 +1,11 @@
 <?php
 
+if (!headers_sent()) {
+  header("X-Frame-Options: SAMEORIGIN");
+  header("X-Content-Type-Options: nosniff");
+  header("Referrer-Policy: strict-origin-when-cross-origin");
+}
+
 @(include 'config.php');
 
 if(!isset($base_dir)){
@@ -49,6 +55,7 @@ if(!isset($doingSetup)){
   }
   else{
     mysqli_select_db($link,$db_name);
+    mysqli_set_charset($link, "utf8mb4");
   }
 }
 
