@@ -634,11 +634,6 @@ function printCategory($row, $name, $displayPurchases, $readOnly, $modifyList, $
             print "<option value='" . $i . "'>" . $i . "</option>";
           }
           print "</select>";
-          if (!$readOnly && $displayPurchases != 0) {
-            print "<div id='split_box_" . $iid . "' class='split-input-box' style='display:none;'>";
-            print "<input type='text' name='split_" . $iid . "' class='split-input' placeholder='Splitting with? (optional)'>";
-            print "</div>";
-          }
         }
         else{ // Everything already bought, display disabled drop down
           print "<select disabled><option>0</option></select>";
@@ -665,12 +660,7 @@ function printCategory($row, $name, $displayPurchases, $readOnly, $modifyList, $
           if($displayPurchases == 1)
             $titley = "title=\"Click here if you purchased this item\"";
 
-          print "<input $titley type='checkbox' name='chk" . $iid . "' " . $val . " onchange=\"toggleSplitInput(" . $iid . ", this.checked)\">";
-          if (!$readOnly && $displayPurchases != 0) {
-            print "<div id='split_box_" . $iid . "' class='split-input-box' style='display:none;'>";
-            print "<input type='text' name='split_" . $iid . "' class='split-input' placeholder='Splitting with? (optional)'>";
-            print "</div>";
-          }
+          print "<input $titley type='checkbox' name='chk" . $iid . "' " . $val . " onclick=\"toggleSplitInput(" . $iid . ", this.checked)\" onchange=\"toggleSplitInput(" . $iid . ", this.checked)\">";
         }
         print "</div><div class='item-cell item-content'>";
       }
@@ -685,6 +675,13 @@ function printCategory($row, $name, $displayPurchases, $readOnly, $modifyList, $
     if($bought > 0 && $quantity==1){ print "</s>"; }
     if(!empty($splitNotes)){
       print " <span class='group-gift-badge' title='Group gift'>👥 Split with " . implode(', ', $splitNotes) . "</span>";
+    }
+
+    if (!$readOnly && !$modifyList && ($quantity - $bought) > 0) {
+      print "<div id='split_box_" . $iid . "' class='split-input-box' style='display:none;'>";
+      print "<label class='split-subtext' style='display:block; margin-bottom: 3px;'>👥 Splitting this gift?</label>";
+      print "<input type='text' name='split_" . $iid . "' class='split-input' placeholder='Co-buyer names or notes (e.g. Split with Sarah)'>";
+      print "</div>";
     }
     
     print "</div>"; // close the item content td

@@ -50,6 +50,17 @@ if ($confirm == "Go Home" || $confirm == "Ho Home") {
         }
     }
     $(document).ready(function() {
+        $('input[name^="chk"]:checked').each(function() {
+            var iid = this.name.replace('chk', '');
+            toggleSplitInput(iid, true);
+        });
+        $('select[name^="sel"]').each(function() {
+            if (parseInt(this.value, 10) > 0) {
+                var iid = this.name.replace('sel', '');
+                toggleSplitInput(iid, true);
+            }
+        });
+
         <?php if (!empty($_GET['saved'])): ?>
         if (typeof showToast === 'function') {
             showToast('Changes saved successfully!');
