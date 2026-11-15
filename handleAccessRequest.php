@@ -4,89 +4,85 @@
 // the Free Software Foundation; either version 2 of the License, or
 // (at your option) any later version.
 
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-
 include "funcLib.php";
 
-if (isset($_POST['requestId']) && isset($_POST['requesterId']) && isset($_POST['decision'])) {
-    verifyCsrfOrDie();
-    $requestId = intval($_POST['requestId']);
-    $requesterId = $_POST['requesterId'];
-    $decision = $_POST['decision'];
-    
-    // Get the targetId from the database
-    $stmt_target = mysqli_prepare($link, "SELECT targetId FROM accessRequests WHERE id = ?");
-    mysqli_stmt_bind_param($stmt_target, "i", $requestId);
-    mysqli_stmt_execute($stmt_target);
-    $result_target = mysqli_stmt_get_result($stmt_target);
-    if ($row_target = mysqli_fetch_assoc($result_target)) {
-        $targetId = $row_target['targetId'];
-    } else {
-        header("Location: home.php?error=invalid_request");
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    header("Location: home.php");
+    exit();
+}
+
+verifyCsrfOrDie(true);
+
+$requestId = isset($_POST['requestId']) ? (int)$_POST['requestId'] : 0;
+$decision = $_POST['decision'] ?? '';
+$returnTo = ($_POST['return_to'] ?? '') === 'admin' && !empty($_SESSION['admin']) && $_SESSION['admin'] == 1
+    ? 'admin/accessRequests.php'
+    : 'home.php';
+
+if ($requestId <= 0 || !in_array($decision, ['approve_readonly', 'approve_contact', 'deny'], true)) {
+    header("Location: " . $returnTo . "?error=invalid_request");
+    exit();
+}
+
+mysqli_begin_transaction($link);
+
+try {
+    $stmt_req = mysqli_prepare($link, "SELECT requesterId, targetId, status FROM accessRequests WHERE id = ? FOR UPDATE");
+    mysqli_stmt_bind_param($stmt_req, "i", $requestId);
+    mysqli_stmt_execute($stmt_req);
+    $res_req = mysqli_stmt_get_result($stmt_req);
+    $row_req = mysqli_fetch_assoc($res_req);
+
+    if (!$row_req) {
+        mysqli_rollback($link);
+        header("Location: " . $returnTo . "?error=invalid_request");
         exit();
     }
 
-    // Security check: ensure the user is either the target or an admin
-    if ($_SESSION['userid'] != $targetId && $_SESSION['admin'] != 1) {
+    $requesterId = $row_req['requesterId'];
+    $targetId = $row_req['targetId'];
+
+    // Ensure the user is either the target list owner or an admin
+    if ($_SESSION['userid'] !== $targetId && (empty($_SESSION['admin']) || $_SESSION['admin'] != 1)) {
+        mysqli_rollback($link);
         header("Location: home.php?error=unauthorized");
         exit();
     }
 
-    mysqli_begin_transaction($link);
-
-    try {
-        if ($decision == 'approve_readonly') {
-            $query = "INSERT INTO viewList (pid, viewer, readOnly, viewContactInfo, allowEdit, lastViewDate) VALUES (?, ?, 1, 0, 0, NOW())";
-            $stmt = mysqli_prepare($link, $query);
-            mysqli_stmt_bind_param($stmt, "ss", $targetId, $requesterId);
-            mysqli_stmt_execute($stmt);
-
-            $query_update = "UPDATE accessRequests SET status = 'approved' WHERE id = ?";
-            $stmt_update = mysqli_prepare($link, $query_update);
-            mysqli_stmt_bind_param($stmt_update, "i", $requestId);
-            mysqli_stmt_execute($stmt_update);
-
-        } elseif ($decision == 'approve_contact') {
-            $query = "INSERT INTO viewList (pid, viewer, readOnly, viewContactInfo, allowEdit, lastViewDate) VALUES (?, ?, 0, 1, 0, NOW())";
-            $stmt = mysqli_prepare($link, $query);
-            mysqli_stmt_bind_param($stmt, "ss", $targetId, $requesterId);
-            mysqli_stmt_execute($stmt);
-
-            $query_update = "UPDATE accessRequests SET status = 'approved' WHERE id = ?";
-            $stmt_update = mysqli_prepare($link, $query_update);
-            mysqli_stmt_bind_param($stmt_update, "i", $requestId);
-            mysqli_stmt_execute($stmt_update);
-
-        } elseif ($decision == 'deny') {
-            $query_update = "UPDATE accessRequests SET status = 'denied' WHERE id = ?";
-            $stmt_update = mysqli_prepare($link, $query_update);
-            mysqli_stmt_bind_param($stmt_update, "i", $requestId);
-            mysqli_stmt_execute($stmt_update);
-        }
-
-        mysqli_commit($link);
-        if ($_SESSION['admin'] == 1) {
-            header("Location: admin/accessRequests.php");
-        } else {
-            header("Location: home.php");
-        }
-        exit();
-
-    } catch (mysqli_sql_exception $exception) {
+    if ($row_req['status'] !== 'pending') {
         mysqli_rollback($link);
-        // You can log the error message
-        header("Location: home.php?error=1");
+        header("Location: " . $returnTo);
         exit();
     }
-} else {
-    header("Location: home.php");
+
+    if ($decision === 'approve_readonly') {
+        $stmt = mysqli_prepare($link, "INSERT INTO viewList (pid, viewer, readOnly, viewContactInfo, allowEdit, lastViewDate) VALUES (?, ?, 1, 0, 0, NOW()) ON DUPLICATE KEY UPDATE readOnly = 1, viewContactInfo = 0, lastViewDate = NOW()");
+        mysqli_stmt_bind_param($stmt, "ss", $targetId, $requesterId);
+        mysqli_stmt_execute($stmt);
+
+        $stmt_update = mysqli_prepare($link, "UPDATE accessRequests SET status = 'approved', notified = 0 WHERE id = ? AND status = 'pending'");
+        mysqli_stmt_bind_param($stmt_update, "i", $requestId);
+        mysqli_stmt_execute($stmt_update);
+    } elseif ($decision === 'approve_contact') {
+        $stmt = mysqli_prepare($link, "INSERT INTO viewList (pid, viewer, readOnly, viewContactInfo, allowEdit, lastViewDate) VALUES (?, ?, 0, 1, 0, NOW()) ON DUPLICATE KEY UPDATE readOnly = 0, viewContactInfo = 1, lastViewDate = NOW()");
+        mysqli_stmt_bind_param($stmt, "ss", $targetId, $requesterId);
+        mysqli_stmt_execute($stmt);
+
+        $stmt_update = mysqli_prepare($link, "UPDATE accessRequests SET status = 'approved', notified = 0 WHERE id = ? AND status = 'pending'");
+        mysqli_stmt_bind_param($stmt_update, "i", $requestId);
+        mysqli_stmt_execute($stmt_update);
+    } elseif ($decision === 'deny') {
+        $stmt_update = mysqli_prepare($link, "UPDATE accessRequests SET status = 'denied', notified = 0 WHERE id = ? AND status = 'pending'");
+        mysqli_stmt_bind_param($stmt_update, "i", $requestId);
+        mysqli_stmt_execute($stmt_update);
+    }
+
+    mysqli_commit($link);
+    header("Location: " . $returnTo);
+    exit();
+} catch (mysqli_sql_exception $exception) {
+    mysqli_rollback($link);
+    error_log("handleAccessRequest failed: " . $exception->getMessage());
+    header("Location: " . $returnTo . "?error=1");
     exit();
 }
-?>
