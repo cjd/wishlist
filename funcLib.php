@@ -147,8 +147,11 @@ if($displayGreeting){
   print "</td>";
 }
 
-print "<td class=navBar align=\"right\"><a class=navMenuLink target=\"_blank\" href=\"$base_url/help.php#$helpLink\">Help</a> :: <a class=\"navMenuLink\" href=\"$base_url/logout.php\">logout</a>";
+print "<td class=navBar align=\"right\"><button type=\"button\" id=\"themeToggleBtn\" class=\"theme-toggle-btn\" onclick=\"toggleTheme()\" title=\"Toggle dark/light theme\" aria-label=\"Toggle theme\">🌙</button> :: <a class=navMenuLink target=\"_blank\" href=\"$base_url/help.php#$helpLink\">Help</a> :: <a class=\"navMenuLink\" href=\"$base_url/logout.php\">logout</a>";
 print "</td></tr></table>";
+print "<script type=\"text/javascript\" src=\"$base_url/js/theme.js\"></script>";
+print "<script type=\"text/javascript\" src=\"$base_url/js/toast.js\"></script>";
+print "<script type=\"text/javascript\" src=\"$base_url/js/back-to-top.js\"></script>";
 }
 
 function getFullPath($url) {
@@ -673,7 +676,53 @@ function printCategory($row, $name, $displayPurchases, $readOnly, $modifyList, $
   print "</div>\n"; // end wishlist-category-block
 }
 
+function formatStoreButton($url, $linkText = "") {
+    if (empty($url)) return "";
+    $host = strtolower(parse_url($url, PHP_URL_HOST) ?? '');
+    $domain = preg_replace('/^www\./', '', $host);
+    
+    $storeName = "";
+    $icon = "🛒 ";
+    
+    if (strpos($domain, "amazon.") !== false) {
+        $storeName = "Amazon";
+    } elseif (strpos($domain, "target.com") !== false) {
+        $storeName = "Target";
+    } elseif (strpos($domain, "walmart.com") !== false) {
+        $storeName = "Walmart";
+    } elseif (strpos($domain, "apple.com") !== false) {
+        $storeName = "Apple";
+    } elseif (strpos($domain, "etsy.com") !== false) {
+        $storeName = "Etsy";
+    } elseif (strpos($domain, "bestbuy.com") !== false) {
+        $storeName = "Best Buy";
+    } elseif (strpos($domain, "ebay.") !== false) {
+        $storeName = "eBay";
+    } elseif (strpos($domain, "lego.com") !== false) {
+        $storeName = "LEGO";
+    } elseif (strpos($domain, "barnesandnoble.com") !== false) {
+        $storeName = "Barnes & Noble";
+    } elseif (strpos($domain, "costco.com") !== false) {
+        $storeName = "Costco";
+    } elseif (strpos($domain, "ikea.com") !== false) {
+        $storeName = "IKEA";
+    }
 
+    if (empty($storeName)) {
+        if (!empty($linkText) && strtolower(trim($linkText)) !== "link") {
+            $label = htmlspecialchars($linkText);
+        } elseif (!empty($domain)) {
+            $label = htmlspecialchars($domain);
+        } else {
+            $label = "Visit Store";
+        }
+    } else {
+        $label = "Buy on " . $storeName;
+    }
+
+    $cleanUrl = htmlspecialchars($url, ENT_QUOTES);
+    return "<a class='store-button' target='_blank' rel='noopener noreferrer' href='{$cleanUrl}' title='Open {$cleanUrl}'>{$icon}{$label} <span class='store-button-arrow'>↗</span></a>";
+}
 
 function printItem($row2, $name, $quantity, $bought, $createDateFormatted){
     global $base_url;
@@ -688,8 +737,14 @@ function printItem($row2, $name, $quantity, $bought, $createDateFormatted){
   }
 
   if($row2["image"] != "") {
-    $text .= "<a href=\"#\" data-featherlight=\"".$base_url."/uploads/image-".$row2["iid"].".jpg\" title=\"".$row2["title"]."\">";
-    $text .= "<img src=\"".$base_url."/uploads/image-".$row2["iid"].".jpg\" width=64></a>";
+    $imgUrl = htmlspecialchars($base_url . "/uploads/image-" . $row2["iid"] . ".jpg", ENT_QUOTES);
+    $imgTitle = htmlspecialchars($row2["title"] ?? '', ENT_QUOTES);
+    $text .= "<div class=\"item-thumbnail-wrapper\">";
+    $text .= "<a href=\"" . $imgUrl . "\" data-featherlight=\"" . $imgUrl . "\" title=\"" . $imgTitle . "\">";
+    $text .= "<img src=\"" . $imgUrl . "\" class=\"item-thumbnail\" alt=\"" . $imgTitle . "\" loading=\"lazy\">";
+    $text .= "</a>";
+    $text .= "<div class=\"item-thumbnail-popup\"><img src=\"" . $imgUrl . "\" alt=\"" . $imgTitle . "\" loading=\"lazy\"></div>";
+    $text .= "</div>";
   }
     
   if($row2["title"] != ""){  
@@ -704,22 +759,19 @@ function printItem($row2, $name, $quantity, $bought, $createDateFormatted){
     $dash = 1;
   }
   
-  if($row2["price"] != "0.00"){
+  if($row2["price"] != "0.00" && !empty($row2["price"])){
     if($dash)
       $text .= " - ";
 
-    $text .= "$" . $row2["price"];
+    $text .= "<span class='price-badge'>$" . htmlspecialchars($row2["price"]) . "</span>";
     $dash = 1;
   }
   
-  if($row2["link1url"] != ""){
+  if(!empty($row2["link1url"])){
     if($dash)
-      $text .= " - ";
-    if ($row2["link1"] != "") {
-      $text .= "<a target='_blank' href='" . $row2["link1url"] . "'>" . $row2["link1"] . "</a>";
-    } else {
-      $text .= "<a target='_blank' href='" . $row2["link1url"] . "'>Link</a>";
-    }
+      $text .= " ";
+    $text .= formatStoreButton($row2["link1url"], $row2["link1"] ?? "");
+    $dash = 1;
   }
 
   print $text;  
@@ -750,14 +802,16 @@ function printItem($row2, $name, $quantity, $bought, $createDateFormatted){
       print "</div>";
     }
     
-    if($link2 != ""){
+    if(!empty($link2url)){
       print "<div class='item-detail-row'>";
-      print "<a target='_blank' href='" . $link2url . "'>" . $link2 ."</a></div>";
+      print formatStoreButton($link2url, $link2);
+      print "</div>";
+    }
       
-      if($link3 != ""){
-        print "<div class='item-detail-row'>";
-        print "<a target='_blank' href='" . $link3url . "'>" . $link3 . "</a></div>";
-      }
+    if(!empty($link3url)){
+      print "<div class='item-detail-row'>";
+      print formatStoreButton($link3url, $link3);
+      print "</div>";
     }
     
     if($quantity > 1){ 
