@@ -220,11 +220,19 @@ function displayWishlist($recip, $userid, $name, $allowEdit, $link)
 <?php
         }
         ?>
-<form method="post" action="addComment.php">
-<input type="hidden" name="recip" value="<?php echo htmlspecialchars($recip); ?>">
-<input type="hidden" name="name" value="<?php echo htmlspecialchars($name); ?>">
-<input type="submit" value="Add New Comment" class="buttonstyle">
-</form>
+<div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;">
+  <form method="post" action="addComment.php" style="margin: 0;">
+    <input type="hidden" name="recip" value="<?php echo htmlspecialchars($recip); ?>">
+    <input type="hidden" name="name" value="<?php echo htmlspecialchars($name); ?>">
+    <input type="submit" value="Add New Comment" class="buttonstyle">
+  </form>
+  <form method="post" action="addComment.php" style="margin: 0;">
+    <input type="hidden" name="recip" value="<?php echo htmlspecialchars($recip); ?>">
+    <input type="hidden" name="name" value="<?php echo htmlspecialchars($name); ?>">
+    <input type="hidden" name="type" value="suggestion">
+    <input type="submit" value="💡 Suggest Secret Gift Idea" class="buttonstyle suggestion-btn-accent">
+  </form>
+</div>
 
 <?php
     } else {
