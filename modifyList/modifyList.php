@@ -85,10 +85,10 @@ others to see"; }
 print "</td></tr></table><p>";
 ?>
 
-<div class="wishlist-search-container">
-  <span class="wishlist-search-icon">&#128269;</span>
-  <input type="text" id="wishlistSearch" class="wishlist-search-input" placeholder="Search your list by title, store, or details..." oninput="filterWishlist(this.value)">
-  <button type="button" id="wishlistSearchClear" class="wishlist-search-clear" onclick="clearWishlistFilter()" title="Clear search">&times;</button>
+<div class="wishlist-search-box">
+  <label for="wishlistSearch"><b>Search List:</b></label>
+  <input type="text" id="wishlistSearch" class="wishlist-search-input" placeholder="Type to filter items..." oninput="filterWishlist(this.value)">
+  <input type="button" id="wishlistSearchClear" class="actionButton" value="Clear" onclick="clearWishlistFilter()" style="display:none;">
   <span id="wishlistSearchCount" class="wishlist-search-count"></span>
 </div>
 
@@ -99,9 +99,10 @@ printModifyList($userid);
 ?>
 <table width=100%>
 <tr><td colspan="3" align="center">
-<form method="post" action="addCategory.php">
+<form method="post" action="addCategory.php" style="display:inline-block;">
 <input type="submit" value="Add New Category" class="buttonstyle">
 </form>
+<input type="button" value="Print List" class="buttonstyle" onclick="window.print()">
 </td>
 </tr>
 </table>
@@ -167,12 +168,15 @@ document.addEventListener('DOMContentLoaded', function () {
                         newIndex: newIndex
                     },
                     success: function(response) {
-                        // You can add a success message here if you want
-                        console.log(response);
+                        if (typeof showToast === 'function') {
+                            showToast('Item order updated');
+                        }
                     },
                     error: function() {
-                        // You can add an error message here if you want
-                        console.error('Error updating item order');
+                        if (typeof showToast === 'function') {
+                            showToast('Error updating item order', 'error');
+                        }
+                    }
                     }
                 });
             }

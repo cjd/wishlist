@@ -40,6 +40,11 @@ if ($confirm == "Go Home" || $confirm == "Ho Home") {
     <script type="text/javascript" src="../js/wishlist-filter.js"></script>
     <script type="text/javascript">
     $(document).ready(function() {
+        <?php if (!empty($_GET['saved'])): ?>
+        if (typeof showToast === 'function') {
+            showToast('Changes saved successfully!');
+        }
+        <?php endif; ?>
         var sendMessageModal = document.getElementById("sendMessageModal");
         var sendMessageBtn = document.getElementById("sendMessageBtn");
         var span = document.getElementsByClassName("close-send-message")[0];
@@ -147,10 +152,10 @@ function displayWishlist($recip, $userid, $name, $allowEdit, $link)
 {
     ?>
 <form method="post" action="validate_purchase.php" name="wishlist">
-<div class="wishlist-search-container">
-  <span class="wishlist-search-icon">&#128269;</span>
-  <input type="text" id="wishlistSearch" class="wishlist-search-input" placeholder="Search items by name, store, or details..." oninput="filterWishlist(this.value)">
-  <button type="button" id="wishlistSearchClear" class="wishlist-search-clear" onclick="clearWishlistFilter()" title="Clear search">&times;</button>
+<div class="wishlist-search-box">
+  <label for="wishlistSearch"><b>Search List:</b></label>
+  <input type="text" id="wishlistSearch" class="wishlist-search-input" placeholder="Type to filter items..." oninput="filterWishlist(this.value)">
+  <input type="button" id="wishlistSearchClear" class="actionButton" value="Clear" onclick="clearWishlistFilter()" style="display:none;">
   <span id="wishlistSearchCount" class="wishlist-search-count"></span>
 </div>
 <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(getCsrfToken(), ENT_QUOTES); ?>">
@@ -169,6 +174,7 @@ function displayWishlist($recip, $userid, $name, $allowEdit, $link)
 <input type="reset" value="Undo Changes" class="buttonstyle" onclick="history.go(0)">
 <input type="button" value="Go Home" class="buttonstyle" onclick="location.href='../home.php'">
 <input type="button" value="Send Message" class="buttonstyle" id="sendMessageBtn">
+<input type="button" value="🖨️ Print List" class="buttonstyle" onclick="window.print()">
 </form>
 
 <hr>
