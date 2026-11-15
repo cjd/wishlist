@@ -820,6 +820,31 @@ input[type=checkbox] {
   margin-top: 1px;
 }
 
+/* Select2 Customization for Split Gifts */
+.split-input-box .select2-container--default .select2-selection--multiple {
+  border: 1px solid #c084fc;
+  border-radius: 4px;
+  background-color: #ffffff;
+  min-height: 28px;
+  padding: 1px 4px;
+}
+
+.split-input-box .select2-container--default .select2-selection--multiple .select2-selection__choice {
+  background-color: #f3e8ff;
+  border: 1px solid #c084fc;
+  color: #6b21a8;
+  font-size: 11px;
+  font-weight: bold;
+  border-radius: 3px;
+  padding: 1px 6px;
+  margin-top: 3px;
+}
+
+.split-input-box .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+  color: #7e22ce;
+  margin-right: 4px;
+}
+
 /* Secret Gift Suggestion Box */
 .secret-suggestion-card {
   background: #faf5ff;
@@ -1450,6 +1475,21 @@ input[type=checkbox] {
 
 [data-theme="dark"] .split-subtext {
   color: #c084fc !important;
+}
+
+[data-theme="dark"] .split-input-box .select2-container--default .select2-selection--multiple {
+  background-color: #1e1035 !important;
+  border-color: #7e22ce !important;
+}
+
+[data-theme="dark"] .split-input-box .select2-container--default .select2-selection--multiple .select2-selection__choice {
+  background-color: #581c87 !important;
+  border-color: #7e22ce !important;
+  color: #f3e8ff !important;
+}
+
+[data-theme="dark"] .split-input-box .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+  color: #d8b4fe !important;
 }
 
 [data-theme="dark"] .secret-suggestion-card {

@@ -26,7 +26,7 @@ $message = "<font color=indianred><b>" . $_SESSION["fullname"] .
 "'s</b> WishList<dir>";
 
 $ar = array();
-$insert_stmt = mysqli_prepare($link, "INSERT INTO purchaseHistory (iid, userid, quantity, boughtDate, splitWith) VALUES (?, ?, ?, NOW(), ?)");
+$insert_stmt = mysqli_prepare($link, "INSERT INTO purchaseHistory (iid, userid, quantity, boughtDate, splitWith, splitUsers) VALUES (?, ?, ?, NOW(), ?, ?)");
 
 foreach ($_REQUEST as $key => $value) {
   $prefix = substr($key, 0, 3);
@@ -42,9 +42,38 @@ foreach ($_REQUEST as $key => $value) {
     }
 
     if ($bought > 0) {
-      $splitWith = trim($_REQUEST["split_" . $iid] ?? "");
+      $selectedUsers = $_REQUEST["split_users_" . $iid] ?? [];
+      if (!is_array($selectedUsers) && !empty($selectedUsers)) {
+        $selectedUsers = [$selectedUsers];
+      }
+
+      $userNames = [];
+      $userIdList = [];
+      if (!empty($selectedUsers)) {
+        $stmt_u = mysqli_prepare($link, "SELECT userid, firstname, lastname FROM people WHERE userid = ?");
+        foreach ($selectedUsers as $uId) {
+          $cleanUid = trim($uId);
+          if ($cleanUid === "") continue;
+          mysqli_stmt_bind_param($stmt_u, "s", $cleanUid);
+          mysqli_stmt_execute($stmt_u);
+          $u_res = mysqli_stmt_get_result($stmt_u);
+          if ($u_row = mysqli_fetch_assoc($u_res)) {
+            $userNames[] = trim($u_row["firstname"] . " " . $u_row["lastname"]);
+            $userIdList[] = $u_row["userid"];
+          }
+        }
+      }
+
+      $extraNote = trim($_REQUEST["split_note_" . $iid] ?? ($_REQUEST["split_" . $iid] ?? ""));
+      $splitWithParts = $userNames;
+      if (!empty($extraNote)) {
+        $splitWithParts[] = $extraNote;
+      }
+      $splitWith = implode(", ", $splitWithParts);
+      $splitUsersStr = implode(",", $userIdList);
+
       $ar[$iid] = ['qty' => $bought, 'split' => $splitWith];
-      mysqli_stmt_bind_param($insert_stmt, "isis", $iid, $userid, $bought, $splitWith);
+      mysqli_stmt_bind_param($insert_stmt, "isiss", $iid, $userid, $bought, $splitWith, $splitUsersStr);
       mysqli_stmt_execute($insert_stmt);
     }
   }

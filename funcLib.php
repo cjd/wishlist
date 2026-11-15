@@ -74,15 +74,19 @@ if(!isset($doingSetup)){
     mysqli_select_db($link,$db_name);
     mysqli_set_charset($link, "utf8mb4");
 
-    // Ensure splitWith column exists in purchaseHistory for group gifting
+    // Ensure splitWith and splitUsers columns exist in purchaseHistory for group gifting
     try {
         $col_check = mysqli_query($link, "SHOW COLUMNS FROM purchaseHistory LIKE 'splitWith'");
         if ($col_check && mysqli_num_rows($col_check) === 0) {
             mysqli_query($link, "SET SESSION sql_mode = ''");
             mysqli_query($link, "ALTER TABLE purchaseHistory MODIFY COLUMN boughtDate DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, ADD COLUMN splitWith VARCHAR(255) NOT NULL DEFAULT ''");
         }
+        $col_check2 = mysqli_query($link, "SHOW COLUMNS FROM purchaseHistory LIKE 'splitUsers'");
+        if ($col_check2 && mysqli_num_rows($col_check2) === 0) {
+            mysqli_query($link, "ALTER TABLE purchaseHistory ADD COLUMN splitUsers VARCHAR(255) NOT NULL DEFAULT ''");
+        }
     } catch (Throwable $e) {
-        error_log("Note: Could not ensure splitWith column: " . $e->getMessage());
+        error_log("Note: Could not ensure split columns: " . $e->getMessage());
     }
   }
 }
@@ -388,6 +392,41 @@ function printList2($recip, $buyerUserId, $name, $displayPurchases = 1){
   // end of the hate
 
 
+  // Find potential co-buyers (other viewers/family members)
+  $coBuyers = [];
+  if (!$readOnly && $recip != $buyerUserId) {
+    $stmt_cobuyers = mysqli_prepare($link, "
+        SELECT DISTINCT p.userid, p.firstname, p.lastname 
+        FROM people p 
+        WHERE p.userid != ? AND p.userid != ? 
+          AND (
+            p.userid IN (SELECT viewer FROM viewList WHERE pid = ?)
+            OR p.userid IN (SELECT pid FROM viewList WHERE viewer = ?)
+          )
+        ORDER BY p.lastname, p.firstname
+    ");
+    if ($stmt_cobuyers) {
+      mysqli_stmt_bind_param($stmt_cobuyers, "ssss", $recip, $buyerUserId, $recip, $buyerUserId);
+      mysqli_stmt_execute($stmt_cobuyers);
+      $rs_cobuyers = mysqli_stmt_get_result($stmt_cobuyers);
+      while ($cb = mysqli_fetch_assoc($rs_cobuyers)) {
+        $coBuyers[] = $cb;
+      }
+    }
+
+    if (empty($coBuyers)) {
+      $stmt_all = mysqli_prepare($link, "SELECT userid, firstname, lastname FROM people WHERE userid != ? AND userid != ? ORDER BY lastname, firstname");
+      if ($stmt_all) {
+        mysqli_stmt_bind_param($stmt_all, "ss", $recip, $buyerUserId);
+        mysqli_stmt_execute($stmt_all);
+        $rs_all = mysqli_stmt_get_result($stmt_all);
+        while ($cb = mysqli_fetch_assoc($rs_all)) {
+          $coBuyers[] = $cb;
+        }
+      }
+    }
+  }
+
   // Now find all categories associated with $recip
   $stmt = mysqli_prepare($link, "SELECT * FROM categories WHERE userid = ? ORDER BY catSortOrder");
   mysqli_stmt_bind_param($stmt, "s", $recip);
@@ -395,7 +434,7 @@ function printList2($recip, $buyerUserId, $name, $displayPurchases = 1){
   $rs = mysqli_stmt_get_result($stmt);
 
   while($row = mysqli_fetch_assoc($rs)){
-    printCategory($row, $name, $displayPurchases, $readOnly, 0, -1, -1);
+    printCategory($row, $name, $displayPurchases, $readOnly, 0, -1, -1, 0, $coBuyers);
   }
 
 }
@@ -431,7 +470,7 @@ function printModifyList($userid){
 /* printCategory
  *   if displayPurchases = 0 then the user is modifying his/her list 
  */
-function printCategory($row, $name, $displayPurchases, $readOnly, $modifyList, $i, $last, $printConsider = 0){
+function printCategory($row, $name, $displayPurchases, $readOnly, $modifyList, $i, $last, $printConsider = 0, $coBuyers = []){
   global $link;
 
   // handle any special categories first
@@ -679,8 +718,17 @@ function printCategory($row, $name, $displayPurchases, $readOnly, $modifyList, $
 
     if (!$readOnly && !$modifyList && ($quantity - $bought) > 0) {
       print "<div id='split_box_" . $iid . "' class='split-input-box' style='display:none;'>";
-      print "<label class='split-subtext' style='display:block; margin-bottom: 3px;'>👥 Splitting this gift?</label>";
-      print "<input type='text' name='split_" . $iid . "' class='split-input' placeholder='Co-buyer names or notes (e.g. Split with Sarah)'>";
+      print "<label class='split-subtext' style='display:block; margin-bottom: 4px;'>👥 Split this gift with site users:</label>";
+      if (!empty($coBuyers)) {
+        print "<select name='split_users_" . $iid . "[]' id='split_users_" . $iid . "' class='split-user-select' multiple data-placeholder='Select co-buyers...' style='width: 100%; max-width: 320px;'>";
+        foreach ($coBuyers as $user) {
+          print "<option value='" . htmlspecialchars($user["userid"]) . "'>" . htmlspecialchars($user["firstname"] . " " . $user["lastname"]) . "</option>";
+        }
+        print "</select>";
+      }
+      print "<div style='margin-top: 5px;'>";
+      print "<input type='text' name='split_note_" . $iid . "' class='split-input' placeholder='Additional note or other non-user (optional)' style='font-size: 11px; padding: 4px 6px;'>";
+      print "</div>";
       print "</div>";
     }
     

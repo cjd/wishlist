@@ -35,8 +35,10 @@ if ($confirm == "Go Home" || $confirm == "Ho Home") {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel=stylesheet href=../style.css type=text/css>
     <link rel=stylesheet href=../css/featherlight.min.css type=text/css>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <script type="text/javascript" src="../js/jquery-3.7.1.min.js"></script>
     <script type="text/javascript" src="../js/featherlight.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script type="text/javascript" src="../js/wishlist-filter.js"></script>
     <script type="text/javascript">
     function toggleSplitInput(iid, show) {
@@ -44,8 +46,14 @@ if ($confirm == "Go Home" || $confirm == "Ho Home") {
         if (box) {
             box.style.display = show ? 'block' : 'none';
             if (show) {
-                var input = box.querySelector('input');
-                if (input) input.focus();
+                var $select = $('#split_users_' + iid);
+                if ($select.length && typeof $.fn.select2 === 'function' && !$select.hasClass('select2-hidden-accessible')) {
+                    $select.select2({
+                        placeholder: "Select co-buyer(s)...",
+                        allowClear: true,
+                        width: '100%'
+                    });
+                }
             }
         }
     }

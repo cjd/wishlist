@@ -50,6 +50,7 @@ AND purchaseHistory.iid=items.iid
 AND items.cid=categories.cid
 AND (purchaseHistory.userid = ?
 OR purchaseHistory.userid IN (SELECT pid FROM viewList WHERE viewer = ? AND allowEdit = 1)
+OR FIND_IN_SET(?, purchaseHistory.splitUsers) > 0
 )
 AND categories.userid != ?)
 UNION
@@ -68,7 +69,7 @@ AND comments.userid != ?)
 ORDER BY lastname,firstname;";
 
 $stmt = mysqli_prepare($link, $query);
-mysqli_stmt_bind_param($stmt, "ssssss", $userid, $userid, $userid, $userid, $userid, $userid);
+mysqli_stmt_bind_param($stmt, "sssssss", $userid, $userid, $userid, $userid, $userid, $userid, $userid);
 mysqli_stmt_execute($stmt);
 $rs = mysqli_stmt_get_result($stmt);
 
