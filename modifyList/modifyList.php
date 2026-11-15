@@ -182,6 +182,43 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     });
+
+    var catList = document.getElementById('categorySortableList');
+    if (catList && typeof Sortable !== 'undefined') {
+        new Sortable(catList, {
+            animation: 150,
+            handle: '.category-drag-handle',
+            draggable: '.wishlist-category-block',
+            onEnd: function (evt) {
+                var categoryIds = [];
+                catList.querySelectorAll('.wishlist-category-block').forEach(function(el) {
+                    var cid = el.getAttribute('data-category-id');
+                    if (cid) {
+                        categoryIds.push(cid);
+                    }
+                });
+
+                $.ajax({
+                    url: 'updateCategoryOrder.php',
+                    type: 'POST',
+                    data: {
+                        csrf_token: '<?php echo getCsrfToken(); ?>',
+                        categoryIds: categoryIds
+                    },
+                    success: function(response) {
+                        if (typeof showToast === 'function') {
+                            showToast('Category order updated');
+                        }
+                    },
+                    error: function() {
+                        if (typeof showToast === 'function') {
+                            showToast('Error updating category order', 'error');
+                        }
+                    }
+                });
+            }
+        });
+    }
     
     var infoModal = document.getElementById("infoModal");
     var infoModalText = document.getElementById("infoModalText");

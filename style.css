@@ -98,6 +98,33 @@ td.goldenRod{background-color : rgb(245, 255, 189);}
     text-align: center;
 }
 
+.category-drag-handle {
+    cursor: grab;
+    font-size: 18px;
+    color: #ffffff;
+    opacity: 0.85;
+    padding: 2px 8px;
+    margin-left: 6px;
+    display: inline-block;
+    vertical-align: middle;
+    user-select: none;
+    transition: opacity 0.15s, transform 0.15s;
+}
+
+.category-drag-handle:hover {
+    opacity: 1;
+    transform: scale(1.15);
+}
+
+.category-drag-handle:active {
+    cursor: grabbing;
+}
+
+#categorySortableList .sortable-ghost {
+    opacity: 0.45;
+    background-color: #dbeafe;
+}
+
 .empty-category-placeholder {
     height: 50px;
     background-color: #f0f0f0;
@@ -1320,6 +1347,7 @@ input[type=checkbox] {
   .item-buttons,
   .item-handle,
   .drag-handle,
+  .category-drag-handle,
   .buttonstyle,
   .actionButton,
   .actionButtonRed,

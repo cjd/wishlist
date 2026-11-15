@@ -396,6 +396,7 @@ function printList2($recip, $buyerUserId, $name, $displayPurchases = 1){
 function printModifyList($userid){
   global $link;
 
+  print "<div id='categorySortableList'>";
   $stmt = mysqli_prepare($link, "SELECT * FROM categories WHERE catSortOrder > -1 AND userid = ? ORDER BY catSortOrder");
   mysqli_stmt_bind_param($stmt, "s", $userid);
   mysqli_stmt_execute($stmt);
@@ -413,6 +414,7 @@ function printModifyList($userid){
     }
     $i++;
   }
+  print "</div>";
 }
 
 /* printCategory
@@ -438,7 +440,7 @@ function printCategory($row, $name, $displayPurchases, $readOnly, $modifyList, $
       return;
   }
 
-  print "\n<div class='wishlist-category-block'>\n";
+  print "\n<div class='wishlist-category-block' data-category-id='" . htmlspecialchars($row["cid"] ?? '', ENT_QUOTES) . "'>\n";
   print "<table width=100% border=0 cellpadding=0 cellspacing=0><tr>\n";
 
   print "<td valign=top class=\"categoryHeader\">";
@@ -521,12 +523,15 @@ function printCategory($row, $name, $displayPurchases, $readOnly, $modifyList, $
   print "</td>";
   if($modifyList){
 ?>
-<td align="right">
+<td align="right" style="white-space: nowrap;">
 <form method="post" action="addItem.php" style="display:inline-block;">
 <input type="hidden" name="cid" value="<?php echo $row["cid"] ?>">
 <input type="hidden" name="cname" value="<?php echo $row["name"] ?>">
 <input type="submit" value="➕ Add Item" class="actionButton">
 </form>
+<?php if ($row["catSortOrder"] != -10000) { ?>
+<span class="category-drag-handle" title="Drag to reorder category">☰</span>
+<?php } ?>
 </td>
 <?php
   }
