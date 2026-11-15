@@ -706,6 +706,18 @@ function formatStoreButton($url, $linkText = "") {
         $storeName = "Costco";
     } elseif (strpos($domain, "ikea.com") !== false) {
         $storeName = "IKEA";
+    } elseif (strpos($domain, "bigw.com.au") !== false) {
+        $storeName = "Big W";
+    } elseif (strpos($domain, "kmart.com") !== false) {
+        $storeName = "Kmart";
+    } elseif (strpos($domain, "ebgames.") !== false) {
+        $storeName = "EB Games";
+    } elseif (strpos($domain, "jbhifi.com") !== false) {
+        $storeName = "JB Hi-Fi";
+    } elseif (strpos($domain, "bunnings.com") !== false) {
+        $storeName = "Bunnings";
+    } elseif (strpos($domain, "officeworks.com.au") !== false) {
+        $storeName = "Officeworks";
     }
 
     if (empty($storeName)) {

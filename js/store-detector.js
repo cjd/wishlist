@@ -36,7 +36,13 @@
         { pattern: /crateandbarrel\.com/i, name: 'Crate & Barrel' },
         { pattern: /microcenter\.com/i, name: 'Micro Center' },
         { pattern: /bhphotovideo\.com/i, name: 'B&H Photo' },
-        { pattern: /dickssportinggoods\.com/i, name: 'Dick\'s Sporting Goods' }
+        { pattern: /dickssportinggoods\.com/i, name: 'Dick\'s Sporting Goods' },
+        { pattern: /bigw\.com\.au/i, name: 'Big W' },
+        { pattern: /kmart\.com(\.au)?/i, name: 'Kmart' },
+        { pattern: /ebgames\.(com\.au|co\.nz|ca)/i, name: 'EB Games' },
+        { pattern: /jbhifi\.com(\.au)?/i, name: 'JB Hi-Fi' },
+        { pattern: /bunnings\.com(\.au)?/i, name: 'Bunnings' },
+        { pattern: /officeworks\.com\.au/i, name: 'Officeworks' }
     ];
 
     function extractStoreName(url) {
