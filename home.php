@@ -6,6 +6,11 @@
 
 include "funcLib.php";
 
+if (!headers_sent()) {
+    header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+    header("Pragma: no-cache");
+}
+
 unset($_SESSION["euserid"]);
 $userid = $_SESSION["userid"];
 $csrf_token = getCsrfToken();
@@ -515,6 +520,12 @@ $(document).ready(function() {
         alert(n.text);
       }
     });
+  }
+});
+
+window.addEventListener("pageshow", function(event) {
+  if (event.persisted) {
+    window.location.reload();
   }
 });
 </script>
