@@ -30,7 +30,7 @@ $userid = $_SESSION["userid"];
 <tr>
 <td valign="top">
 <?php
-createNavBar("home.php:Home|:View Purchases", false, "viewOther");
+createNavBar("home.php:Home|:View Purchases", false, "viewPurchases");
 ?>
 <font size="3">
 <p>Below is a list of purchases/comments made by you or those who you have been given access to (ie spouse/children) but <b>not</b> including gifts bought for you.<br>
