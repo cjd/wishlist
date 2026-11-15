@@ -77,5 +77,5 @@ if (!empty($ar)) {
   }
 }
 
-header("Location: " . getFullPath("viewList.php?recip=". urlencode($receiverUserid) ."&name=". urlencode($receiverName)));
+header("Location: " . getFullPath("viewList.php?recip=". urlencode($receiverUserid) ."&name=". urlencode($receiverName) . "&saved=1"));
 exit;
