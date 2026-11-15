@@ -140,7 +140,7 @@ createNavBar("../home.php:Home|viewList.php?recip=" . $_REQUEST["recip"] . "&nam
 <tr><td align=center>
 <table style="border: 1px solid lightBlue" >
 <tr><td colspan="2" align="center" bgcolor="#6702cc"> <b><font size=3 color="#ffffff">
-Send Email?</font></b>
+Send Message?</font></b>
 </td>
 </tr>
 <tr>

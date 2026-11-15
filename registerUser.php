@@ -44,7 +44,6 @@ if($stop){
   $lname = convertString($_REQUEST["lname"] ?? '');
   $suffix = convertString($_REQUEST["suffix"] ?? '');
   $userid = convertString($_REQUEST["userid"] ?? '');
-  $email = convertString($_REQUEST["email"] ?? '');
   $comment = convertString($_REQUEST["comment"] ?? '');
 
   // send a message to all the admins
@@ -59,7 +58,7 @@ if($stop){
   $to = rtrim($to, ',');
 
   $subject = "Request for new WishList account";
-  $message = "The following person is requesting a new account<p><b>First Name:</b> " . $fname . "<br><b>Last Name:</b> " . $lname ."<br><b>Suffix:</b> " . $suffix . "<br><b>Desired Userid:</b> " . $userid . "<br><b>Email:</b> " . $email . "<br><b>Comment</b><br>" .$comment;
+  $message = "The following person is requesting a new account<p><b>First Name:</b> " . $fname . "<br><b>Last Name:</b> " . $lname ."<br><b>Suffix:</b> " . $suffix . "<br><b>Desired Userid:</b> " . $userid . "<br><b>Comment</b><br>" .$comment;
 
   $result = sendEmail($to, "", $subject, $message, 0);
 
@@ -111,10 +110,6 @@ created.
 <td><input type=text name=userid size=20></td>
 </tr>
 
-<tr>
-<td align=right><b>Email</b></td>
-<td><input type=text name=email size=40></td>
-</tr>
 
 <tr>
 <td align=right><b>Comment</b></td>

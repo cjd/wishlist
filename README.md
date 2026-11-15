@@ -38,7 +38,7 @@ A modern, responsive PHP-based web application designed to manage gift lists for
   * Accessible via **"💡 Suggest Secret Gift Idea"** on the wishlist.
   * Prompts for title, retail URL, estimated price, and private notes.
   * Renders as a styled purple suggestion card with store buttons and price tags for all viewers while completely invisible to the list owner.
-  * Dispatches email notifications to fellow viewers for group feedback.
+  * Dispatches on-site notification messages to fellow viewers for group feedback.
 
 ### 5. 💰 Gift Purchases & Budgeting
 * **Purchase History Log:** Track every gift purchased across all family wishlists.

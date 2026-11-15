@@ -61,7 +61,7 @@ if (isset($_SESSION["userid"])) {
   <summary class="faq-question"><span>How do I view someone's list?</span><span class="faq-icon">▾</span></summary>
   <div class="faq-answer">
     <p>To see someone's wishlist, you first need to be granted permission. Once the list owner has given you access, their name will appear on your homepage. Simply click on their name to view their list.</p>
-    <p>If you don't see the person's list you're looking for, you can request access. Go to <b>Update Your Account &gt;&gt; Manage List Access</b> and use the search function to find the person by their username or email. This will send a request for them to approve.</p>
+    <p>If you don't see the person's list you're looking for, you can request access. Go to <b>Update Your Account &gt;&gt; Manage List Access</b> and use the search function to find the person by their name or username. This will send a request for them to approve.</p>
   </div>
 </details>
 
@@ -104,7 +104,7 @@ if (isset($_SESSION["userid"])) {
     <ul>
       <li>A purple <b>👥 Split with [Names]</b> badge will be displayed on the list for all viewers so nobody buys a duplicate.</li>
       <li>The item will automatically appear in <b>View Purchases</b> for you <i>and</i> all selected co-buyers so everyone can keep track of their spending.</li>
-      <li>All viewers receive an email notification detailing the purchase and co-contributors.</li>
+      <li>All viewers receive a message notification detailing the purchase and co-contributors.</li>
     </ul>
   </div>
 </details>
@@ -135,7 +135,7 @@ if (isset($_SESSION["userid"])) {
   <summary class="faq-question"><span>How do I add comments?</span><span class="faq-icon">▾</span></summary>
   <div class="faq-answer">
     <p>Each wishlist has a <b>Comments</b> section at the bottom. This is a private space for people viewing the list to communicate and coordinate with each other. <b>The owner of the list cannot see these comments</b>, so it's a great place to ask questions or make suggestions about gifts without spoiling the surprise.</p>
-    <p>To add a comment, click the <b>Add New Comment</b> button, type your message, and submit. You can also choose to send your comment as an email to other viewers of the list.</p>
+    <p>To add a comment, click the <b>Add New Comment</b> button, type your message, and submit. You can also choose to send your comment as a notification message to other viewers of the list.</p>
   </div>
 </details>
 
@@ -147,7 +147,7 @@ if (isset($_SESSION["userid"])) {
       <li><b>Click "💡 Suggest Secret Gift Idea":</b> At the bottom of the wishlist (in the Comments section), click the suggestion button.</li>
       <li><b>Enter Gift Details:</b> Enter the gift title, an optional retail store link, estimated price, and private notes.</li>
       <li><b>Hidden from Owner:</b> The recipient can <b>never</b> see these suggestions—they only appear to authorized viewers as a purple <i>"💡 Secret Gift Idea"</i> card with direct store buttons and price tags.</li>
-      <li><b>Coordinate via Email:</b> You can check the names of fellow viewers to dispatch an instant email notification proposing the idea.</li>
+      <li><b>Coordinate via Messages:</b> You can check the names of fellow viewers to dispatch an instant on-site notification message proposing the idea.</li>
     </ul>
   </div>
 </details>
@@ -213,7 +213,7 @@ if (isset($_SESSION["userid"])) {
 <details class="faq-item" id="notifications">
   <summary class="faq-question"><span>How do I send an update notification?</span><span class="faq-icon">▾</span></summary>
   <div class="faq-answer">
-    <p>After you've made changes to your list, you might want to let people know. At the bottom of the 'Modify Your List' page, you will find a <b>Send Update Notification</b> button. This allows you to send an email notification to everyone who has permission to view your list.</p>
+    <p>After you've made changes to your list, you might want to let people know. At the bottom of the 'Modify Your List' page, you will find a <b>Send Update Notification</b> button. This allows you to send a message notification to everyone who has permission to view your list.</p>
   </div>
 </details>
 </div>
@@ -310,7 +310,7 @@ if (isset($_SESSION["userid"])) {
 <details class="faq-item" id="changeInfo">
   <summary class="faq-question"><span>How do I change my personal information?</span><span class="faq-icon">▾</span></summary>
   <div class="faq-answer">
-    <p>To update your personal details, such as your name or email address, go to the <b>Update Your Account</b> page and click the <b>Edit Personal Info</b> button.</p>
+    <p>To update your personal details, such as your name, birthday, or address, go to the <b>Update Your Account</b> page and click the <b>Edit Personal Info</b> button.</p>
   </div>
 </details>
 

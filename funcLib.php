@@ -218,17 +218,28 @@ function sendEmail($to, $from, $subject, $message, $debug){
 
         // If debug is enabled, send to admin instead
         if ($debug == 1) {
-            global $admin_email;
-            // This assumes the admin's email is their userid.
-            // A better approach would be to have a dedicated admin userid.
-            $stmt = mysqli_prepare($link, "SELECT userid FROM people WHERE email = ?");
-            mysqli_stmt_bind_param($stmt, "s", $admin_email);
-            mysqli_stmt_execute($stmt);
-            $result = mysqli_stmt_get_result($stmt);
-            if ($row = mysqli_fetch_assoc($result)) {
-                $recipient_id = $row['userid'];
-            } else {
-                continue; // Admin user not found
+            $stmt = mysqli_prepare($link, "SELECT userid FROM people WHERE admin = '1' ORDER BY userid LIMIT 1");
+            if ($stmt) {
+                mysqli_stmt_execute($stmt);
+                $result = mysqli_stmt_get_result($stmt);
+                if ($row = mysqli_fetch_assoc($result)) {
+                    $recipient_id = $row['userid'];
+                } else {
+                    continue; // Admin user not found
+                }
+            }
+        }
+
+        // If recipient happens to be formatted with @, resolve to userid if possible
+        if (strpos($recipient_id, '@') !== false) {
+            $stmt_res = mysqli_prepare($link, "SELECT userid FROM people WHERE email = ?");
+            if ($stmt_res) {
+                mysqli_stmt_bind_param($stmt_res, "s", $recipient_id);
+                mysqli_stmt_execute($stmt_res);
+                $res_u = mysqli_stmt_get_result($stmt_res);
+                if ($row_u = mysqli_fetch_assoc($res_u)) {
+                    $recipient_id = $row_u['userid'];
+                }
             }
         }
 

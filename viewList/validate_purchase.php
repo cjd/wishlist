@@ -95,13 +95,13 @@ if (!empty($ar)) {
   }
   $message .= "</dir>";
 
-  $stmt_viewers = mysqli_prepare($link, "SELECT email FROM viewList JOIN people ON viewer = userid WHERE pid = ? AND viewer != ? AND viewer != ?");
+  $stmt_viewers = mysqli_prepare($link, "SELECT viewer FROM viewList WHERE pid = ? AND viewer != ? AND viewer != ?");
   mysqli_stmt_bind_param($stmt_viewers, "sss", $receiverUserid, $receiverUserid, $userid);
   mysqli_stmt_execute($stmt_viewers);
   $res_viewers = mysqli_stmt_get_result($stmt_viewers);
   $to = "";
   while ($vrow = mysqli_fetch_assoc($res_viewers)) {
-    $to .= $vrow["email"] . ",";
+    $to .= $vrow["viewer"] . ",";
   }
   $to = rtrim($to, ",");
   if (!empty($to)) {

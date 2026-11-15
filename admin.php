@@ -148,7 +148,7 @@ elseif($_REQUEST["action"] == "commitAdd"){
   $lname = convertString($_REQUEST["lname"]);
   $suffix = convertString($_REQUEST["suffix"] ?? '');
   $desiredUserid = convertString($_REQUEST["userid"]);
-  $email = convertString($_REQUEST["email"]);
+  $email = "";
   
   if($desiredUserid != ""){
     // use submitted password or come up with random password
@@ -267,10 +267,6 @@ if($_REQUEST["action"] == "add"){
 </tr>
 
 <tr>
-<td align=right><b>Email</b></td>
-<td><input type=text name=email size=40></td>
-</tr>
-<tr>
 <td align=right><b>Password</b></td>
 <td><input type=password name=password size=20></td>
 </tr>
@@ -326,8 +322,6 @@ elseif($_REQUEST["action"] == "delete"){
 <b>Last Login</b>
 </td><td align="center">
 <b>Admin</b>
-</td><td align="center">
-<b>Email</b>
 </td>
 </tr>
 
@@ -346,13 +340,12 @@ while($row = mysqli_fetch_assoc($result)){
   print "<td>" . htmlspecialchars($row["firstname"] . ' ' . $row["lastname"] . ' ' . $row["suffix"]) . "</td>";
   print "<td><font face=Courier>" . parseDate($row["lastLoginDate"], 1) . "</font></td>";
   print "<td align=center><input type=checkbox name=grantAdmin[] value=\"" . $u_escaped . "\" " . ($row["admin"] == 1 ? "checked" : "") . "></td>";
-  print "<td>" . htmlspecialchars($row["email"]) . "</td>";
   print "</tr>";
 }
 ?>
 
 
-<tr><td align="center" colspan="5" bgcolor="#c0c0c0">
+<tr><td align="center" colspan="4" bgcolor="#c0c0c0">
 <input type="submit" value="Update Admin Status" class='buttonstyle'>
 
 </td></tr></table>

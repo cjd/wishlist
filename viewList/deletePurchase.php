@@ -29,14 +29,14 @@ if ($confirm == "yes") {
      mysqli_stmt_bind_param($stmt, "is", $purchaseId, $userid);
      mysqli_stmt_execute($stmt);
 
-     $stmt_email = mysqli_prepare($link, "SELECT email FROM viewList JOIN people ON viewer = userid WHERE pid = ? AND viewer != ?");
+     $stmt_email = mysqli_prepare($link, "SELECT viewer FROM viewList WHERE pid = ? AND viewer != ?");
      mysqli_stmt_bind_param($stmt_email, "ss", $recip, $recip);
      mysqli_stmt_execute($stmt_email);
      $rs_email = mysqli_stmt_get_result($stmt_email);
 
      $to = "";
      while ($row = mysqli_fetch_assoc($rs_email)) {
-       $to .= $row["email"] . ",";
+       $to .= $row["viewer"] . ",";
      }
      $to = rtrim($to, ",");
 
@@ -111,7 +111,7 @@ createNavBar("../home.php:Home|viewList.php?recip=" . $recip . "&name=" . $name 
 </form>
 </td></tr>
 <tr><td colspan=3 align=center>
-<b>Note</b>: an email will be sent to everyone that can view <?php echo $name ?>'s WishList
+<b>Note</b>: a message will be sent to everyone that can view <?php echo $name ?>'s WishList
 </td></tr></table>
 
 

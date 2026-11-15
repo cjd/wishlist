@@ -106,11 +106,6 @@ Information on File</font>
 <input type="text" name="mobilephone" value="<?php echo htmlspecialchars($rs['mobilephone'] ?? ''); ?>">
 </td></tr>
 
-<tr><td class="lightYellow" align="right">
-<b>Email</b>
-</td><td bgcolor="#eeeeee">
-<input type="email" name="email" size="30" value="<?php echo htmlspecialchars($rs['email'] ?? ''); ?>">
-</td></tr>
 
 <tr><td class="lightYellow" align="right">
 <b>Birthday</b>

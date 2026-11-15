@@ -100,9 +100,8 @@ if ($num_rows > 0) {
         $allowView = !empty($row["viewContactInfo"]);
         $new_userid = $row["userid"];
         $name = trim($row["firstname"] . ' ' . $row["lastname"] . ' ' . ($row["suffix"] ?? ''));
-        $email = $row["email"] ?? '';
         if ($allowView) {
-            $contact_string = $name . "\n" . $email . "\n";
+            $contact_string = $name . "\n";
             if (!empty($row['bday']) && $row['bday'] != 0) {
                 $contact_string .= "Birthday: " . $row['bmonth'] . " " . $row['bday'];
             }

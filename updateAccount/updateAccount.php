@@ -208,11 +208,6 @@ $row = mysqli_fetch_assoc($result) ?? [];
 <?php echo htmlspecialchars(($row['firstname'] ?? '') . ' ' . ($row['lastname'] ?? '') . ' ' . ($row['suffix'] ?? '')); ?>
 </td></tr>
 <tr><td align="right">
-<b>Email</b>
-</td><td bgcolor=white>
-<?php echo htmlspecialchars($row["email"] ?? ''); ?>
-</td></tr>
-<tr><td align="right">
 <b>Birthday</b>
 </td><td bgcolor=white>
 <?php echo htmlspecialchars(($row["bmonth"] ?? '') . " " . ($row["bday"] ?? '')); ?>
@@ -255,28 +250,19 @@ $row = mysqli_fetch_assoc($result) ?? [];
 </tr>
 <tr>
 <td>
-Enter the person's userid or e-mail:<br>
+Enter the person's name or username:<br>
 <form method=post action="updateAccount.php">
-<input type=text size=20 name=email>
+<input type=text size=20 name=searchUser>
 <input type=hidden name=action value=addUser>
 <input type=submit value="Go">
 </form>
 <?php
 
 if($_REQUEST["action"] == "addUser"){
-  $email = $_REQUEST["email"] ?? "";
-  
-  $pos = strpos($email, "@");
-
-  if ($pos === false) {
-    $search = "%" . $email . "%";
-    $stmt_add = mysqli_prepare($link, "SELECT firstname, lastname, suffix, userid FROM people WHERE userid LIKE ?");
-    mysqli_stmt_bind_param($stmt_add, "s", $search);
-  }
-  else{
-    $stmt_add = mysqli_prepare($link, "SELECT firstname, lastname, suffix, userid FROM people WHERE email = ?");
-    mysqli_stmt_bind_param($stmt_add, "s", $email);
-  }
+  $searchUser = trim($_REQUEST["searchUser"] ?? ($_REQUEST["email"] ?? ""));
+  $search = "%" . $searchUser . "%";
+  $stmt_add = mysqli_prepare($link, "SELECT firstname, lastname, suffix, userid FROM people WHERE userid LIKE ? OR firstname LIKE ? OR lastname LIKE ?");
+  mysqli_stmt_bind_param($stmt_add, "sss", $search, $search, $search);
 
   mysqli_stmt_execute($stmt_add);
   $result = mysqli_stmt_get_result($stmt_add);
@@ -377,9 +363,9 @@ print "<input type=hidden name=listUsers value=\"" . htmlspecialchars($list) . "
 </tr>
 <tr>
 <td>
-Enter the person's userid or e-mail:<br>
+Enter the person's name or username:<br>
 <form method=post action="updateAccount.php">
-<input type=text size=20 name=email>
+<input type=text size=20 name=searchUser>
 <input type=hidden name=action value=findUser>
 <input type=submit value="Go">
 </form>
@@ -412,19 +398,10 @@ while($row = mysqli_fetch_assoc($result)){
 <?php
 
 if($_REQUEST["action"] == "findUser"){
-  $email = $_REQUEST["email"] ?? "";
-
-  $pos = strpos($email, "@");
-
-  if ($pos === false) {
-    $search = "%" . $email . "%";
-    $stmt_find = mysqli_prepare($link, "SELECT firstname, lastname, suffix, userid FROM people WHERE userid LIKE ?");
-    mysqli_stmt_bind_param($stmt_find, "s", $search);
-  }
-  else{
-    $stmt_find = mysqli_prepare($link, "SELECT firstname, lastname, suffix, userid FROM people WHERE email = ?");
-    mysqli_stmt_bind_param($stmt_find, "s", $email);
-  }
+  $searchUser = trim($_REQUEST["searchUser"] ?? ($_REQUEST["email"] ?? ""));
+  $search = "%" . $searchUser . "%";
+  $stmt_find = mysqli_prepare($link, "SELECT firstname, lastname, suffix, userid FROM people WHERE userid LIKE ? OR firstname LIKE ? OR lastname LIKE ?");
+  mysqli_stmt_bind_param($stmt_find, "sss", $search, $search, $search);
 
   mysqli_stmt_execute($stmt_find);
   $result = mysqli_stmt_get_result($stmt_find);
