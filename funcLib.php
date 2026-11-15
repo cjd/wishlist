@@ -75,9 +75,14 @@ if(!isset($doingSetup)){
     mysqli_set_charset($link, "utf8mb4");
 
     // Ensure splitWith column exists in purchaseHistory for group gifting
-    $col_check = mysqli_query($link, "SHOW COLUMNS FROM purchaseHistory LIKE 'splitWith'");
-    if ($col_check && mysqli_num_rows($col_check) === 0) {
-        @mysqli_query($link, "ALTER TABLE purchaseHistory ADD COLUMN splitWith VARCHAR(255) NOT NULL DEFAULT ''");
+    try {
+        $col_check = mysqli_query($link, "SHOW COLUMNS FROM purchaseHistory LIKE 'splitWith'");
+        if ($col_check && mysqli_num_rows($col_check) === 0) {
+            mysqli_query($link, "SET SESSION sql_mode = ''");
+            mysqli_query($link, "ALTER TABLE purchaseHistory MODIFY COLUMN boughtDate DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, ADD COLUMN splitWith VARCHAR(255) NOT NULL DEFAULT ''");
+        }
+    } catch (Throwable $e) {
+        error_log("Note: Could not ensure splitWith column: " . $e->getMessage());
     }
   }
 }
