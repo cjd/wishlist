@@ -72,7 +72,7 @@ foreach ($_REQUEST as $key => $value) {
       $splitWith = implode(", ", $splitWithParts);
       $splitUsersStr = implode(",", $userIdList);
 
-      $ar[$iid] = ['qty' => $bought, 'split' => $splitWith];
+      $ar[$iid] = ['qty' => $bought, 'split' => $splitWith, 'splitUsers' => $userIdList];
       mysqli_stmt_bind_param($insert_stmt, "isiss", $iid, $userid, $bought, $splitWith, $splitUsersStr);
       mysqli_stmt_execute($insert_stmt);
     }
@@ -81,32 +81,61 @@ foreach ($_REQUEST as $key => $value) {
 
 if (!empty($ar)) {
   $stmt_item = mysqli_prepare($link, "SELECT title, description FROM items WHERE iid = ?");
+  $coBuyerMessages = [];
+  $generalMessageLines = [];
+
   foreach ($ar as $iid => $pdata) {
     $qty = $pdata['qty'];
     $split = $pdata['split'];
+    $splitUsers = $pdata['splitUsers'];
+
     mysqli_stmt_bind_param($stmt_item, "i", $iid);
     mysqli_stmt_execute($stmt_item);
     $rs_item = mysqli_stmt_get_result($stmt_item);
     if ($row = mysqli_fetch_assoc($rs_item)) {
       $splitText = !empty($split) ? " <font color=purple><b>(Group gift with " . htmlspecialchars($split) . ")</b></font>" : "";
-      $message .= "<font color=red>Bought " . $qty . " of</font> <i>" . $row["title"] . 
-        "</i>" . $splitText . " - " . $row["description"] . "<p>";
+      $itemLine = "<font color=red>Bought " . $qty . " of</font> <i>" . htmlspecialchars($row["title"]) . "</i>" . $splitText . " - " . htmlspecialchars($row["description"]) . "<p>";
+
+      if (!empty($splitUsers)) {
+        // Send dedicated notification only to selected co-buyers
+        foreach ($splitUsers as $cbUser) {
+          if (!isset($coBuyerMessages[$cbUser])) {
+            $coBuyerMessages[$cbUser] = [];
+          }
+          $coBuyerMessages[$cbUser][] = $itemLine;
+        }
+      } else {
+        // Solo purchases broadcast to other viewers
+        $generalMessageLines[] = $itemLine;
+      }
     }
   }
-  $message .= "</dir>";
 
-  $stmt_viewers = mysqli_prepare($link, "SELECT viewer FROM viewList WHERE pid = ? AND viewer != ? AND viewer != ?");
-  mysqli_stmt_bind_param($stmt_viewers, "sss", $receiverUserid, $receiverUserid, $userid);
-  mysqli_stmt_execute($stmt_viewers);
-  $res_viewers = mysqli_stmt_get_result($stmt_viewers);
-  $to = "";
-  while ($vrow = mysqli_fetch_assoc($res_viewers)) {
-    $to .= $vrow["viewer"] . ",";
+  // 1. Send dedicated group gift messages directly to the co-buyers
+  if (!empty($coBuyerMessages)) {
+    foreach ($coBuyerMessages as $cbUser => $lines) {
+      $cbSubject = "Group Gift: " . $receiverName . "'s WishList";
+      $cbBody = "<font color=indianred><b>" . $_SESSION["fullname"] . "</b></font> has added you as a co-contributor for a group gift on <b>" . htmlspecialchars($receiverName) . "'s</b> WishList:<p><dir>" . implode("", $lines) . "</dir>";
+      sendEmail($cbUser, $userid, $cbSubject, $cbBody, 0);
+    }
   }
-  $to = rtrim($to, ",");
-  if (!empty($to)) {
-    $subject = $receiverName . "'s WishList has been modified by " . $_SESSION["fullname"];
-    sendEmail($to, "", $subject, $message, 0);
+
+  // 2. Broadcast solo purchases to viewers (if any solo items were bought)
+  if (!empty($generalMessageLines)) {
+    $stmt_viewers = mysqli_prepare($link, "SELECT viewer FROM viewList WHERE pid = ? AND viewer != ? AND viewer != ?");
+    mysqli_stmt_bind_param($stmt_viewers, "sss", $receiverUserid, $receiverUserid, $userid);
+    mysqli_stmt_execute($stmt_viewers);
+    $res_viewers = mysqli_stmt_get_result($stmt_viewers);
+    $to = "";
+    while ($vrow = mysqli_fetch_assoc($res_viewers)) {
+      $to .= $vrow["viewer"] . ",";
+    }
+    $to = rtrim($to, ",");
+    if (!empty($to)) {
+      $subject = $receiverName . "'s WishList has been modified by " . $_SESSION["fullname"];
+      $genBody = "<font color=indianred><b>" . $_SESSION["fullname"] . "</b></font> has checked off the following items from <b>" . htmlspecialchars($receiverName) . "'s</b> WishList<dir>" . implode("", $generalMessageLines) . "</dir>";
+      sendEmail($to, $userid, $subject, $genBody, 0);
+    }
   }
 }
 
