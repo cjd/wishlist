@@ -95,8 +95,17 @@ if (isset($_SESSION["userid"])) {
 <details class="faq-item" id="groupGifting">
   <summary class="faq-question"><span>Can I split a gift or contribute as a group?</span><span class="faq-icon">▾</span></summary>
   <div class="faq-answer">
-    <p>Yes! When you check off an item or select a quantity, an optional <b>Splitting with?</b> field appears below the checkbox. Type the names of anyone chipping in with you (e.g. <i>"Dave &amp; Sarah"</i>).</p>
-    <p>When you click <b>Save Changes</b>, a purple <b>👥 Split</b> badge will be displayed on the list for all viewers, and co-buyers will be recorded in the Purchase Log, View Purchases table, and email notification.</p>
+    <p>Yes! When you check off an item or select a quantity, a purple <b>👥 Splitting this gift with site users:</b> box automatically appears below the item.</p>
+    <ul>
+      <li><b>Select Registered Co-Buyers:</b> Use the searchable dropdown to select one or more family members/viewers who are contributing with you.</li>
+      <li><b>Additional Notes / External Contributors:</b> An optional text field lets you include off-site family members or contribution details (e.g. <i>"50/50 with Sarah"</i>).</li>
+    </ul>
+    <p>When you click <b>Save Changes</b>:</p>
+    <ul>
+      <li>A purple <b>👥 Split with [Names]</b> badge will be displayed on the list for all viewers so nobody buys a duplicate.</li>
+      <li>The item will automatically appear in <b>View Purchases</b> for you <i>and</i> all selected co-buyers so everyone can keep track of their spending.</li>
+      <li>All viewers receive an email notification detailing the purchase and co-contributors.</li>
+    </ul>
   </div>
 </details>
 
@@ -129,6 +138,19 @@ if (isset($_SESSION["userid"])) {
     <p>To add a comment, click the <b>Add New Comment</b> button, type your message, and submit. You can also choose to send your comment as an email to other viewers of the list.</p>
   </div>
 </details>
+
+<details class="faq-item" id="secretSuggestions">
+  <summary class="faq-question"><span>How do I suggest secret gift ideas to other viewers?</span><span class="faq-icon">▾</span></summary>
+  <div class="faq-answer">
+    <p>If you have an idea for a gift that isn't on the person's wishlist, you can suggest it privately to other viewers without spoiling the surprise for the list owner!</p>
+    <ul>
+      <li><b>Click "💡 Suggest Secret Gift Idea":</b> At the bottom of the wishlist (in the Comments section), click the suggestion button.</li>
+      <li><b>Enter Gift Details:</b> Enter the gift title, an optional retail store link, estimated price, and private notes.</li>
+      <li><b>Hidden from Owner:</b> The recipient can <b>never</b> see these suggestions—they only appear to authorized viewers as a purple <i>"💡 Secret Gift Idea"</i> card with direct store buttons and price tags.</li>
+      <li><b>Coordinate via Email:</b> You can check the names of fellow viewers to dispatch an instant email notification proposing the idea.</li>
+    </ul>
+  </div>
+</details>
 </div>
 
 <!-- SECTION 2: Managing Your List -->
@@ -143,12 +165,13 @@ if (isset($_SESSION["userid"])) {
 </details>
 
 <details class="faq-item" id="addCategory">
-  <summary class="faq-question"><span>How do I manage categories?</span><span class="faq-icon">▾</span></summary>
+  <summary class="faq-question"><span>How do I manage and reorder categories?</span><span class="faq-icon">▾</span></summary>
   <div class="faq-answer">
-    <p>Categories help you organize the items on your list. You can create categories for different types of items, such as "Books", "Kitchen Gadgets", or "Clothing".</p>
+    <p>Categories help you organize the items on your list into sections such as "Books", "Kitchen Gadgets", or "Clothing".</p>
     <ul>
       <li>To <b>add a new category</b>, scroll to the bottom of the 'Modify Your List' page and click the <b>Add New Category</b> button.</li>
-      <li>To <b>edit or delete a category</b>, use the edit (✏️) and delete (🗑️) buttons located next to each category name.</li>
+      <li>To <b>edit or delete a category</b>, use the edit (✏️) and delete (🗑️) buttons in the category header.</li>
+      <li>To <b>reorder categories</b>, grab the drag handle (<b>☰</b>) located on the right side of any category header and drag it up or down, or click the blue up/down arrows. Your new category order saves automatically.</li>
     </ul>
   </div>
 </details>
@@ -158,6 +181,18 @@ if (isset($_SESSION["userid"])) {
   <div class="faq-answer">
     <p>To add an item, go to the 'Modify Your List' page. In the header of each category, you will find a <b>➕ Add Item</b> button. Clicking this button will take you to a form where you can enter the title, description, price, quantity, an optional image, and web links.</p>
     <p><b>Automatic Store Detection:</b> When you paste a product link from major retailers (such as Amazon, Big W, Kmart, Target, EB Games, JB Hi-Fi, Bunnings, Apple, Best Buy, and many others), the website will automatically detect the retailer and fill in the store name for you. On wishlists, these links display as neat <b>Find at [Store]</b> buttons.</p>
+  </div>
+</details>
+
+<details class="faq-item" id="duplicateDetection">
+  <summary class="faq-question"><span>How does Duplicate Item Detection work?</span><span class="faq-icon">▾</span></summary>
+  <div class="faq-answer">
+    <p>To prevent accidentally adding the same gift twice, the site includes real-time duplicate checking:</p>
+    <ul>
+      <li>When adding or editing an item, the site automatically compares your <b>Item Title</b> and <b>Store Links</b> against all items already on your list across every category.</li>
+      <li>If a matching item is found, an orange warning banner appears immediately, identifying the existing item and the category it's in.</li>
+      <li>This ensures your wishlist stays clean and organized without duplicate requests.</li>
+    </ul>
   </div>
 </details>
 
