@@ -194,5 +194,6 @@ if($row["addStar"] == "1")
 </form>
 
 </td></tr></table>
+<script src="../js/store-detector.js"></script>
 </body>
 </html>

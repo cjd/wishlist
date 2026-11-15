@@ -58,7 +58,7 @@ if (array_key_exists("addStar",$_REQUEST)) {
 if($link1url != "" && strpos($link1url, "http") === false){
     $link1url = "https://" . $link1url;
 }                
-if($link1url != "") {
+if($link1url != "" && ($link1 == "" || strtolower($link1) == "link")) {
     $link1 = preg_replace("#^h.*://(.*?)/.*$#","$1",$link1url);
 }
 

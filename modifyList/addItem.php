@@ -86,6 +86,11 @@ Add new item to "<?php echo htmlspecialchars($cname); ?>" category
     <table>
       <tr>
         <td align=right>
+          <b>Store / Name</b>
+        </td>
+      </tr>
+      <tr>
+        <td align=right>
           <b>URL</b>
         </td>
       </tr>
@@ -93,10 +98,11 @@ Add new item to "<?php echo htmlspecialchars($cname); ?>" category
   </td><td bgcolor="#eeeeee">
     <table width=100%>
       <tr><td>
-        <input type="text" style="width:100%;" name="link1" value="link" hidden>
-        <input type="text" style="width:100%;" name="link1url" value="">
-      </td>
-      </tr>
+        <input type="text" style="width:100%;" name="link1" id="link1" placeholder="Auto-detected from URL, or type store name" value="">
+      </td></tr>
+      <tr><td>
+        <input type="text" style="width:100%;" name="link1url" id="link1url" placeholder="Paste item link (https://...)" value="">
+      </td></tr>
     </table>
   </td></tr>
 
@@ -123,5 +129,6 @@ Add new item to "<?php echo htmlspecialchars($cname); ?>" category
 </form>
 
 </td></tr></table>
+<script src="../js/store-detector.js"></script>
 </body>
 </html>
