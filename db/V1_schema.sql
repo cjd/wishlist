@@ -152,6 +152,7 @@ CREATE TABLE `purchaseHistory` (
   `userid` varchar(50) NOT NULL DEFAULT '',
   `quantity` smallint unsigned NOT NULL DEFAULT '0',
   `boughtDate` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `splitWith` varchar(255) NOT NULL DEFAULT '',
   PRIMARY KEY (`purchaseId`)
 ) ENGINE=MyISAM AUTO_INCREMENT=3251 DEFAULT CHARSET=latin1;
 

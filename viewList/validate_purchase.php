@@ -26,7 +26,7 @@ $message = "<font color=indianred><b>" . $_SESSION["fullname"] .
 "'s</b> WishList<dir>";
 
 $ar = array();
-$insert_stmt = mysqli_prepare($link, "INSERT INTO purchaseHistory (iid, userid, quantity, boughtDate) VALUES (?, ?, ?, NOW())");
+$insert_stmt = mysqli_prepare($link, "INSERT INTO purchaseHistory (iid, userid, quantity, boughtDate, splitWith) VALUES (?, ?, ?, NOW(), ?)");
 
 foreach ($_REQUEST as $key => $value) {
   $prefix = substr($key, 0, 3);
@@ -42,8 +42,9 @@ foreach ($_REQUEST as $key => $value) {
     }
 
     if ($bought > 0) {
-      $ar[$iid] = $bought;
-      mysqli_stmt_bind_param($insert_stmt, "isi", $iid, $userid, $bought);
+      $splitWith = trim($_REQUEST["split_" . $iid] ?? "");
+      $ar[$iid] = ['qty' => $bought, 'split' => $splitWith];
+      mysqli_stmt_bind_param($insert_stmt, "isis", $iid, $userid, $bought, $splitWith);
       mysqli_stmt_execute($insert_stmt);
     }
   }
@@ -51,13 +52,16 @@ foreach ($_REQUEST as $key => $value) {
 
 if (!empty($ar)) {
   $stmt_item = mysqli_prepare($link, "SELECT title, description FROM items WHERE iid = ?");
-  foreach ($ar as $iid => $qty) {
+  foreach ($ar as $iid => $pdata) {
+    $qty = $pdata['qty'];
+    $split = $pdata['split'];
     mysqli_stmt_bind_param($stmt_item, "i", $iid);
     mysqli_stmt_execute($stmt_item);
     $rs_item = mysqli_stmt_get_result($stmt_item);
     if ($row = mysqli_fetch_assoc($rs_item)) {
+      $splitText = !empty($split) ? " <font color=purple><b>(Group gift with " . htmlspecialchars($split) . ")</b></font>" : "";
       $message .= "<font color=red>Bought " . $qty . " of</font> <i>" . $row["title"] . 
-        "</i> - " . $row["description"] . "<p>";
+        "</i>" . $splitText . " - " . $row["description"] . "<p>";
     }
   }
   $message .= "</dir>";

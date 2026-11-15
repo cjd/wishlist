@@ -92,6 +92,14 @@ if (isset($_SESSION["userid"])) {
   </div>
 </details>
 
+<details class="faq-item" id="groupGifting">
+  <summary class="faq-question"><span>Can I split a gift or contribute as a group?</span><span class="faq-icon">▾</span></summary>
+  <div class="faq-answer">
+    <p>Yes! When you check off an item or select a quantity, an optional <b>Splitting with?</b> field appears below the checkbox. Type the names of anyone chipping in with you (e.g. <i>"Dave &amp; Sarah"</i>).</p>
+    <p>When you click <b>Save Changes</b>, a purple <b>👥 Split</b> badge will be displayed on the list for all viewers, and co-buyers will be recorded in the Purchase Log, View Purchases table, and email notification.</p>
+  </div>
+</details>
+
 <details class="faq-item" id="removePurchase">
   <summary class="faq-question"><span>How do I undo a purchase I marked?</span><span class="faq-icon">▾</span></summary>
   <div class="faq-answer">

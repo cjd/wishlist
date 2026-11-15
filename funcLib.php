@@ -73,6 +73,12 @@ if(!isset($doingSetup)){
   else{
     mysqli_select_db($link,$db_name);
     mysqli_set_charset($link, "utf8mb4");
+
+    // Ensure splitWith column exists in purchaseHistory for group gifting
+    $col_check = mysqli_query($link, "SHOW COLUMNS FROM purchaseHistory LIKE 'splitWith'");
+    if ($col_check && mysqli_num_rows($col_check) === 0) {
+        @mysqli_query($link, "ALTER TABLE purchaseHistory ADD COLUMN splitWith VARCHAR(255) NOT NULL DEFAULT ''");
+    }
   }
 }
 
@@ -585,14 +591,18 @@ function printCategory($row, $name, $displayPurchases, $readOnly, $modifyList, $
     
     if($row2["allowCheck"] == "true"){
 
+      $splitNotes = [];
       if($modifyList == 0){
-        $stmt = mysqli_prepare($link, "SELECT sum(quantity) as numBought FROM purchaseHistory WHERE iid = ? GROUP BY iid");
+        $stmt = mysqli_prepare($link, "SELECT quantity, splitWith FROM purchaseHistory WHERE iid = ?");
         mysqli_stmt_bind_param($stmt, "i", $iid);
         mysqli_stmt_execute($stmt);
         $rs = mysqli_stmt_get_result($stmt);
         
-        if($sumRow = mysqli_fetch_assoc($rs)){
-          $bought = $sumRow["numBought"];
+        while($sumRow = mysqli_fetch_assoc($rs)){
+          $bought += intval($sumRow["quantity"]);
+          if (!empty($sumRow["splitWith"])) {
+            $splitNotes[] = htmlspecialchars($sumRow["splitWith"]);
+          }
         }  
       }
 
@@ -614,15 +624,20 @@ function printCategory($row, $name, $displayPurchases, $readOnly, $modifyList, $
           if($displayPurchases == 1)
             $titley = "title=\"Select the number you have purchased\"";
 
-          print "<select $titley  name=\"sel" . $iid . "\">";
+          print "<select $titley  name=\"sel" . $iid . "\" onchange=\"toggleSplitInput(" . $iid . ", this.value > 0)\">";
           for($i = 0; $i <= $quantity - $bought; $i++){
             print "<option value='" . $i . "'>" . $i . "</option>";
           }
+          print "</select>";
+          if (!$readOnly && $displayPurchases != 0) {
+            print "<div id='split_box_" . $iid . "' class='split-input-box' style='display:none;'>";
+            print "<input type='text' name='split_" . $iid . "' class='split-input' placeholder='Splitting with? (optional)'>";
+            print "</div>";
+          }
         }
         else{ // Everything already bought, display disabled drop down
-          print "<select disabled>";
+          print "<select disabled><option>0</option></select>";
         }
-        print "</select>";
         print "</div><div class='item-cell item-content'>";
       }
       else{
@@ -645,7 +660,12 @@ function printCategory($row, $name, $displayPurchases, $readOnly, $modifyList, $
           if($displayPurchases == 1)
             $titley = "title=\"Click here if you purchased this item\"";
 
-          print "<input $titley type='checkbox' name='chk" . $iid . "' " . $val . ">";
+          print "<input $titley type='checkbox' name='chk" . $iid . "' " . $val . " onchange=\"toggleSplitInput(" . $iid . ", this.checked)\">";
+          if (!$readOnly && $displayPurchases != 0) {
+            print "<div id='split_box_" . $iid . "' class='split-input-box' style='display:none;'>";
+            print "<input type='text' name='split_" . $iid . "' class='split-input' placeholder='Splitting with? (optional)'>";
+            print "</div>";
+          }
         }
         print "</div><div class='item-cell item-content'>";
       }
@@ -658,6 +678,9 @@ function printCategory($row, $name, $displayPurchases, $readOnly, $modifyList, $
     if($bought > 0 && $quantity==1){ print "<s>"; }
     printItem($row2, $name, $quantity, $bought, $row2['createDateFormatted']);
     if($bought > 0 && $quantity==1){ print "</s>"; }
+    if(!empty($splitNotes)){
+      print " <span class='group-gift-badge' title='Group gift'>👥 Split with " . implode(', ', $splitNotes) . "</span>";
+    }
     
     print "</div>"; // close the item content td
     

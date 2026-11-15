@@ -39,6 +39,16 @@ if ($confirm == "Go Home" || $confirm == "Ho Home") {
     <script type="text/javascript" src="../js/featherlight.min.js"></script>
     <script type="text/javascript" src="../js/wishlist-filter.js"></script>
     <script type="text/javascript">
+    function toggleSplitInput(iid, show) {
+        var box = document.getElementById('split_box_' + iid);
+        if (box) {
+            box.style.display = show ? 'block' : 'none';
+            if (show) {
+                var input = box.querySelector('input');
+                if (input) input.focus();
+            }
+        }
+    }
     $(document).ready(function() {
         <?php if (!empty($_GET['saved'])): ?>
         if (typeof showToast === 'function') {

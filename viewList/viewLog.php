@@ -53,7 +53,7 @@ createNavBar("../home.php:Home|viewList.php?recip=" . urlencode($recip) . "&name
 
 <?php
 
-$query = "SELECT firstname, lastname, suffix, purchaseHistory.userid, purchaseHistory.boughtDate, purchaseHistory.quantity, title, items.description, purchaseId FROM items, categories, people, purchaseHistory WHERE items.iid=purchaseHistory.iid AND categories.cid=items.cid AND people.userid=purchaseHistory.userid AND categories.userid = ? AND (people.userid = ? OR people.userid IN (SELECT pid FROM viewList WHERE viewer = ? AND allowEdit=1)) ORDER BY purchaseHistory.boughtDate DESC";
+$query = "SELECT firstname, lastname, suffix, purchaseHistory.userid, purchaseHistory.boughtDate, purchaseHistory.quantity, purchaseHistory.splitWith, title, items.description, purchaseId FROM items, categories, people, purchaseHistory WHERE items.iid=purchaseHistory.iid AND categories.cid=items.cid AND people.userid=purchaseHistory.userid AND categories.userid = ? AND (people.userid = ? OR people.userid IN (SELECT pid FROM viewList WHERE viewer = ? AND allowEdit=1)) ORDER BY purchaseHistory.boughtDate DESC";
 
 $stmt_log = mysqli_prepare($link, $query);
 mysqli_stmt_bind_param($stmt_log, "sss", $recip, $userid, $userid);
@@ -64,7 +64,11 @@ while($row = mysqli_fetch_assoc($rs)){
 ?>
 
   On <font color="indianred"><?php echo parseDate($row["boughtDate"],1) ?></font>, 
-  <font color="navy"><?php echo htmlspecialchars($row["firstname"] . ' ' . $row["lastname"] . ' ' . $row["suffix"]) ?></font> made the following changes
+  <font color="navy"><?php echo htmlspecialchars($row["firstname"] . ' ' . $row["lastname"] . ' ' . $row["suffix"]) ?></font>
+  <?php if (!empty($row["splitWith"])) { ?>
+    <font color="purple"><b>(Splitting with <?php echo htmlspecialchars($row["splitWith"]); ?>)</b></font>
+  <?php } ?>
+  made the following changes
 <?php
   if($row["userid"] == $userid){ 
 ?>    <b><a href="deletePurchase.php?recip=<?php echo urlencode($recip); ?>&name=<?php echo urlencode($name); ?>&purchaseId=<?php echo intval($row["purchaseId"]); ?>">[Undo this purchase]</a></b>

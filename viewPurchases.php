@@ -41,7 +41,8 @@ $query = "(SELECT 'item' as type, CONCAT(p1.firstname,' ',p1.lastname) AS recipi
 CONCAT(p2.firstname,' ',p2.lastname) AS buyer,
 p1.userid, boughtDate, purchaseHistory.purchaseId, items.title,
 purchaseHistory.quantity, items.description, items.price,
-p1.firstname as firstname, p1.lastname as lastname
+p1.firstname as firstname, p1.lastname as lastname,
+purchaseHistory.splitWith as splitWith
 FROM people as p1, people as p2, purchaseHistory,items,categories
 WHERE p1.userid=categories.userid
 AND p2.userid=purchaseHistory.userid
@@ -56,7 +57,8 @@ UNION
 CONCAT(p2.firstname,' ',p2.lastname) as buyer, p1.userid,
 comments.date,comments.commentId,comments.comment,
 0,'',0,
-p1.firstname as firstname, p1.lastname as lastname
+p1.firstname as firstname, p1.lastname as lastname,
+'' as splitWith
 FROM people as p1, people as p2, comments
 WHERE p1.userid = comments.userid
 AND p2.userid = comments.comment_userid
@@ -158,7 +160,11 @@ foreach ($rows as $row){
     echo "<span class='price-secret'>$" . number_format($row["price"]*$row["quantity"], 2) . "</span>";
   }
   echo "</td>";
-  echo "<td class=".$style.">".htmlspecialchars($row["buyer"])."</td>";
+  echo "<td class=".$style.">".htmlspecialchars($row["buyer"]);
+  if (!empty($row["splitWith"])) {
+    echo "<div class='split-subtext'>👥 with " . htmlspecialchars($row["splitWith"]) . "</div>";
+  }
+  echo "</td>";
   echo "<td class=".$style.">".parseDate($row["boughtDate"],1)."</td>\n";
   if ($row["type"] == "item") {
     echo "<td class=".$style."><b><a href=\"viewList/deletePurchase.php?recip=".urlencode($row["userid"])."&name=".urlencode($row["recipient"])."&purchaseId=".intval($row["purchaseId"])."\">[Undo this purchase]</a></b></td>";
