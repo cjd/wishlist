@@ -729,7 +729,7 @@ function formatStoreButton($url, $linkText = "") {
             $label = "Visit Store";
         }
     } else {
-        $label = "Buy on " . $storeName;
+        $label = "Find at " . $storeName;
     }
 
     $cleanUrl = htmlspecialchars($url, ENT_QUOTES);
