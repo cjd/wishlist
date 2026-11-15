@@ -1312,6 +1312,15 @@ input[type=checkbox] {
   animation: faqPulseDark 2s ease !important;
 }
 
+[data-theme="dark"] #dupWarningRow td {
+  background-color: #3b2003 !important;
+  border-color: #d97706 !important;
+}
+
+[data-theme="dark"] #dupWarningRow div {
+  color: #fcd34d !important;
+}
+
 /* ========================================================
    Print Stylesheet
    ======================================================== */

@@ -26,6 +26,18 @@ if ($row = mysqli_fetch_assoc($res)) {
     die("Category not found or access denied.");
 }
 
+$existingItems = [];
+$stmt_exist = mysqli_prepare($link, "SELECT title, link1url, categories.name as catName FROM items JOIN categories ON items.cid = categories.cid WHERE categories.userid = ?");
+mysqli_stmt_bind_param($stmt_exist, "s", $userid);
+mysqli_stmt_execute($stmt_exist);
+$res_exist = mysqli_stmt_get_result($stmt_exist);
+while ($row_exist = mysqli_fetch_assoc($res_exist)) {
+    $existingItems[] = [
+        'title' => $row_exist['title'],
+        'url' => $row_exist['link1url'],
+        'cat' => $row_exist['catName']
+    ];
+}
 ?>
 <HTML>
 <head><meta name="viewport" content="width=device-width, initial-scale=1.0" /></head>
@@ -56,6 +68,17 @@ createNavBar("../home.php:Home|modifyList.php:Modify WishList|:Add Item");
 <tr><td colspan="2" align="center" bgcolor="#6702cc"> <b><font size=3 color="#ffffff">
 Add new item to "<?php echo htmlspecialchars($cname); ?>" category
 </td></tr>
+
+<tr id="dupWarningRow" style="display:none;">
+  <td colspan="2" bgcolor="#fffbeb" style="padding: 8px 12px; border: 2px solid #f59e0b;">
+    <div style="color: #b45309; font-family: arial, sans-serif; font-size: 13px; display: flex; align-items: center; gap: 8px;">
+      <span style="font-size: 18px;">⚠️</span>
+      <div>
+        <b>Possible Duplicate Detected:</b> You already have an item <i id="dupItemTitle"></i> in category <b id="dupItemCat"></b>.
+      </div>
+    </div>
+  </td>
+</tr>
 
   <tr><td align="right">
     <b>Title</b>
@@ -129,6 +152,10 @@ Add new item to "<?php echo htmlspecialchars($cname); ?>" category
 </form>
 
 </td></tr></table>
+<script>
+window.existingWishlistItems = <?php echo json_encode($existingItems, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
+</script>
 <script src="../js/store-detector.js"></script>
+<script src="../js/duplicate-detector.js"></script>
 </body>
 </html>
