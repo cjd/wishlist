@@ -23,10 +23,10 @@ a.menuLink:visited {background-color: transparent; color: Blue; text-decoration 
 a.menuLink:hover {background-color : lightblue; color : White; text-decoration : none;}
 a.menuLinkRed:link {background-color: transparent; color: Red; text-decoration : none; }
 a.menuLinkRed:visited {background-color: transparent; color: Red; text-decoration : none;}
-a.menuLinkRed:hover {background-color : red; color : White; ext-decoration : none;}
+a.menuLinkRed:hover {background-color : red; color : White; text-decoration: none;}
 a.menuLinkRedDashed:link {background-color: transparent; color: Red; text-decoration : none; border-bottom : 1px dashed;}
 a.menuLinkRedDashed:visited {background-color: transparent; color: Red; text-decoration : none; border-bottom : 1px dashed;}
-a.menuLinkRedDashed:hover {background-color : red; color : White; ext-decoration : none; border-bottom : 1px dashed;}
+a.menuLinkRedDashed:hover {background-color : red; color : White; text-decoration: none; border-bottom : 1px dashed;}
 
 
 .roundedbox {
@@ -403,11 +403,11 @@ td.footercell {
 }
 
 textarea.contact {
-    background-color:transparent;
-    overflow:hidden;
-    border:0;
-    scrolling:none;
-    color:black;
+    background-color: transparent;
+    overflow: hidden;
+    border: 0;
+    white-space: pre-wrap;
+    color: black;
 }
 
 input[type=checkbox] {
@@ -1280,6 +1280,8 @@ input[type=checkbox] {
 
 [data-theme="dark"] input[type="text"],
 [data-theme="dark"] input[type="password"],
+[data-theme="dark"] input[type="email"],
+[data-theme="dark"] input[type="number"],
 [data-theme="dark"] select,
 [data-theme="dark"] textarea {
   background-color: #22272e !important;
@@ -1558,7 +1560,10 @@ input[type=checkbox] {
   .modal,
   #sendMessageModal,
   #infoModal,
-  #toastContainer,
+  #toast-container,
+  .toast-container,
+  .no-print,
+  #unsavedPurchaseBar,
   hr {
     display: none !important;
   }
@@ -1642,9 +1647,9 @@ input[type=checkbox] {
     background: #f8fafc !important;
   }
 
-  /* Unblur any hidden prices in print */
+  /* Respect Privacy Mode hidden prices in print */
   .spending-hidden .price-secret {
-    filter: none !important;
+    visibility: hidden !important;
   }
 
   /* Clean text links */

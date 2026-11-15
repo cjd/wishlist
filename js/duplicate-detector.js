@@ -3,13 +3,34 @@
  * Warns users if an item with the same URL or title already exists in their wishlist
  */
 (function() {
+    var TRACKING_PARAM_RE = /^(?:utm_.*|fbclid|gclid|dclid|msclkid|mc_cid|mc_eid|ref|ref_|tag|affid|spm|igshid)$/i;
+
     function normalizeUrl(url) {
         if (!url || typeof url !== 'string') return '';
-        return url.trim().toLowerCase()
-            .replace(/^https?:\/\//, '')
-            .replace(/^www\./, '')
-            .replace(/\/+$/, '')
-            .split('?')[0]; // compare core product path
+        var raw = url.trim();
+        if (!raw) return '';
+
+        try {
+            var withProto = raw.indexOf('://') === -1 ? 'https://' + raw : raw;
+            var parsed = new URL(withProto);
+            var host = parsed.hostname.toLowerCase().replace(/^www\./, '');
+            var path = parsed.pathname.replace(/\/+$/, '').toLowerCase();
+
+            var keptParams = [];
+            parsed.searchParams.forEach(function(val, key) {
+                if (!TRACKING_PARAM_RE.test(key) && val !== '') {
+                    keptParams.push(key.toLowerCase() + '=' + val.toLowerCase());
+                }
+            });
+            keptParams.sort();
+
+            return host + path + (keptParams.length ? '?' + keptParams.join('&') : '');
+        } catch (e) {
+            return raw.toLowerCase()
+                .replace(/^https?:\/\//, '')
+                .replace(/^www\./, '')
+                .replace(/\/+$/, '');
+        }
     }
 
     function initDuplicateDetector() {
@@ -39,13 +60,11 @@
                 var itemNormUrl = normalizeUrl(item.url);
                 var itemTitle = (item.title || '').trim().toLowerCase();
 
-                // Check URL match first (high confidence)
                 if (urlVal && itemNormUrl && urlVal === itemNormUrl) {
                     match = item;
                     break;
                 }
 
-                // Check exact title match (only if length >= 4 chars)
                 if (titleVal && titleVal.length >= 4 && itemTitle === titleVal) {
                     match = item;
                     break;

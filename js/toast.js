@@ -2,7 +2,8 @@
  * Floating Toast Notification Utility
  */
 function showToast(message, type, duration) {
-    type = type || 'success';
+    var allowedTypes = { success: true, error: true, info: true };
+    type = (type && allowedTypes[type]) ? type : 'success';
     duration = duration || 3000;
 
     var container = document.getElementById('toast-container');
@@ -16,9 +17,16 @@ function showToast(message, type, duration) {
     var toast = document.createElement('div');
     toast.className = 'toast-pill toast-' + type;
 
-    var icon = (type === 'error') ? '⚠️ ' : (type === 'info' ? 'ℹ️ ' : '✓ ');
-    toast.innerHTML = '<span class="toast-icon">' + icon + '</span><span class="toast-text">' + message + '</span>';
+    var iconSpan = document.createElement('span');
+    iconSpan.className = 'toast-icon';
+    iconSpan.textContent = (type === 'error') ? '⚠️ ' : (type === 'info' ? 'ℹ️ ' : '✓ ');
 
+    var textSpan = document.createElement('span');
+    textSpan.className = 'toast-text';
+    textSpan.textContent = String(message == null ? '' : message);
+
+    toast.appendChild(iconSpan);
+    toast.appendChild(textSpan);
     container.appendChild(toast);
 
     requestAnimationFrame(function() {

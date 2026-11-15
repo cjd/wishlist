@@ -3,11 +3,13 @@ $ignoreSession = true;
 include "funcLib.php";
 ?>
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta http-equiv="Expires" content="0"> 
 <meta http-equiv="Pragma" content="no-cache"> 
+<link rel="manifest" href="manifest.json">
 <link rel="stylesheet" type="text/css" media="screen" href="style.css">
 <title>Help &amp; Frequently Asked Questions</title>
 </head>
@@ -61,7 +63,7 @@ if (isset($_SESSION["userid"])) {
   <summary class="faq-question"><span>How do I view someone's list?</span><span class="faq-icon">▾</span></summary>
   <div class="faq-answer">
     <p>To see someone's wishlist, you first need to be granted permission. Once the list owner has given you access, their name will appear on your homepage. Simply click on their name to view their list.</p>
-    <p>If you don't see the person's list you're looking for, you can request access. Go to <b>Update Your Account &gt;&gt; Manage List Access</b> and use the search function to find the person by their name or username. This will send a request for them to approve.</p>
+    <p>If you don't see the person's list you're looking for, you can request access. Go to <b>Update Your Account</b> and use the search box to find the person by their name or username. This will send a request for them to approve.</p>
   </div>
 </details>
 
@@ -104,7 +106,7 @@ if (isset($_SESSION["userid"])) {
     <ul>
       <li>A purple <b>👥 Split with [Names]</b> badge will be displayed on the list for all viewers so nobody buys a duplicate.</li>
       <li>The item will automatically appear in <b>View Purchases</b> for you <i>and</i> all selected co-buyers so everyone can keep track of their spending.</li>
-      <li>All viewers receive a message notification detailing the purchase and co-contributors.</li>
+      <li>Selected co-buyers receive an on-site message notification detailing the shared purchase.</li>
     </ul>
   </div>
 </details>
@@ -209,13 +211,6 @@ if (isset($_SESSION["userid"])) {
     <p>You can organize your list by dragging and dropping items. Grab the handle icon (☰) on the right side of each item and drag it to your desired position. You can move items within the same category, or drag them into an entirely different category. A confirmation notification will appear when the new order is saved.</p>
   </div>
 </details>
-
-<details class="faq-item" id="notifications">
-  <summary class="faq-question"><span>How do I send an update notification?</span><span class="faq-icon">▾</span></summary>
-  <div class="faq-answer">
-    <p>After you've made changes to your list, you might want to let people know. At the bottom of the 'Modify Your List' page, you will find a <b>Send Update Notification</b> button. This allows you to send a message notification to everyone who has permission to view your list.</p>
-  </div>
-</details>
 </div>
 
 <!-- SECTION 3: Gift Purchases & Budget -->
@@ -298,7 +293,7 @@ if (isset($_SESSION["userid"])) {
 <details class="faq-item" id="manageMessages">
   <summary class="faq-question"><span>How do I manage my messages?</span><span class="faq-icon">▾</span></summary>
   <div class="faq-answer">
-    <p>For each message in your inbox, you have the option to mark it as read or unread, and to delete it. Sent messages can be viewed but not edited or deleted.</p>
+    <p>For each message in your inbox, you have the option to mark it as read or unread, and to delete it. You can also delete messages from your Sent Messages list.</p>
   </div>
 </details>
 </div>
@@ -317,14 +312,21 @@ if (isset($_SESSION["userid"])) {
 <details class="faq-item" id="password">
   <summary class="faq-question"><span>How do I change my password?</span><span class="faq-icon">▾</span></summary>
   <div class="faq-answer">
-    <p>You can change your password from the <b>Update Your Account</b> page. Click the <b>Change Password</b> button and follow the instructions.</p>
+    <p>You can change your password from the <b>Update Your Account</b> page. Click the <b>Change Password</b> button, enter your current password and new password, and save.</p>
+  </div>
+</details>
+
+<details class="faq-item" id="forgotPassword">
+  <summary class="faq-question"><span>What if I forget my password?</span><span class="faq-icon">▾</span></summary>
+  <div class="faq-answer">
+    <p>Click <b>Forgot your password?</b> on the login page, enter your User ID, and select a trusted family member (someone you share wishlists with) or a site administrator. They will receive an internal message with an approval link. Once they verify it was you and approve the reset, a temporary password is generated for them to pass along to you so you can log in and set a new password.</p>
   </div>
 </details>
 
 <details class="faq-item" id="listAccess">
   <summary class="faq-question"><span>How do I manage who can view my list?</span><span class="faq-icon">▾</span></summary>
   <div class="faq-answer">
-    <p>You have control over who can see your wishlist. Go to <b>Update Your Account &gt;&gt; Manage List Access</b>. On this page, you can see a list of people who currently have access. You can also grant access to new people or revoke access from existing people.</p>
+    <p>You have control over who can see your wishlist. Go to <b>Update Your Account</b>. On this page, you can see everyone who currently has access to your list, adjust their permissions, request access to other users' lists, or remove viewers.</p>
   </div>
 </details>
 </div>
@@ -337,8 +339,10 @@ if (isset($_SESSION["userid"])) {
 </table>
 </center>
 
+<?php if (!isset($_SESSION["userid"])): ?>
 <script type="text/javascript" src="js/theme.js"></script>
 <script type="text/javascript" src="js/back-to-top.js"></script>
+<?php endif; ?>
 <script type="text/javascript">
 var currentCategory = 'all';
 

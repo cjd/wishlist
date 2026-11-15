@@ -15,18 +15,15 @@ $errorMessage = "Please Sign In";
 $loginUserid = trim((string)($_POST["userid"] ?? ""));
 $password = (string)($_POST["password"] ?? "");
 $clientIp = getClientIp();
-$ipKey = 'ip:' . $clientIp;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $loginUserid !== "" && $password !== "") {
     verifyCsrfOrDie(true);
-    $userKey = 'user:' . strtolower($loginUserid);
+    $normalizedUser = strtolower($loginUserid);
 
-    $ipLimit = checkRateLimit($link, $ipKey, 10, 900, 900);
-    $userLimit = checkRateLimit($link, $userKey, 5, 900, 900);
+    $rl = checkRateLimit($link, $clientIp, $normalizedUser, 'web_login', 5, 300);
 
-    if (!$ipLimit['allowed'] || !$userLimit['allowed']) {
-        $waitSecs = max($ipLimit['retry_after'], $userLimit['retry_after']);
-        $mins = max(1, (int)ceil($waitSecs / 60));
+    if ($rl['blocked']) {
+        $mins = max(1, (int)ceil($rl['retry_after'] / 60));
         $errorMessage = "Too many failed login attempts. Please try again in {$mins} minute(s).";
     } else {
         $stmt_user = mysqli_prepare($link, "SELECT userid, password, firstname, lastname, suffix, admin FROM people WHERE userid = ?");
@@ -59,8 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $loginUserid !== "" && $password !=
         }
 
         if ($row && $passValidate) {
-            clearRateLimitAttempts($link, $ipKey);
-            clearRateLimitAttempts($link, $userKey);
+            clearRateLimitAttempts($link, $clientIp, $normalizedUser, 'web_login');
 
             session_regenerate_id(true);
             $_SESSION['last_activity'] = time();
@@ -77,8 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $loginUserid !== "" && $password !=
             createPage();
             exit;
         } else {
-            recordRateLimitAttempt($link, $ipKey, 10, 900, 900);
-            recordRateLimitAttempt($link, $userKey, 5, 900, 900);
+            recordRateLimitAttempt($link, $clientIp, $normalizedUser, 'web_login');
             $errorMessage = "Invalid User ID or Password. Please try again.";
         }
     }
