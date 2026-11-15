@@ -201,11 +201,15 @@ if (!empty($_SESSION['login_lockout_until']) && time() < $_SESSION['login_lockou
 
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-</head>
-
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="WishList">
+<link rel="apple-touch-icon" href="images/icons/icon-192x192.png">
+<link rel="manifest" href="manifest.json">
+<script type="text/javascript" src="js/theme.js"></script>
 <link rel=stylesheet href=style.css type=text/css>
-
 <title>WishList Login</title>
+</head>
 
 <body bgcolor=#ffffff onload="document.login_form.userid.focus();">
 <center>
