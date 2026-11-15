@@ -4,38 +4,55 @@
 // the Free Software Foundation; either version 2 of the License, or
 // (at your option) any later version.
 
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-
 include "../funcLib.php";
 
-verifyCsrfOrDie();
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    header("Location: " . getFullPath("modifyList.php"));
+    exit;
+}
 
-$cid = $_REQUEST["cid"];
+verifyCsrfOrDie(true);
 
-$name= convertString($_REQUEST["name"]);
-$description = convertString($_REQUEST["description"]);
-$linkname = convertString($_REQUEST["linkname"]);
-$linkurl = convertString($_REQUEST["linkurl"]);
-$catSubDescription = convertString($_REQUEST["catSubDescription"]);
+$cid = (int)($_POST["cid"] ?? 0);
+$stmt_chk = mysqli_prepare($link, "SELECT catSortOrder, name FROM categories WHERE cid = ? AND userid = ? AND catSortOrder != -1000");
+mysqli_stmt_bind_param($stmt_chk, "is", $cid, $userid);
+mysqli_stmt_execute($stmt_chk);
+$cat_row = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt_chk));
+if (!$cat_row) {
+    http_response_code(403);
+    die("Category not found or access denied.");
+}
 
-// Note our use of ===.  Simply == would not work as expected
-// because the position of "http" is at the front of a url
-if($linkurl != "" && strpos($linkurl, "http") === false){
-    $linkurl = "https://" . $linkurl;
-}                
+$name = ((int)$cat_row['catSortOrder'] < 0)
+    ? $cat_row['name']
+    : trim((string)($_POST["name"] ?? ''));
+
+if ($name === '') {
+    header("Location: " . getFullPath("editCategory.php?cid=" . $cid));
+    exit;
+}
+
+$description = trim((string)($_POST["description"] ?? ''));
+$linkname = trim((string)($_POST["linkname"] ?? ''));
+$linkurl_in = trim((string)($_POST["linkurl"] ?? ''));
+$catSubDescription = trim((string)($_POST["catSubDescription"] ?? ''));
+
+$linkurl = '';
+if ($linkurl_in !== '') {
+    if (!preg_match('#^https?://#i', $linkurl_in)) {
+        $linkurl_in = 'https://' . $linkurl_in;
+    }
+    $linkurl = sanitizeHttpUrl($linkurl_in, false);
+}
+if ($linkurl === '') {
+    $linkname = '';
+}
 
 $stmt = mysqli_prepare($link, "UPDATE categories SET name = ?, description = ?, linkname = ?, linkurl = ?, catSubDescription = ? WHERE cid = ? AND userid = ?");
 mysqli_stmt_bind_param($stmt, "sssssis", $name, $description, $linkname, $linkurl, $catSubDescription, $cid, $userid);
 mysqli_stmt_execute($stmt);
 
-$stmt = mysqli_prepare($link, "UPDATE people SET lastModDate=NOW() WHERE userid = ?");
+$stmt = mysqli_prepare($link, "UPDATE people SET lastModDate = NOW() WHERE userid = ?");
 mysqli_stmt_bind_param($stmt, "s", $userid);
 mysqli_stmt_execute($stmt);
 

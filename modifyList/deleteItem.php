@@ -1,120 +1,111 @@
 <?php
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
-// the Free Software
+// the Free Software Foundation; either version 2 of the License, or
 // (at your option) any later version.
-
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 include "../funcLib.php";
 
-$iid = $_REQUEST["iid"];
-$cid = $_REQUEST["cid"];
-$iso = $_REQUEST["iso"];
-$cname = $_REQUEST["cname"];
-$referrer = $_REQUEST["referrer"];
-if (array_key_exists("confirm", $_REQUEST)) {
-    $confirm = $_REQUEST["confirm"];
-} else {
-    $confirm = "";
-}
+$iid = (int)($_REQUEST["iid"] ?? 0);
+$confirm = $_REQUEST["confirm"] ?? "";
+$rawReferrer = basename((string)($_REQUEST["referrer"] ?? "modifyList.php"));
+$referrer = in_array($rawReferrer, ["modifyList.php", "editCategory.php", "editItem.php"], true)
+    ? $rawReferrer
+    : "modifyList.php";
 
-// check if either are null
+$stmt = mysqli_prepare($link, "SELECT items.*, categories.cid AS actual_cid, categories.name AS catName FROM items JOIN categories ON items.cid = categories.cid WHERE items.iid = ? AND categories.userid = ?");
+mysqli_stmt_bind_param($stmt, "is", $iid, $userid);
+mysqli_stmt_execute($stmt);
+$row = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
 
-if($confirm == "yes"){
-  verifyCsrfOrDie();
-  $check = mysqli_prepare($link, "SELECT items.iid FROM items JOIN categories ON items.cid = categories.cid WHERE items.iid = ? AND categories.userid = ?");
-  mysqli_stmt_bind_param($check, "is", $iid, $userid);
-  mysqli_stmt_execute($check);
-  $res = mysqli_stmt_get_result($check);
-  if (mysqli_num_rows($res) == 0) {
-    die("Unauthorized: That item does not belong to you.");
-  }
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $confirm === "yes") {
+    verifyCsrfOrDie(true);
+    if (!$row) {
+        http_response_code(403);
+        die("Unauthorized: That item does not belong to you.");
+    }
 
-  $result = deleteItem($iid, $userid, $_SESSION["fullname"], $base_dir);
-  
-  if($result != "Success"){
-    print $result;
-  }
-  else{
-    header("Location: " . getFullPath("modifyList.php?cid=" . $cid . "&cname=" . $cname));
+    $cid = (int)$row["actual_cid"];
+    $cname = $row["catName"];
+    $result = deleteItem($iid, $userid, $activeOwnerFullname, $base_dir);
+
+    if ($result !== "Success") {
+        http_response_code(400);
+        echo escapeText($result);
+        exit;
+    }
+
+    $stmt_m = mysqli_prepare($link, "UPDATE people SET lastModDate = NOW() WHERE userid = ?");
+    mysqli_stmt_bind_param($stmt_m, "s", $userid);
+    mysqli_stmt_execute($stmt_m);
+
+    header("Location: " . getFullPath("modifyList.php?cid=" . $cid . "&cname=" . urlencode($cname)));
     exit;
-  }
 }
-else{
-
-   $stmt = mysqli_prepare($link, "SELECT items.iid as iid, items.title, items.addStar, items.description, subdesc, price, quantity, link1, link1url, link2, link2url, link3, link3url, image FROM items, categories WHERE items.cid=categories.cid AND items.iid = ? AND items.cid = ? AND userid = ?");
-   mysqli_stmt_bind_param($stmt, "iis", $iid, $cid, $userid);
-   mysqli_stmt_execute($stmt);
-   $result = mysqli_stmt_get_result($stmt);
-
 ?>
-<HTML>
-<head><meta name="viewport" content="width=device-width, initial-scale=1.0" /></head>
-
-
-<link rel=stylesheet href=../style.css type=text/css>
-
-<BODY>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="../style.css" type="text/css">
+  <link rel="manifest" href="../manifest.json">
+  <title>Delete Item</title>
+</head>
+<body>
 <table class="pagetable">
 <tr>
+<td valign="top">
 
-<td valign="top" >
+<?php createNavBar("../home.php:Home|modifyList.php:Modify WishList|:Delete Item"); ?>
 
-<?php
-createNavBar("../home.php:Home|modifyList.php:Modify WishList|:Delete Item");
-?>
+<table width="100%">
+<tr><td valign="center" align="center">
 
-<table width="100%" height="100%">
-<tr><td valign=center align=center>
+<?php if ($row): ?>
+  <?php
+    $cid = (int)$row["actual_cid"];
+    $iso = (int)$row["itemSortOrder"];
+    $cname = $row["catName"];
+  ?>
+  <table><tr><td align="left">
+    <h2>Delete Item</h2>
+    <table border="0" cellpadding="2">
+      <?php printItem($row, $activeOwnerFullname, (int)$row["quantity"], 0, ''); ?>
+    </table>
+    <p>
+    <table bgcolor="indianred" cellpadding="6">
+    <tr>
+      <td><h3>Are you sure you want to delete this item?</h3></td>
+      <td>
+        <form method="post" action="deleteItem.php" style="margin:0;">
+          <input type="hidden" name="csrf_token" value="<?php echo escapeText(getCsrfToken()); ?>">
+          <input type="hidden" name="iid" value="<?php echo (int)$iid; ?>">
+          <input type="hidden" name="iso" value="<?php echo (int)$iso; ?>">
+          <input type="hidden" name="cid" value="<?php echo (int)$cid; ?>">
+          <input type="hidden" name="cname" value="<?php echo escapeText($cname); ?>">
+          <input type="hidden" name="confirm" value="yes">
+          <input type="hidden" name="referrer" value="<?php echo escapeText($referrer); ?>">
+          <input type="submit" value="Yes" style="font-weight:bold">
+        </form>
+      </td>
+      <td>
+        <form method="get" action="<?php echo escapeText($referrer); ?>" style="margin:0;">
+          <input type="hidden" name="iid" value="<?php echo (int)$iid; ?>">
+          <input type="hidden" name="iso" value="<?php echo (int)$iso; ?>">
+          <input type="hidden" name="cid" value="<?php echo (int)$cid; ?>">
+          <input type="hidden" name="cname" value="<?php echo escapeText($cname); ?>">
+          <input type="submit" value="Cancel" style="font-weight:bold">
+        </form>
+      </td>
+    </tr>
+    </table>
+  </td></tr></table>
+<?php else: ?>
+  <h2 style="color:#c00;">That item was not found or does not belong to you.</h2>
+<?php endif; ?>
 
-<table><tr><td align=left>
-<h2>Delete Item</h2>
-<p>
-
-<?php
-  if($row = mysqli_fetch_assoc($result)){ 
-    printItem($row, 1, "", 0, 0);
-?>
-<p>
-<table bgcolor="indianred">
-<tr><td>
-<h3>Are you sure you want to delete this item?</h3>
-</td><td>
-<form method="post" action="deleteItem.php">
-<input type="hidden" name="csrf_token" value="<?php echo getCsrfToken(); ?>">
-<input type="hidden" name="iid" value="<?php echo htmlspecialchars($iid); ?>">
-<input type="hidden" name="iso" value="<?php echo htmlspecialchars($iso); ?>">
-<input type="hidden" name="cid" value="<?php echo htmlspecialchars($cid); ?>">
-<input type="hidden" name="cname" value="<?php echo htmlspecialchars($cname); ?>">
-<input type="hidden" name="confirm" value="yes">
-<input type="hidden" name="referrer" value="<?php echo htmlspecialchars($referrer); ?>">
-<input type="submit" value="Yes" style="font-weight:bold">
-</form>
-</td><td>
-<form method="post" action="<?php echo htmlspecialchars($referrer); ?>">
-<input type="hidden" name="iid" value="<?php echo htmlspecialchars($iid); ?>">
-<input type="hidden" name="iso" value="<?php echo htmlspecialchars($iso); ?>">
-<input type="hidden" name="cid" value="<?php echo htmlspecialchars($cid); ?>">
-<input type="hidden" name="cname" value="<?php echo htmlspecialchars($cname); ?>">
-<input type="submit" value="Cancel" style="font-weight:bold">
-</form>
 </td></tr></table>
 </td></tr></table>
-
-</td></tr></table>
-
-<?php
-}
-else{
-  print "<h1><font color=red>That item does not belong to you!</font></h1>";
-}
-}
-?>
+</body>
+</html>

@@ -4,49 +4,10 @@
 // the Free Software Foundation; either version 2 of the License, or
 // (at your option) any later version.
 
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-
-
 include "../funcLib.php";
 
-?>
-<!DOCTYPE html>
-<HTML>
-<head><meta name="viewport" content="width=device-width, initial-scale=1.0" /></head>
-
-
-<link rel=stylesheet href=../style.css type=text/css>
-<link rel=stylesheet href=../css/featherlight.min.css type=text/css>
-<script type="text/javascript" src="../js/jquery-3.7.1.min.js"></script>
-<script type="text/javascript" src="../js/featherlight.min.js"></script>
-<script type="text/javascript" src="../js/wishlist-filter.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
-
-<head>
-</head>
-
-<title>Modify List</title>
-<BODY>
-
-<table class=pagetable>
-<tr>
-<td valign="top" >
-
-<?php
-createNavBar("../home.php:Home|:Modify WishList");
-?>
-
-<table width="100%"><tr><td>
-<?php
 $displayName = "Your ";
-if ($userid != $_SESSION["userid"]) {
+if ($userid !== $_SESSION["userid"]) {
     $stmt_name = mysqli_prepare($link, "SELECT firstname FROM people WHERE userid = ?");
     mysqli_stmt_bind_param($stmt_name, "s", $userid);
     mysqli_stmt_execute($stmt_name);
@@ -57,32 +18,52 @@ if ($userid != $_SESSION["userid"]) {
         $displayName = $userid . "'s ";
     }
 }
+
+$csrf_token = getCsrfToken();
 ?>
-<font face=arial size=5 color=red><b><?php echo $displayName; ?>List</b></font> - 
-<font size=-1 face=arial><b>All check marks have been removed</b></font>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="../style.css" type="text/css">
+  <link rel="stylesheet" href="../print.css" type="text/css" media="print">
+  <link rel="stylesheet" href="../css/featherlight.min.css" type="text/css">
+  <link rel="manifest" href="../manifest.json">
+  <title>Modify List</title>
+  <script src="../js/jquery-3.7.1.min.js"></script>
+  <script src="../js/featherlight.min.js"></script>
+  <script src="../js/wishlist-filter.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+</head>
+<body>
+<table class="pagetable">
+<tr>
+<td valign="top">
+
+<?php createNavBar("../home.php:Home|:Modify WishList"); ?>
+
+<table width="100%"><tr><td>
+  <font face="arial" size="5" color="red"><b><?php echo escapeText($displayName); ?>List</b></font> -
+  <font size="-1" face="arial"><b>All check marks have been removed</b></font>
 </td></tr></table>
 
 <?php
+$stmt = mysqli_prepare($link, "SELECT catSubDescription FROM categories WHERE userid = ? AND catSortOrder = -1000");
+mysqli_stmt_bind_param($stmt, "s", $userid);
+mysqli_stmt_execute($stmt);
+$mrs = mysqli_stmt_get_result($stmt);
+$mrow = mysqli_fetch_assoc($mrs);
 
-  $stmt = mysqli_prepare($link, "SELECT catSubDescription FROM categories WHERE userid = ? AND catSortOrder=-1000");
-  mysqli_stmt_bind_param($stmt, "s", $userid);
-  mysqli_stmt_execute($stmt);
-  $mrs = mysqli_stmt_get_result($stmt);
-  $mrow = mysqli_fetch_assoc($mrs);
-
-print "<table border=0 cellpadding=2 cellspacing=0 width=100%><tr>";
-if(isset($mrow["catSubDescription"]) && $mrow["catSubDescription"] != ""){
-
-  print "<td NOWRAP bgcolor=#99ff99><form method=\"post\" action=\"editListComment.php\"><input type=\"submit\" value=\"✏️\" class=\"actionButton\"></form><img width=26px height=13px
-src=\"../images/space.GIF\"></td><td width=99% bgcolor=#ffffcc> "
-. $mrow["catSubDescription"];
-
-} else{ print "<td NOWRAP width=\"100px\" bgcolor=#99ff99><form method=\"post\" action=\"editListComment.php\"><input type=\"submit\" value=\"➕\" class=\"actionButton\"></form><img width=26px height=13px
-src=\"../images/space.GIF\"></td><td width=99% bgcolor=#ffffcc> Click
-the link to the left to add a comment to the top of your list for
-others to see"; }
-
-print "</td></tr></table><p>";
+echo "<table border=\"0\" cellpadding=\"2\" cellspacing=\"0\" width=\"100%\"><tr>";
+if (!empty($mrow["catSubDescription"])) {
+    echo "<td nowrap bgcolor=\"#99ff99\"><form method=\"get\" action=\"editListComment.php\" style=\"margin:0;display:inline;\"><input type=\"submit\" value=\"✏️\" class=\"actionButton\" title=\"Edit List Comment\"></form><img width=\"26\" height=\"13\" src=\"../images/space.GIF\" alt=\"\"></td>";
+    echo "<td width=\"99%\" bgcolor=\"#ffffcc\"> " . formatMultilineText($mrow["catSubDescription"]) . "</td>";
+} else {
+    echo "<td nowrap width=\"100\" bgcolor=\"#99ff99\"><form method=\"get\" action=\"editListComment.php\" style=\"margin:0;display:inline;\"><input type=\"submit\" value=\"➕\" class=\"actionButton\" title=\"Add List Comment\"></form><img width=\"26\" height=\"13\" src=\"../images/space.GIF\" alt=\"\"></td>";
+    echo "<td width=\"99%\" bgcolor=\"#ffffcc\"> Click the button to the left to add a comment to the top of your list for others to see</td>";
+}
+echo "</tr></table><p>";
 ?>
 
 <div class="wishlist-search-box">
@@ -92,155 +73,160 @@ print "</td></tr></table><p>";
   <span id="wishlistSearchCount" class="wishlist-search-count"></span>
 </div>
 
-<?php 
+<?php printModifyList($userid); ?>
 
-printModifyList($userid);
-
-?>
-<table width=100%>
+<table width="100%">
 <tr><td colspan="3" align="center">
-<form method="post" action="addCategory.php" style="display:inline-block;">
-<input type="submit" value="Add New Category" class="buttonstyle">
-</form>
-<input type="button" value="Print List" class="buttonstyle" onclick="window.print()">
-</td>
-</tr>
+  <form method="get" action="addCategory.php" style="display:inline-block;">
+    <input type="submit" value="Add New Category" class="buttonstyle">
+  </form>
+  <input type="button" value="🖨️ Print List" class="buttonstyle" onclick="location.href='print.php'">
+</td></tr>
 </table>
 
 <p>
 
 <?php
-  $stmt = mysqli_prepare($link, "SELECT * FROM categories WHERE userid = ? AND catSortOrder=-10000");
-  mysqli_stmt_bind_param($stmt, "s", $userid);
-  mysqli_stmt_execute($stmt);
-  $mrs = mysqli_stmt_get_result($stmt);
-  $mrow = mysqli_fetch_assoc($mrs);
-
-  printCategory($mrow, $_SESSION["fullname"], 0, 0, 1, 0, 0, 1);
+$stmt = mysqli_prepare($link, "SELECT * FROM categories WHERE userid = ? AND catSortOrder = -10000");
+mysqli_stmt_bind_param($stmt, "s", $userid);
+mysqli_stmt_execute($stmt);
+$mrs = mysqli_stmt_get_result($stmt);
+$mrow = mysqli_fetch_assoc($mrs);
+if ($mrow) {
+    printCategory($mrow, $activeOwnerFullname, 0, 0, 1, 0, 0, 1);
+}
 ?>
 
 <center>
-<input type="button" value="Edit Account" class="buttonstyle" onclick="location.href='../updateAccount/updateAccount.php'">
-<form method="post" action="removeCrossedItems.php">
-<input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(getCsrfToken(), ENT_QUOTES); ?>">
-<input type="submit" value="Remove Crossed Off Items" class="buttonstyle">
-</form>
+  <input type="button" value="Edit Account" class="buttonstyle" onclick="location.href='../updateAccount/updateAccount.php<?php echo $userid !== $_SESSION['userid'] ? '?target_userid=' . urlencode($userid) : ''; ?>'">
+  <form method="get" action="removeCrossedItems.php" style="display:inline-block;">
+    <input type="submit" value="Remove Crossed Off Items" class="buttonstyle">
+  </form>
 </center>
 
 </td>
 </tr>
 </table>
+
 <div id="infoModal" class="info-modal">
   <div class="info-modal-content">
     <span class="close-info-modal">&times;</span>
     <p id="infoModalText"></p>
   </div>
 </div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    var lists = document.querySelectorAll('.sortable-list');
-    lists.forEach(function (list) {
-        new Sortable(list, {
-            group: 'shared', // set both lists to same group
-            animation: 150,
-            handle: '.drag-handle',
-            onAdd: function (evt) {
-                var placeholder = evt.to.querySelector('.empty-category-placeholder');
-                if (placeholder) {
-                    placeholder.remove();
+    var csrfToken = <?php echo json_encode($csrf_token, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
+
+    if (typeof Sortable !== 'undefined') {
+        var lists = document.querySelectorAll('.sortable-list');
+        lists.forEach(function (list) {
+            new Sortable(list, {
+                group: 'shared',
+                animation: 150,
+                handle: '.drag-handle',
+                onAdd: function (evt) {
+                    var placeholder = evt.to.querySelector('.empty-category-placeholder');
+                    if (placeholder) {
+                        placeholder.remove();
+                    }
+                },
+                onEnd: function (evt) {
+                    var itemEl = evt.item;
+                    var itemId = itemEl.dataset.itemId;
+                    var fromCategoryId = evt.from.dataset.categoryId;
+                    var toCategoryId = evt.to.dataset.categoryId;
+                    var newIndex = evt.newIndex;
+
+                    $.ajax({
+                        url: 'updateItemOrder.php',
+                        type: 'POST',
+                        data: {
+                            csrf_token: csrfToken,
+                            itemId: itemId,
+                            fromCategoryId: fromCategoryId,
+                            toCategoryId: toCategoryId,
+                            newIndex: newIndex
+                        },
+                        success: function() {
+                            if (typeof showToast === 'function') {
+                                showToast('Item order updated');
+                            }
+                        },
+                        error: function() {
+                            if (typeof showToast === 'function') {
+                                showToast('Error updating item order', 'error');
+                            }
+                        }
+                    });
                 }
-            },
-            onEnd: function (evt) {
-                var itemEl = evt.item;
-                var itemId = itemEl.dataset.itemId;
-                var fromCategoryId = evt.from.dataset.categoryId;
-                var toCategoryId = evt.to.dataset.categoryId;
-                var newIndex = evt.newIndex;
-
-                $.ajax({
-                    url: 'updateItemOrder.php',
-                    type: 'POST',
-                    data: {
-                        csrf_token: '<?php echo getCsrfToken(); ?>',
-                        itemId: itemId,
-                        fromCategoryId: fromCategoryId,
-                        toCategoryId: toCategoryId,
-                        newIndex: newIndex
-                    },
-                    success: function(response) {
-                        if (typeof showToast === 'function') {
-                            showToast('Item order updated');
-                        }
-                    },
-                    error: function() {
-                        if (typeof showToast === 'function') {
-                            showToast('Error updating item order', 'error');
-                        }
-                    }
-                    }
-                });
-            }
+            });
         });
-    });
 
-    var catList = document.getElementById('categorySortableList');
-    if (catList && typeof Sortable !== 'undefined') {
-        new Sortable(catList, {
-            animation: 150,
-            handle: '.category-drag-handle',
-            draggable: '.wishlist-category-block',
-            onEnd: function (evt) {
-                var categoryIds = [];
-                catList.querySelectorAll('.wishlist-category-block').forEach(function(el) {
-                    var cid = el.getAttribute('data-category-id');
-                    if (cid) {
-                        categoryIds.push(cid);
-                    }
-                });
-
-                $.ajax({
-                    url: 'updateCategoryOrder.php',
-                    type: 'POST',
-                    data: {
-                        csrf_token: '<?php echo getCsrfToken(); ?>',
-                        categoryIds: categoryIds
-                    },
-                    success: function(response) {
-                        if (typeof showToast === 'function') {
-                            showToast('Category order updated');
+        var catList = document.getElementById('categorySortableList');
+        if (catList) {
+            new Sortable(catList, {
+                animation: 150,
+                handle: '.category-drag-handle',
+                draggable: '.wishlist-category-block',
+                onEnd: function () {
+                    var categoryIds = [];
+                    catList.querySelectorAll('.wishlist-category-block').forEach(function(el) {
+                        var cid = el.getAttribute('data-category-id');
+                        if (cid) {
+                            categoryIds.push(cid);
                         }
-                    },
-                    error: function() {
-                        if (typeof showToast === 'function') {
-                            showToast('Error updating category order', 'error');
+                    });
+
+                    $.ajax({
+                        url: 'updateCategoryOrder.php',
+                        type: 'POST',
+                        data: {
+                            csrf_token: csrfToken,
+                            categoryIds: categoryIds
+                        },
+                        success: function() {
+                            if (typeof showToast === 'function') {
+                                showToast('Category order updated');
+                            }
+                        },
+                        error: function() {
+                            if (typeof showToast === 'function') {
+                                showToast('Error updating category order', 'error');
+                            }
                         }
-                    }
-                });
-            }
-        });
-    }
-    
-    var infoModal = document.getElementById("infoModal");
-    var infoModalText = document.getElementById("infoModalText");
-    var closeInfoModal = document.getElementsByClassName("close-info-modal")[0];
-
-    $('.info-icon').on('click', function() {
-        var createDate = $(this).data('create-date');
-        infoModalText.innerHTML = "This item was added on " + createDate;
-        infoModal.style.display = "block";
-    });
-
-    if (closeInfoModal) {
-        closeInfoModal.onclick = function() {
-            infoModal.style.display = "none";
+                    });
+                }
+            });
         }
     }
 
-    window.onclick = function(event) {
-      if (event.target == infoModal) {
-        infoModal.style.display = "none";
-      }
+    var infoModal = document.getElementById("infoModal");
+    var infoModalText = document.getElementById("infoModalText");
+    var closeInfoModal = document.querySelector(".close-info-modal");
+
+    $('.info-icon').on('click', function() {
+        var createDate = $(this).data('create-date') || '';
+        if (infoModalText) {
+            infoModalText.textContent = "This item was added on " + createDate;
+        }
+        if (infoModal) {
+            infoModal.style.display = "block";
+        }
+    });
+
+    if (closeInfoModal && infoModal) {
+        closeInfoModal.addEventListener("click", function() {
+            infoModal.style.display = "none";
+        });
     }
+
+    window.addEventListener("click", function(event) {
+        if (infoModal && event.target === infoModal) {
+            infoModal.style.display = "none";
+        }
+    });
 });
 </script>
 </body>

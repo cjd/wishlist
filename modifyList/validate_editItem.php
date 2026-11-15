@@ -4,129 +4,152 @@
 // the Free Software Foundation; either version 2 of the License, or
 // (at your option) any later version.
 
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-
 include "../funcLib.php";
 
-verifyCsrfOrDie();
-
-$iid = $_REQUEST["iid"];
-$cid = $_REQUEST["cid"];
-$movecid = $_REQUEST["movecid"];
-
-$title= convertString($_REQUEST["title"]);
-$description = convertString($_REQUEST["desc"]);
-
-$iso = convertString($_REQUEST["iso"]);
-
-if(!is_numeric($iso))
-     $iso = 0;
-
-$price = str_replace("$", "", trim($_REQUEST["price"]));
-
-if(!is_numeric($price))
-     $price = 0;
-
-$quantity = $_REQUEST["quantity"];
-
-if(!is_numeric($quantity))
-     $quantity = 1;
-
-if($quantity < 0)
-     $quantity = 1;
-
-$subdesc = convertString($_REQUEST["subdesc"]);
-$link1 = convertString($_REQUEST["link1"]);
-$link1url = convertString($_REQUEST["link1url"]);
-$allowCheck = convertString($_REQUEST["allowCheck"]);
-if (isset($_REQUEST["addStar"])) {
-    $addStar = convertString($_REQUEST["addStar"]);
-} else {
-    $addStar="";
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    header("Location: " . getFullPath("modifyList.php"));
+    exit;
 }
 
-// Note our use of ===.  Simply == would not work as expected
-// because the position of "http" is at the front of a url
-if($link1url != "" && strpos($link1url, "http") === false){
-    $link1url = "https://" . $link1url;
-}                
+verifyCsrfOrDie(true);
 
-if($allowCheck == "")
-  $allowCheck = "false";
-else
-  $allowCheck = "true";
+$iid = (int)($_POST["iid"] ?? 0);
+$movecid = (int)($_POST["movecid"] ?? 0);
 
-if($addStar == "")
-  $addStar = '0';
-else
-  $addStar = '1';
-
-$check_item = mysqli_prepare($link, "SELECT items.iid FROM items JOIN categories ON items.cid = categories.cid WHERE items.iid = ? AND categories.userid = ?");
+// Fetch authoritative item state from DB
+$check_item = mysqli_prepare($link, "SELECT items.iid, items.cid, items.itemSortOrder, items.price, items.image FROM items JOIN categories ON items.cid = categories.cid WHERE items.iid = ? AND categories.userid = ?");
 mysqli_stmt_bind_param($check_item, "is", $iid, $userid);
 mysqli_stmt_execute($check_item);
-if (mysqli_num_rows(mysqli_stmt_get_result($check_item)) == 0) {
+$cur_item = mysqli_fetch_assoc(mysqli_stmt_get_result($check_item));
+if (!$cur_item) {
+    http_response_code(403);
     die("Unauthorized: That item does not belong to you.");
 }
 
-$check_move = mysqli_prepare($link, "SELECT cid FROM categories WHERE cid = ? AND userid = ?");
+$cid = (int)$cur_item["cid"];
+$iso = (int)$cur_item["itemSortOrder"];
+$oldPrice = (float)($cur_item["price"] ?? 0);
+$oldImage = !empty($cur_item["image"]) ? basename($cur_item["image"]) : "";
+
+$check_move = mysqli_prepare($link, "SELECT cid FROM categories WHERE cid = ? AND userid = ? AND catSortOrder != -1000");
 mysqli_stmt_bind_param($check_move, "is", $movecid, $userid);
 mysqli_stmt_execute($check_move);
-if (mysqli_num_rows(mysqli_stmt_get_result($check_move)) == 0) {
+if (!mysqli_fetch_assoc(mysqli_stmt_get_result($check_move))) {
+    http_response_code(403);
     die("Unauthorized: Destination category does not belong to you.");
 }
 
-if($cid != $movecid){
-  // moving to a different category so update iso
-
-  $stmt = mysqli_prepare($link, "UPDATE items SET itemSortOrder = itemSortOrder - 1 WHERE itemSortOrder > ? AND cid = ?");
-  mysqli_stmt_bind_param($stmt, "ii", $iso, $cid);
-  mysqli_stmt_execute($stmt);
-
-  $stmt = mysqli_prepare($link, "SELECT max(itemSortOrder) as iso FROM items WHERE cid = ?");
-  mysqli_stmt_bind_param($stmt, "i", $movecid);
-  mysqli_stmt_execute($stmt);
-  $rs = mysqli_stmt_get_result($stmt);
-  
-  if($row = mysqli_fetch_assoc($rs)){
-    if($row["iso"] != ""){
-      $iso = $row["iso"];
-      $iso++;
-    }
-    else
-      $iso = 0;
-  }
-  else
-    $iso = 0;
-
+$title = trim((string)($_POST["title"] ?? ''));
+if ($title === '') {
+    header("Location: " . getFullPath("editItem.php?iid=" . $iid . "&cid=" . $cid));
+    exit;
 }
 
+$description = trim((string)($_POST["desc"] ?? ''));
+$priceRaw = str_replace([',', '$'], '', trim((string)($_POST["price"] ?? '')));
+$price = is_numeric($priceRaw) ? max(0.0, round((float)$priceRaw, 2)) : 0.0;
 
-$stmt = mysqli_prepare($link, "UPDATE items SET title = ?, description = ?, quantity = ?, subdesc = ?, price = ?, allowCheck = ?, addStar = ?, link1 = ?, link1url = ?, itemSortOrder = ?, cid = ? WHERE iid = ?");
-mysqli_stmt_bind_param($stmt, "ssisdsissiii", $title, $description, $quantity, $subdesc, $price, $allowCheck, $addStar, $link1, $link1url, $iso, $movecid, $iid);
-mysqli_stmt_execute($stmt);
+$qtyRaw = $_POST["quantity"] ?? 1;
+$quantity = is_numeric($qtyRaw) ? max(1, (int)$qtyRaw) : 1;
 
-if (isset($_FILES['image']) && ($_FILES['image']['error']==0)) {
-    $uploadDir = $base_dir.'/uploads/';
-    $uploadFile = "image-" . $iid.".jpg";
-    if (is_file($uploadDir . $uploadFile)) {
-      unlink($uploadDir . $uploadFile);
+$subdesc = trim((string)($_POST["subdesc"] ?? ''));
+$link1 = trim((string)($_POST["link1"] ?? ''));
+$link1url_in = trim((string)($_POST["link1url"] ?? ''));
+
+$link1url = '';
+if ($link1url_in !== '') {
+    if (!preg_match('#^https?://#i', $link1url_in)) {
+        $link1url_in = 'https://' . $link1url_in;
     }
-    $result = process_image_upload('image',$uploadDir.$uploadFile);
-    if ($result) {
+    $link1url = sanitizeHttpUrl($link1url_in, false);
+}
+
+if ($link1url === '') {
+    $link1 = '';
+} elseif ($link1 === '' || strtolower($link1) === 'link') {
+    $host = parse_url($link1url, PHP_URL_HOST);
+    $link1 = $host ? preg_replace('/^www\./i', '', $host) : 'Link';
+}
+
+$allowCheck = !empty($_POST["allowCheck"]) ? "true" : "false";
+$addStar = !empty($_POST["addStar"]) ? "1" : "0";
+
+mysqli_begin_transaction($link);
+try {
+    if ($cid !== $movecid) {
+        $stmt = mysqli_prepare($link, "UPDATE items SET itemSortOrder = itemSortOrder - 1 WHERE itemSortOrder > ? AND cid = ?");
+        mysqli_stmt_bind_param($stmt, "ii", $iso, $cid);
+        mysqli_stmt_execute($stmt);
+
+        $stmt = mysqli_prepare($link, "SELECT COALESCE(MAX(itemSortOrder), -1) + 1 AS next_iso FROM items WHERE cid = ?");
+        mysqli_stmt_bind_param($stmt, "i", $movecid);
+        mysqli_stmt_execute($stmt);
+        $row_iso = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
+        $iso = max(0, (int)($row_iso["next_iso"] ?? 0));
+    }
+
+    $stmt = mysqli_prepare($link, "UPDATE items SET title = ?, description = ?, quantity = ?, subdesc = ?, price = ?, allowCheck = ?, addStar = ?, link1 = ?, link1url = ?, itemSortOrder = ?, cid = ? WHERE iid = ?");
+    mysqli_stmt_bind_param($stmt, "ssisdsissiii", $title, $description, $quantity, $subdesc, $price, $allowCheck, $addStar, $link1, $link1url, $iso, $movecid, $iid);
+    mysqli_stmt_execute($stmt);
+
+    if (abs($price - $oldPrice) >= 0.005) {
+        $stmt_ph = mysqli_prepare($link, "INSERT INTO itemPriceHistory (iid, price) VALUES (?, ?)");
+        if ($stmt_ph) {
+            mysqli_stmt_bind_param($stmt_ph, "id", $iid, $price);
+            mysqli_stmt_execute($stmt_ph);
+        }
+    }
+
+    mysqli_commit($link);
+} catch (mysqli_sql_exception $e) {
+    mysqli_rollback($link);
+    error_log("validate_editItem failed: " . $e->getMessage());
+    header("Location: " . getFullPath("editItem.php?iid=" . $iid . "&cid=" . $cid . "&error=1"));
+    exit;
+}
+
+// Non-destructive image upload / removal handling
+$uploadDir = $base_dir . '/uploads/';
+$hasNewUpload = (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK);
+
+if ($hasNewUpload) {
+    $finalFile = "image-" . $iid . ".jpg";
+    $tempBase = "image-" . $iid . "-tmp-" . bin2hex(random_bytes(4));
+    $tempFile = $tempBase . ".jpg";
+    $tempThumb = $tempBase . "_thumb.jpg";
+    $finalThumb = "image-" . $iid . "_thumb.jpg";
+
+    if (process_image_upload('image', $uploadDir . $tempFile)) {
+        // Remove legacy differently-named image if any
+        if ($oldImage !== "" && $oldImage !== $finalFile && is_file($uploadDir . $oldImage)) {
+            @unlink($uploadDir . $oldImage);
+        }
+        @rename($uploadDir . $tempFile, $uploadDir . $finalFile);
+        if (is_file($uploadDir . $tempThumb)) {
+            @rename($uploadDir . $tempThumb, $uploadDir . $finalThumb);
+        }
         $stmt_img = mysqli_prepare($link, "UPDATE items SET image = ? WHERE iid = ?");
-        mysqli_stmt_bind_param($stmt_img, "si", $uploadFile, $iid);
+        mysqli_stmt_bind_param($stmt_img, "si", $finalFile, $iid);
         mysqli_stmt_execute($stmt_img);
+    } else {
+        // Clean up any partial temp files while keeping existing image intact!
+        if (is_file($uploadDir . $tempFile)) @unlink($uploadDir . $tempFile);
+        if (is_file($uploadDir . $tempThumb)) @unlink($uploadDir . $tempThumb);
     }
+} elseif (!empty($_POST['remove_image']) && $oldImage !== "") {
+    if (is_file($uploadDir . $oldImage)) {
+        @unlink($uploadDir . $oldImage);
+    }
+    $oldThumb = preg_replace('/\.[^.]+$/', '', $oldImage) . '_thumb.jpg';
+    if (is_file($uploadDir . $oldThumb)) {
+        @unlink($uploadDir . $oldThumb);
+    }
+    $stmt_img = mysqli_prepare($link, "UPDATE items SET image = NULL WHERE iid = ?");
+    mysqli_stmt_bind_param($stmt_img, "i", $iid);
+    mysqli_stmt_execute($stmt_img);
 }
 
-$stmt = mysqli_prepare($link, "UPDATE people SET lastModDate=NOW() WHERE userid = ?");
+$stmt = mysqli_prepare($link, "UPDATE people SET lastModDate = NOW() WHERE userid = ?");
 mysqli_stmt_bind_param($stmt, "s", $userid);
 mysqli_stmt_execute($stmt);
 
