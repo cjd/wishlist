@@ -25,33 +25,28 @@ $confirm = $_REQUEST["confirm"] ?? "";
 if ($confirm == "yes") {
   verifyCsrfOrDie();
   if ($purchaseId > 0) {
+     $stmt_split = mysqli_prepare($link, "SELECT splitUsers, splitWith FROM purchaseHistory WHERE purchaseId = ? AND userid = ?");
+     $coBuyersToNotify = "";
+     if ($stmt_split) {
+       mysqli_stmt_bind_param($stmt_split, "is", $purchaseId, $userid);
+       mysqli_stmt_execute($stmt_split);
+       $res_split = mysqli_stmt_get_result($stmt_split);
+       if ($row_split = mysqli_fetch_assoc($res_split)) {
+         $coBuyersToNotify = trim($row_split["splitUsers"] ?? "");
+       }
+     }
+
      $stmt = mysqli_prepare($link, "DELETE FROM purchaseHistory WHERE purchaseId = ? AND userid = ?");
      mysqli_stmt_bind_param($stmt, "is", $purchaseId, $userid);
      mysqli_stmt_execute($stmt);
 
-     $stmt_email = mysqli_prepare($link, "SELECT viewer FROM viewList WHERE pid = ? AND viewer != ?");
-     mysqli_stmt_bind_param($stmt_email, "ss", $recip, $recip);
-     mysqli_stmt_execute($stmt_email);
-     $rs_email = mysqli_stmt_get_result($stmt_email);
-
-     $to = "";
-     while ($row = mysqli_fetch_assoc($rs_email)) {
-       $to .= $row["viewer"] . ",";
-     }
-     $to = rtrim($to, ",");
-
-     $from = "";
-     $subject = $name . "'s WishList has been modified by " . 
-       $_SESSION["fullname"];
-     $desc = $_REQUEST["desc"] ?? "";
-     $message = "<font color=indianred><b>" . $_SESSION["fullname"] . 
-       "</b></font>" . 
-       " has decided not to get the following purchase from " . 
-       $name . "'s WishList" .
-       "<br><dir>" . $desc . "</dir>";
-
-     if (!empty($to)) {
-       sendEmail($to, $from, $subject, $message, 0);
+     if (!empty($coBuyersToNotify)) {
+       $subject = "Group Gift Cancelled: " . $name . "'s WishList";
+       $desc = $_REQUEST["desc"] ?? "";
+       $message = "<font color=indianred><b>" . $_SESSION["fullname"] . 
+         "</b></font> has cancelled the group gift purchase from " . 
+         htmlspecialchars($name) . "'s WishList:<br><dir>" . $desc . "</dir>";
+       sendEmail($coBuyersToNotify, $userid, $subject, $message, 0);
      }
 
      header("Location: " . getFullPath("../viewPurchases.php"));
@@ -110,9 +105,7 @@ createNavBar("../home.php:Home|viewList.php?recip=" . $recip . "&name=" . $name 
 <input type="submit" value="No">
 </form>
 </td></tr>
-<tr><td colspan=3 align=center>
-<b>Note</b>: a message will be sent to everyone that can view <?php echo $name ?>'s WishList
-</td></tr></table>
+</table>
 
 
 <?php
