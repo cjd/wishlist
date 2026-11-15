@@ -39,7 +39,8 @@ if (isset($_SESSION["userid"])) {
     <input type="button" id="helpSearchClear" class="actionButton" value="Clear" onclick="clearHelpSearch()" style="display:none;">
     <span id="helpSearchCount" class="wishlist-search-count"></span>
   </div>
-  <div>
+  <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+    <button type="button" class="whats-new-trigger-btn" onclick="openWhatsNewModal()">✨ What&rsquo;s New</button>
     <button type="button" id="toggleAllBtn" class="help-toggle-all-btn" onclick="toggleAllFaqs()">Expand All</button>
   </div>
 </div>
@@ -353,6 +354,11 @@ if (isset($_SESSION["userid"])) {
 </td></tr>
 </table>
 </center>
+
+<?php
+$helpCsrf = isset($_SESSION["userid"]) ? getCsrfToken() : "";
+renderWhatsNewModal(!empty($_GET["whatsnew"]), true, $helpCsrf);
+?>
 
 <?php if (!isset($_SESSION["userid"])): ?>
 <script type="text/javascript" src="js/theme.js?v=<?php echo (int)@filemtime(__DIR__ . '/js/theme.js'); ?>"></script>

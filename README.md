@@ -47,8 +47,8 @@ A modern, responsive PHP-based web application designed to manage gift lists for
 
 ### 6. 🌙 Modern UI & Mobile Experience
 * **Seamless Dark Mode:** Complete dark theme with system preference auto-detection and persistent toggle control in the navigation bar.
-* **Privacy-Safe Progressive Web App (PWA):** Installable on iOS, Android, and Desktop via `manifest.json` (with `share_target`) and `service-worker.js` (`wishlist-v9`), using network-first caching for CSS/JS and never caching authenticated HTML pages or private `/uploads/` images. All frontend libraries are 100% self-hosted.
-* **Interactive Help Center:** Searchable, deep-linkable FAQ in [help.php](help.php) with category tabs and collapsible accordions.
+* **Privacy-Safe Progressive Web App (PWA):** Installable on iOS, Android, and Desktop via `manifest.json` (with `share_target`) and `service-worker.js` (`wishlist-v10`), using network-first caching for CSS/JS and never caching authenticated HTML pages or private `/uploads/` images. All frontend libraries are 100% self-hosted.
+* **What's New Onboarding & Interactive Help Center:** First-login **✨ What's New** feature overview dialog (tracked per user in `people.whatsNewSeenVersion`) with deep-links into the searchable FAQ in [help.php](help.php) and a button on the Help page to re-read anytime.
 
 ### 7. 💬 Internal Messaging & Administration
 * **Direct Messaging:** Send internal messages to authorized list viewers with safe HTML formatting, Secret Gift card rendering, read/unread toggles, and deletion from both **Inbox** and **Sent Messages**.
@@ -60,7 +60,7 @@ A modern, responsive PHP-based web application designed to manage gift lists for
 ## 🛠️ Technology Stack
 
 * **Server:** PHP 8.x (`mysqli` prepared statements, `.user.ini` hardening)
-* **Database:** MySQL 8.x / MariaDB (`InnoDB`, `utf8mb4_unicode_ci`, versioned migrations `db/V1_schema.sql` – `db/V4_schema.sql`)
+* **Database:** MySQL 8.x / MariaDB (`InnoDB`, `utf8mb4_unicode_ci`, versioned migrations `db/V1_schema.sql` – `db/V5_schema.sql`)
 * **Frontend:** HTML5, CSS3 (Light, Dark, and Print stylesheets), Vanilla JS
 * **Libraries (100% Self-Hosted):** jQuery 3.7.1, SortableJS 1.15.6, Select2 4.1, Native `<dialog>` Lightbox (`js/lightbox.js`)
 * **Deployment:** Docker / Nginx / PHP-FPM / Syncthing (`.stignore` configured)
@@ -72,5 +72,5 @@ A modern, responsive PHP-based web application designed to manage gift lists for
 1. **Clone or Extract:** Place the files in your web server's document root (e.g., `/var/www/lists/`).
 2. **Access Setup:** Open the web application in your browser (e.g., `https://your-domain.com/`). If unconfigured, it routes to the setup wizard (`admin.php?setup=true`).
 3. **Database Configuration:** Provide database credentials (host, database name, user, password).
-4. **Create Administrator:** Complete the setup form to generate `config.php` (`0640` permissions), apply `db/V1_schema.sql` – `db/V4_schema.sql`, and create the primary administrator account.
+4. **Create Administrator:** Complete the setup form to generate `config.php` (`0640` permissions), apply `db/V1_schema.sql` – `db/V5_schema.sql`, and create the primary administrator account.
 5. **Permissions & Uploads:** Ensure the `uploads/` directory is writable by the PHP-FPM user (`www-data`) and excluded from public PHP execution.

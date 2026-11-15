@@ -2,7 +2,7 @@
  * WishList Site Service Worker
  * Caches static UI assets only; never caches authenticated HTML or private uploads.
  */
-const CACHE_NAME = 'wishlist-v9';
+const CACHE_NAME = 'wishlist-v10';
 const STATIC_ASSETS = [
   './style.css',
   './print.css',

@@ -15,6 +15,20 @@ unset($_SESSION["euserid"]);
 $userid = $_SESSION["userid"];
 $csrf_token = getCsrfToken();
 
+$showWhatsNewPopup = false;
+try {
+    $stmt_wn = mysqli_prepare($link, "SELECT whatsNewSeenVersion FROM people WHERE userid = ? LIMIT 1");
+    if ($stmt_wn) {
+        mysqli_stmt_bind_param($stmt_wn, "s", $userid);
+        mysqli_stmt_execute($stmt_wn);
+        if ($wn_row = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt_wn))) {
+            $showWhatsNewPopup = ((int)($wn_row['whatsNewSeenVersion'] ?? 0) < WHATS_NEW_VERSION);
+        }
+    }
+} catch (Throwable $e) {
+    $showWhatsNewPopup = false;
+}
+
 // Fetch pending access requests for this user's list (checking whether we already view or requested theirs)
 $pending_requests_query = "
     SELECT ar.*, p.firstname, p.lastname, p.suffix,
@@ -443,6 +457,8 @@ if ($unread_messages_result && mysqli_num_rows($unread_messages_result) > 0) {
   </div>
 </div>
 <?php endif; ?>
+
+<?php renderWhatsNewModal($showWhatsNewPopup, false, $csrf_token); ?>
 
 <script>
 $(document).ready(function() {

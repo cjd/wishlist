@@ -1877,3 +1877,186 @@ function verifyCsrfOrDie($postOnly = false) {
     die("Security validation failed (invalid or missing CSRF token). Please refresh the page and try again.");
   }
 }
+
+define('WHATS_NEW_VERSION', 1);
+
+function renderWhatsNewModal($autoOpen = false, $onHelpPage = false, $csrfToken = '') {
+  $features = [
+    [
+      'icon' => '✨',
+      'title' => 'One-Click Auto-Fill from Store Links',
+      'desc' => 'Paste a product URL when adding an item to auto-fill its title, price, store name, and photo, or share links straight from your phone (up to 3 store links per item).',
+      'anchor' => 'addItem'
+    ],
+    [
+      'icon' => '🟢',
+      'title' => 'New Item Badges & Upcoming Celebrations',
+      'desc' => 'Spot "🟢 N new" and "✨ NEW" badges for items added since your last visit, plus an upcoming birthdays and holidays banner on your Home page.',
+      'anchor' => 'viewOther'
+    ],
+    [
+      'icon' => '💡',
+      'title' => 'Claimable Secret Gift Ideas',
+      'desc' => 'Claim off-list secret gift ideas (solo or split with co-buyers) so nobody buys the same surprise twice—automatically tracked in View Purchases.',
+      'anchor' => 'secretSuggestions'
+    ],
+    [
+      'icon' => '🕵️',
+      'title' => 'Anonymous Gift Shopper Questions',
+      'desc' => 'Need a boot size or color preference? Send a question anonymously as "A Gift Shopper" without spoiling who is asking.',
+      'anchor' => 'anonymousQuestion'
+    ],
+    [
+      'icon' => '📇',
+      'title' => 'Quick Address Copy & Family Sharing',
+      'desc' => 'Copy a recipient\'s shipping address in one tap, grant or request access for multiple family members at once, or Approve & Request Their List Back.',
+      'anchor' => 'listAccess'
+    ],
+    [
+      'icon' => '🎁',
+      'title' => 'Interactive Post-Holiday Cleanup',
+      'desc' => 'After birthdays or Christmas, review bought items behind a spoiler warning to delete, move to Items Under Consideration, or keep remaining quantities.',
+      'anchor' => 'postHolidayCleanup'
+    ]
+  ];
+  ?>
+  <dialog id="whatsNewDialog" class="whats-new-dialog" aria-labelledby="whatsNewHeading">
+    <div class="whats-new-header">
+      <div class="whats-new-title-wrap">
+        <span class="whats-new-badge">NEW</span>
+        <h2 id="whatsNewHeading">What&rsquo;s New in WishList!</h2>
+      </div>
+      <button type="button" class="whats-new-close" onclick="closeWhatsNewModal()" aria-label="Dismiss What's New">&times;</button>
+    </div>
+
+    <div class="whats-new-body">
+      <p class="whats-new-intro">
+        We&rsquo;ve added new features to make building lists, coordinating family gifts, and keeping surprises easier than ever:
+      </p>
+
+      <div class="whats-new-grid">
+        <?php foreach ($features as $feat): ?>
+          <div class="whats-new-card">
+            <div class="whats-new-card-title">
+              <span><?php echo $feat['icon']; ?></span>
+              <b><?php echo escapeText($feat['title']); ?></b>
+            </div>
+            <div class="whats-new-card-desc"><?php echo escapeText($feat['desc']); ?></div>
+            <div class="whats-new-card-link">
+              <?php if ($onHelpPage): ?>
+                <a href="#<?php echo escapeText($feat['anchor']); ?>" onclick="jumpToHelpTopicFromWhatsNew('<?php echo escapeText($feat['anchor']); ?>'); return false;">Read in FAQ &rarr;</a>
+              <?php else: ?>
+                <a href="help.php#<?php echo escapeText($feat['anchor']); ?>" onclick="openHelpFromWhatsNew('<?php echo escapeText($feat['anchor']); ?>'); return false;">Learn more &rarr;</a>
+              <?php endif; ?>
+            </div>
+          </div>
+        <?php endforeach; ?>
+      </div>
+
+      <?php if (!$onHelpPage): ?>
+        <p class="whats-new-tip">
+          💡 <i>Tip: You can re-open this summary anytime using the <b>✨ What&rsquo;s New</b> button at the top of the Help page.</i>
+        </p>
+      <?php endif; ?>
+    </div>
+
+    <div class="whats-new-footer">
+      <?php if ($onHelpPage): ?>
+        <button type="button" class="buttonstyle" onclick="closeWhatsNewModal()">✓ Close</button>
+      <?php else: ?>
+        <button type="button" class="buttonstyle" onclick="openHelpFromWhatsNew('')">📖 More Info on Help Page</button>
+        <button type="button" class="lightbutton" onclick="closeWhatsNewModal()">✓ Dismiss</button>
+      <?php endif; ?>
+    </div>
+  </dialog>
+
+  <script>
+  (function() {
+    var wnDismissed = false;
+    var wnCsrf = <?php echo json_encode((string)$csrfToken, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
+    var wnShouldPersistDismiss = <?php echo (!$onHelpPage && $csrfToken !== '') ? 'true' : 'false'; ?>;
+    var wnAutoOpen = <?php echo $autoOpen ? 'true' : 'false'; ?>;
+
+    function recordWhatsNewSeen() {
+      if (wnDismissed || !wnShouldPersistDismiss || !wnCsrf) return;
+      wnDismissed = true;
+      if (typeof window.fetch === 'function') {
+        var body = 'ajax=1&csrf_token=' + encodeURIComponent(wnCsrf);
+        window.fetch('dismissWhatsNew.php', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          body: body,
+          credentials: 'same-origin',
+          keepalive: true
+        }).catch(function() {});
+      }
+    }
+
+    window.openWhatsNewModal = function() {
+      var dlg = document.getElementById('whatsNewDialog');
+      if (!dlg) return;
+      if (typeof dlg.showModal === 'function') {
+        if (!dlg.open) {
+          dlg.showModal();
+        }
+      } else {
+        dlg.setAttribute('open', '');
+      }
+    };
+
+    window.closeWhatsNewModal = function() {
+      var dlg = document.getElementById('whatsNewDialog');
+      recordWhatsNewSeen();
+      if (!dlg) return;
+      if (typeof dlg.close === 'function' && dlg.open) {
+        dlg.close();
+      } else {
+        dlg.removeAttribute('open');
+      }
+    };
+
+    window.openHelpFromWhatsNew = function(anchor) {
+      recordWhatsNewSeen();
+      var dest = 'help.php' + (anchor ? ('#' + anchor) : '');
+      window.location.href = dest;
+    };
+
+    window.jumpToHelpTopicFromWhatsNew = function(anchor) {
+      window.closeWhatsNewModal();
+      if (!anchor) return;
+      if (typeof clearHelpSearch === 'function') {
+        var s = document.getElementById('helpSearch');
+        if (s && s.value) {
+          s.value = '';
+          if (typeof filterHelp === 'function') filterHelp('');
+        }
+      }
+      if (window.location.hash === '#' + anchor) {
+        if (typeof handleDeepLink === 'function') handleDeepLink();
+      } else {
+        window.location.hash = '#' + anchor;
+      }
+    };
+
+    document.addEventListener('DOMContentLoaded', function() {
+      var dlg = document.getElementById('whatsNewDialog');
+      if (!dlg) return;
+      dlg.addEventListener('close', function() {
+        recordWhatsNewSeen();
+      });
+      dlg.addEventListener('click', function(e) {
+        if (e.target === dlg) {
+          window.closeWhatsNewModal();
+        }
+      });
+      if (wnAutoOpen) {
+        window.openWhatsNewModal();
+      }
+    });
+  })();
+  </script>
+  <?php
+}

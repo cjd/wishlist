@@ -2363,3 +2363,209 @@ a.navQuickLink:hover {
   color: #e4e6eb;
 }
 
+/* --- What's New Modal (<dialog>) & Help Trigger Button --- */
+.whats-new-trigger-btn {
+  background: linear-gradient(135deg, #7c3aed, #4f46e5);
+  color: #ffffff;
+  border: 1px solid #4338ca;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-family: Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(79, 70, 229, 0.25);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.whats-new-trigger-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(79, 70, 229, 0.35);
+}
+
+.whats-new-dialog {
+  border: none;
+  border-radius: 12px;
+  padding: 0;
+  width: 92vw;
+  max-width: 720px;
+  max-height: 88vh;
+  background: #ffffff;
+  color: #1e293b;
+  box-shadow: 0 22px 48px rgba(0, 0, 0, 0.35);
+  font-family: Arial, sans-serif;
+  text-align: left;
+  overflow: hidden;
+}
+
+.whats-new-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.whats-new-dialog::backdrop {
+  background: rgba(15, 23, 42, 0.68);
+}
+
+.whats-new-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  background: linear-gradient(135deg, #6702cc 0%, #4f46e5 100%);
+  color: #ffffff;
+}
+
+.whats-new-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.whats-new-title-wrap h2 {
+  margin: 0;
+  font-size: 19px;
+  color: #ffffff;
+}
+
+.whats-new-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #fde047;
+  color: #3b0764;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.whats-new-close {
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: #ffffff;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.whats-new-close:hover {
+  background: rgba(255, 255, 255, 0.32);
+}
+
+.whats-new-body {
+  padding: 16px 18px;
+  overflow-y: auto;
+}
+
+.whats-new-intro {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: #334155;
+  line-height: 1.45;
+}
+
+.whats-new-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (max-width: 640px) {
+  .whats-new-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.whats-new-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.whats-new-card-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  color: #1e1b4b;
+}
+
+.whats-new-card-desc {
+  font-size: 12.5px;
+  color: #475569;
+  line-height: 1.42;
+}
+
+.whats-new-card-link a {
+  font-size: 12px;
+  font-weight: 700;
+  color: #6d28d9;
+  text-decoration: none;
+}
+
+.whats-new-card-link a:hover {
+  text-decoration: underline;
+}
+
+.whats-new-tip {
+  margin: 12px 0 0 0;
+  font-size: 12.5px;
+  color: #64748b;
+}
+
+.whats-new-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 12px 18px;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+}
+
+[data-theme="dark"] .whats-new-dialog {
+  background: #22272e;
+  color: #e4e6eb;
+  border: 1px solid #444c56;
+}
+
+[data-theme="dark"] .whats-new-intro {
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .whats-new-card {
+  background: #1c2128;
+  border-color: #373e47;
+}
+
+[data-theme="dark"] .whats-new-card-title {
+  color: #f3f4f6;
+}
+
+[data-theme="dark"] .whats-new-card-desc,
+[data-theme="dark"] .whats-new-tip {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .whats-new-card-link a {
+  color: #c4b5fd;
+}
+
+[data-theme="dark"] .whats-new-footer {
+  background: #1c2128;
+  border-top-color: #373e47;
+}
+
+
