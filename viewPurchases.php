@@ -4,69 +4,65 @@
 // the Free Software Foundation; either version 2 of the License, or
 // (at your option) any later version.
 
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-
 include "funcLib.php";
 $userid = $_SESSION["userid"];
-?>
-<!DOCTYPE html>
-<HTML>
+$csrf_token = getCsrfToken();
 
-<head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<link rel=stylesheet href=style.css type=text/css>
-<title>Your Purchases</title>
-</head>
+// Pre-fetch accounts where $userid has allowEdit=1 (spouse/children proxy accounts)
+$proxy_pids = [];
+$stmt_proxy = mysqli_prepare($link, "SELECT pid FROM viewList WHERE viewer = ? AND allowEdit = 1");
+mysqli_stmt_bind_param($stmt_proxy, "s", $userid);
+mysqli_stmt_execute($stmt_proxy);
+$res_proxy = mysqli_stmt_get_result($stmt_proxy);
+while ($pr = mysqli_fetch_assoc($res_proxy)) {
+    $proxy_pids[$pr['pid']] = true;
+}
 
-<BODY>
-<table class=pagetable>
-<tr>
-<td valign="top">
-<?php
-createNavBar("home.php:Home|:View Purchases", false, "viewPurchases");
-?>
-<font size="3">
-<p>Below is a list of purchases/comments made by you or those who you have been given access to (ie spouse/children) but <b>not</b> including gifts bought for you.<br>
-If you want to include any additional people in this list then request that they give you Edit Access.
-</p>
-<?php
-$query = "(SELECT 'item' as type, CONCAT(p1.firstname,' ',p1.lastname) AS recipient,
-CONCAT(p2.firstname,' ',p2.lastname) AS buyer,
-p1.userid, boughtDate, purchaseHistory.purchaseId, items.title,
-purchaseHistory.quantity, items.description, items.price,
-p1.firstname as firstname, p1.lastname as lastname,
-purchaseHistory.splitWith as splitWith
-FROM people as p1, people as p2, purchaseHistory,items,categories
-WHERE p1.userid=categories.userid
-AND p2.userid=purchaseHistory.userid
-AND purchaseHistory.iid=items.iid
-AND items.cid=categories.cid
-AND (purchaseHistory.userid = ?
-OR purchaseHistory.userid IN (SELECT pid FROM viewList WHERE viewer = ? AND allowEdit = 1)
-OR FIND_IN_SET(?, purchaseHistory.splitUsers) > 0
-)
-AND categories.userid != ?)
-UNION
-(SELECT 'comment' as type, CONCAT(p1.firstname,' ',p1.lastname) as recipient,
-CONCAT(p2.firstname,' ',p2.lastname) as buyer, p1.userid,
-comments.date,comments.commentId,comments.comment,
-0,'',0,
-p1.firstname as firstname, p1.lastname as lastname,
-'' as splitWith
-FROM people as p1, people as p2, comments
-WHERE p1.userid = comments.userid
-AND p2.userid = comments.comment_userid
-AND (comments.comment_userid = ?
-OR comments.comment_userid IN (SELECT pid FROM viewList WHERE viewer = ? AND allowEdit = 1))
-AND comments.userid != ?)
-ORDER BY lastname,firstname;";
+$query = "(SELECT 'item' AS type,
+    TRIM(CONCAT_WS(' ', p1.firstname, p1.lastname, NULLIF(p1.suffix, ''))) AS recipient,
+    TRIM(CONCAT_WS(' ', p2.firstname, p2.lastname, NULLIF(p2.suffix, ''))) AS buyer,
+    p1.userid AS userid,
+    p2.userid AS actor_userid,
+    purchaseHistory.boughtDate AS boughtDate,
+    purchaseHistory.purchaseId AS recordId,
+    items.title AS content,
+    purchaseHistory.quantity AS quantity,
+    items.description AS description,
+    items.price AS price,
+    p1.firstname AS firstname,
+    p1.lastname AS lastname,
+    purchaseHistory.splitWith AS splitWith
+  FROM purchaseHistory
+  JOIN items ON purchaseHistory.iid = items.iid
+  JOIN categories ON items.cid = categories.cid
+  JOIN people AS p1 ON p1.userid = categories.userid
+  JOIN people AS p2 ON p2.userid = purchaseHistory.userid
+  WHERE (purchaseHistory.userid = ?
+         OR purchaseHistory.userid IN (SELECT pid FROM viewList WHERE viewer = ? AND allowEdit = 1)
+         OR FIND_IN_SET(?, purchaseHistory.splitUsers) > 0)
+    AND categories.userid != ?)
+UNION ALL
+(SELECT 'comment' AS type,
+    TRIM(CONCAT_WS(' ', p1.firstname, p1.lastname, NULLIF(p1.suffix, ''))) AS recipient,
+    TRIM(CONCAT_WS(' ', p2.firstname, p2.lastname, NULLIF(p2.suffix, ''))) AS buyer,
+    p1.userid AS userid,
+    p2.userid AS actor_userid,
+    comments.date AS boughtDate,
+    comments.commentId AS recordId,
+    comments.comment AS content,
+    0 AS quantity,
+    '' AS description,
+    0 AS price,
+    p1.firstname AS firstname,
+    p1.lastname AS lastname,
+    '' AS splitWith
+  FROM comments
+  JOIN people AS p1 ON p1.userid = comments.userid
+  JOIN people AS p2 ON p2.userid = comments.comment_userid
+  WHERE (comments.comment_userid = ?
+         OR comments.comment_userid IN (SELECT pid FROM viewList WHERE viewer = ? AND allowEdit = 1))
+    AND comments.userid != ?)
+ORDER BY lastname, firstname, userid, boughtDate DESC";
 
 $stmt = mysqli_prepare($link, $query);
 mysqli_stmt_bind_param($stmt, "sssssss", $userid, $userid, $userid, $userid, $userid, $userid, $userid);
@@ -81,22 +77,43 @@ $personSummary = [];
 while ($r = mysqli_fetch_assoc($rs)) {
     $rows[] = $r;
     if ($r["type"] === "item") {
-        $qty = intval($r["quantity"] ?? 1);
-        if ($qty <= 0) $qty = 1;
-        $price = floatval($r["price"] ?? 0);
+        $qty = (int)($r["quantity"] ?? 1);
+        if ($qty <= 0) {
+            $qty = 1;
+        }
+        $price = (float)($r["price"] ?? 0);
         $subtotal = $qty * $price;
         $totalSpent += $subtotal;
         $totalGifts += $qty;
 
-        $recipName = $r["recipient"];
-        if (!isset($personSummary[$recipName])) {
-            $personSummary[$recipName] = ['count' => 0, 'total' => 0.0];
+        $recipKey = $r["userid"];
+        if (!isset($personSummary[$recipKey])) {
+            $personSummary[$recipKey] = ['name' => $r["recipient"], 'count' => 0, 'total' => 0.0];
         }
-        $personSummary[$recipName]['count'] += $qty;
-        $personSummary[$recipName]['total'] += $subtotal;
+        $personSummary[$recipKey]['count'] += $qty;
+        $personSummary[$recipKey]['total'] += $subtotal;
     }
 }
 ?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css" type="text/css">
+  <link rel="stylesheet" href="print.css" type="text/css" media="print">
+  <link rel="manifest" href="manifest.json">
+  <title>Your Purchases</title>
+</head>
+<body>
+<table class="pagetable">
+<tr>
+<td valign="top">
+<?php createNavBar("home.php:Home|:View Purchases", false, "viewPurchases"); ?>
+<font size="3">
+<p>Below is a list of purchases and comments made by you or family accounts you have Edit Access to, <b>excluding</b> gifts bought for you.<br>
+To include additional family members' purchases here, ask them to grant you Edit Access under Update Account.
+</p>
 
 <div class="spending-summary-card">
   <div class="spending-summary-header">
@@ -118,77 +135,110 @@ while ($r = mysqli_fetch_assoc($rs)) {
       <span class="stat-value price-secret">$<?php echo number_format($totalSpent, 2); ?></span>
       <span class="stat-sub">(<?php echo $totalGifts; ?> gift<?php echo $totalGifts === 1 ? '' : 's'; ?>)</span>
     </div>
-    <?php foreach ($personSummary as $person => $data): ?>
+    <?php foreach ($personSummary as $data): ?>
       <div class="spending-stat-pill">
-        <span class="stat-label"><?php echo htmlspecialchars($person); ?>:</span>
+        <span class="stat-label"><?php echo escapeText($data['name']); ?>:</span>
         <span class="stat-value price-secret">$<?php echo number_format($data['total'], 2); ?></span>
-        <span class="stat-sub">(<?php echo $data['count']; ?>)</span>
+        <span class="stat-sub">(<?php echo (int)$data['count']; ?>)</span>
       </div>
     <?php endforeach; ?>
   </div>
 </div>
 
-<table class=viewpurchases>
-<tr><th class=headerCell>List</th><th class=headerCell>Gift/Comment</th><th class=headerCell>$</th><th class=headerCell>Buyer</th><th class=headerCell>Bought @</th><th class=headerCell>Action</th></tr>
+<table class="viewpurchases">
+<tr>
+  <th class="headerCell">List</th>
+  <th class="headerCell">Gift / Comment</th>
+  <th class="headerCell">$</th>
+  <th class="headerCell">Buyer</th>
+  <th class="headerCell">Bought @</th>
+  <th class="headerCell">Action</th>
+</tr>
 
 <?php
-$style="viewpurchases1";
-$oldrecip="";
-$oldlast="";
-foreach ($rows as $row){
-  if ($row["recipient"]!=$oldrecip) {
-    $oldrecip=$row["recipient"];
-    if ($row["lastname"] != $oldlast) {
-      if ($oldlast != "") {
-        echo "<tr><td colspan=6 class=viewpurchaseshead></td></tr>";
-        echo "<tr><td colspan=6>&nbsp;</td></tr>";
-      }
-      $oldlast=$row["lastname"];
+$style = "viewpurchases1";
+$oldrecip_id = "";
+$oldlast = "";
+foreach ($rows as $row) {
+    if ($row["userid"] !== $oldrecip_id) {
+        $oldrecip_id = $row["userid"];
+        if (strcasecmp($row["lastname"], $oldlast) !== 0) {
+            if ($oldlast !== "") {
+                echo "<tr><td colspan=\"6\" class=\"viewpurchaseshead\"></td></tr>";
+                echo "<tr><td colspan=\"6\">&nbsp;</td></tr>";
+            }
+            $oldlast = $row["lastname"];
+        }
+        echo "<tr><td colspan=\"6\" class=\"viewpurchaseshead\"></td></tr>";
+        $style = "viewpurchases1";
+        echo "<tr><td class=\"" . $style . "\"><b><a href=\"viewList/viewList.php?recip=" . urlencode($row["userid"]) . "&amp;name=" . urlencode($row["recipient"]) . "\">" . escapeText($row["recipient"]) . "</a></b></td>";
+    } else {
+        echo "<tr><td class=\"" . $style . "\"></td>";
     }
-    echo "<tr><td colspan=6 class=viewpurchaseshead></td></tr>";
-    $style="viewpurchases1";
-    echo "<tr><td class=".$style."><b><a href=\"viewList/viewList.php?recip=".urlencode($row["userid"])."&name=".urlencode($row["recipient"])."\">".htmlspecialchars($row["recipient"])."</a></b></td>";
-  } else {
-    echo "<tr><td class=".$style."></td>";
-  }
-  echo "<td class=".$style.">";
-  if ($row["quantity"] > 0) {
-    echo $row["quantity"]." x ";
-  }
-  echo htmlspecialchars($row["title"], ENT_QUOTES, 'UTF-8', false)."</td>";
-  echo "<td class=".$style.">";
-  if ($row["price"]*$row["quantity"] > 0) {
-    echo "<span class='price-secret'>$" . number_format($row["price"]*$row["quantity"], 2) . "</span>";
-  }
-  echo "</td>";
-  echo "<td class=".$style.">".htmlspecialchars($row["buyer"]);
-  if (!empty($row["splitWith"])) {
-    echo "<div class='split-subtext'>👥 with " . htmlspecialchars($row["splitWith"]) . "</div>";
-  }
-  echo "</td>";
-  echo "<td class=".$style.">".parseDate($row["boughtDate"],1)."</td>\n";
-  if ($row["type"] == "item") {
-    echo "<td class=".$style."><b><a href=\"viewList/deletePurchase.php?recip=".urlencode($row["userid"])."&name=".urlencode($row["recipient"])."&purchaseId=".intval($row["purchaseId"])."\">[Undo this purchase]</a></b></td>";
-  } else {
-    echo "<td class=".$style."><b><a href=\"viewList/deleteComment.php?commentId=".intval($row["purchaseId"])."&recip=".urlencode($row["userid"])."&name=".urlencode($row["recipient"])."\">[Delete this comment]</a></b></td>";
 
-  }
-  echo "</tr>\n";
-  if ( $style == "viewpurchases1") {
-    $style="viewpurchases2";
-  } else {
-    $style="viewpurchases1";
-  }
+    echo "<td class=\"" . $style . "\">";
+    if ($row["type"] === "item") {
+        if ((int)$row["quantity"] > 0) {
+            echo (int)$row["quantity"] . " x ";
+        }
+        echo escapeText($row["content"]);
+    } else {
+        $cText = (string)$row["content"];
+        if (strpos($cText, "<div class='secret-suggestion-card'>") === 0 || strpos($cText, '<div class="secret-suggestion-card">') === 0) {
+            echo formatMessage($cText);
+        } else {
+            echo "<i>Comment:</i> " . formatMultilineText($cText);
+        }
+    }
+    echo "</td>";
+
+    echo "<td class=\"" . $style . "\">";
+    if ($row["type"] === "item" && ((float)$row["price"] * (int)$row["quantity"]) > 0) {
+        echo "<span class='price-secret'>$" . number_format((float)$row["price"] * (int)$row["quantity"], 2) . "</span>";
+    }
+    echo "</td>";
+
+    echo "<td class=\"" . $style . "\">" . escapeText($row["buyer"]);
+    if (!empty($row["splitWith"])) {
+        echo "<div class='split-subtext'>👥 with " . escapeText($row["splitWith"]) . "</div>";
+    }
+    echo "</td>";
+
+    echo "<td class=\"" . $style . "\">" . escapeText(parseDate($row["boughtDate"], 1)) . "</td>\n";
+
+    echo "<td class=\"" . $style . "\">";
+    if ($row["type"] === "item") {
+        $canUndo = ($row["actor_userid"] === $userid || isset($proxy_pids[$row["actor_userid"]]));
+        if ($canUndo) {
+            echo "<b><a href=\"viewList/deletePurchase.php?recip=" . urlencode($row["userid"]) . "&amp;name=" . urlencode($row["recipient"]) . "&amp;purchaseId=" . (int)$row["recordId"] . "&amp;return_to=viewPurchases\">[Undo this purchase]</a></b>";
+        } else {
+            echo "<small>(Co-buyer)</small>";
+        }
+    } else {
+        if ($row["actor_userid"] === $userid) {
+            echo "<form method=\"post\" action=\"viewList/deleteComment.php\" style=\"display:inline; margin:0;\">";
+            echo "<input type=\"hidden\" name=\"csrf_token\" value=\"" . escapeText($csrf_token) . "\">";
+            echo "<input type=\"hidden\" name=\"commentId\" value=\"" . (int)$row["recordId"] . "\">";
+            echo "<input type=\"hidden\" name=\"recip\" value=\"" . escapeText($row["userid"]) . "\">";
+            echo "<input type=\"hidden\" name=\"name\" value=\"" . escapeText($row["recipient"]) . "\">";
+            echo "<input type=\"hidden\" name=\"return_to\" value=\"viewPurchases\">";
+            echo "<button type=\"submit\" class=\"menuLink\" style=\"background:none;border:none;padding:0;color:#0000cc;cursor:pointer;font-weight:bold;text-decoration:underline;\">[Delete this comment]</button>";
+            echo "</form>";
+        }
+    }
+    echo "</td></tr>\n";
+
+    $style = ($style === "viewpurchases1") ? "viewpurchases2" : "viewpurchases1";
 }
 ?>
-<tr><td colspan=6 class=viewpurchaseshead></td></tr>
+<tr><td colspan="6" class="viewpurchaseshead"></td></tr>
 </table>
+</font>
 </td></tr>
 </table>
 
 <script>
 function toggleSpendingPrivacy() {
-    var area = document.getElementById('spendingStatsArea');
     var label = document.getElementById('spendingPrivacyLabel');
     var isHidden = document.body.classList.toggle('spending-hidden');
     if (label) {

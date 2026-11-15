@@ -4,37 +4,37 @@
 // the Free Software Foundation; either version 2 of the License, or
 // (at your option) any later version.
 
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-
 include "../funcLib.php";
 
-verifyCsrfOrDie();
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    header("Location: ../home.php");
+    exit;
+}
 
-$name = $_REQUEST["name"] ?? "";
-$recip = $_REQUEST["recip"] ?? "";
-$bad = intval($_REQUEST["commentId"] ?? 0);
-$userid = $_SESSION["userid"];
+verifyCsrfOrDie(true);
 
-if ($bad > 0) {
-    if (isset($_SESSION['admin']) && $_SESSION['admin'] == 1) {
-        $stmt = mysqli_prepare($link, "DELETE FROM comments WHERE commentId = ?");
-        mysqli_stmt_bind_param($stmt, "i", $bad);
+$viewerUserid = $_SESSION["userid"];
+$name = trim((string)($_POST["name"] ?? ""));
+$recip = trim((string)($_POST["recip"] ?? ""));
+$commentId = (int)($_POST["commentId"] ?? 0);
+$returnTo = $_POST["return_to"] ?? "";
+
+if ($commentId > 0) {
+    // Only the comment author (or an admin for someone else's list) may delete a comment;
+    // list owners can never blind-delete comments on their own wishlist.
+    if (!empty($_SESSION['admin']) && $_SESSION['admin'] == 1) {
+        $stmt = mysqli_prepare($link, "DELETE FROM comments WHERE commentId = ? AND (comment_userid = ? OR userid != ?)");
+        mysqli_stmt_bind_param($stmt, "iss", $commentId, $viewerUserid, $viewerUserid);
     } else {
-        $stmt = mysqli_prepare($link, "DELETE FROM comments WHERE commentId = ? AND (comment_userid = ? OR userid = ?)");
-        mysqli_stmt_bind_param($stmt, "iss", $bad, $userid, $userid);
+        $stmt = mysqli_prepare($link, "DELETE FROM comments WHERE commentId = ? AND comment_userid = ?");
+        mysqli_stmt_bind_param($stmt, "is", $commentId, $viewerUserid);
     }
     mysqli_stmt_execute($stmt);
 }
 
-header("Location: " . getFullPath("viewList.php?recip=" . urlencode($recip) . "&name=" . urlencode($name)));
+if ($returnTo === 'viewPurchases') {
+    header("Location: " . getFullPath("../viewPurchases.php"));
+} else {
+    header("Location: " . getFullPath("viewList.php?recip=" . urlencode($recip) . "&name=" . urlencode($name)));
+}
 exit;
-
-
-?>

@@ -4,116 +4,122 @@
 // the Free Software Foundation; either version 2 of the License, or
 // (at your option) any later version.
 
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-
 include "../funcLib.php";
 
-$name = $_REQUEST["name"] ?? "";
-$recip = $_REQUEST["recip"] ?? "";
-$userid = $_SESSION["userid"];
-
-$purchaseId = intval($_REQUEST["purchaseId"] ?? 0);
+$viewerUserid = $_SESSION["userid"];
+$name = trim((string)($_REQUEST["name"] ?? ""));
+$recip = trim((string)($_REQUEST["recip"] ?? ""));
+$purchaseId = (int)($_REQUEST["purchaseId"] ?? 0);
 $confirm = $_REQUEST["confirm"] ?? "";
+$returnTo = $_REQUEST["return_to"] ?? "";
 
-if ($confirm == "yes") {
-  verifyCsrfOrDie();
-  if ($purchaseId > 0) {
-     $stmt_split = mysqli_prepare($link, "SELECT splitUsers, splitWith FROM purchaseHistory WHERE purchaseId = ? AND userid = ?");
-     $coBuyersToNotify = "";
-     if ($stmt_split) {
-       mysqli_stmt_bind_param($stmt_split, "is", $purchaseId, $userid);
-       mysqli_stmt_execute($stmt_split);
-       $res_split = mysqli_stmt_get_result($stmt_split);
-       if ($row_split = mysqli_fetch_assoc($res_split)) {
-         $coBuyersToNotify = trim($row_split["splitUsers"] ?? "");
-       }
-     }
+// Fetch purchase + item details from DB, verifying primary buyer or allowEdit=1 spouse/proxy
+$sql_fetch = "SELECT ph.purchaseId, ph.userid AS buyer_userid, ph.quantity, ph.splitUsers, ph.splitWith,
+                     i.title, i.description, c.userid AS owner_userid,
+                     p.firstname AS owner_first, p.lastname AS owner_last, p.suffix AS owner_suffix
+              FROM purchaseHistory ph
+              JOIN items i ON i.iid = ph.iid
+              JOIN categories c ON c.cid = i.cid
+              JOIN people p ON p.userid = c.userid
+              WHERE ph.purchaseId = ?
+                AND (ph.userid = ? OR ph.userid IN (SELECT pid FROM viewList WHERE viewer = ? AND allowEdit = 1))";
+$stmt = mysqli_prepare($link, $sql_fetch);
+mysqli_stmt_bind_param($stmt, "iss", $purchaseId, $viewerUserid, $viewerUserid);
+mysqli_stmt_execute($stmt);
+$row = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
 
-     $stmt = mysqli_prepare($link, "DELETE FROM purchaseHistory WHERE purchaseId = ? AND userid = ?");
-     mysqli_stmt_bind_param($stmt, "is", $purchaseId, $userid);
-     mysqli_stmt_execute($stmt);
-
-     if (!empty($coBuyersToNotify)) {
-       $subject = "Group Gift Cancelled: " . $name . "'s WishList";
-       $desc = $_REQUEST["desc"] ?? "";
-       $message = "<font color=indianred><b>" . $_SESSION["fullname"] . 
-         "</b></font> has cancelled the group gift purchase from " . 
-         htmlspecialchars($name) . "'s WishList:<br><dir>" . $desc . "</dir>";
-       sendEmail($coBuyersToNotify, $userid, $subject, $message, 0);
-     }
-
-     header("Location: " . getFullPath("../viewPurchases.php"));
-     exit;
-  }
+if ($row) {
+    $recip = $row["owner_userid"];
+    $name = trim($row["owner_first"] . " " . $row["owner_last"] . " " . ($row["owner_suffix"] ?? ""));
 }
-else{
-  $stmt = mysqli_prepare($link, "SELECT * FROM items JOIN purchaseHistory ON items.iid = purchaseHistory.iid WHERE purchaseHistory.userid = ? AND purchaseId = ?");
-  mysqli_stmt_bind_param($stmt, "si", $userid, $purchaseId);
-  mysqli_stmt_execute($stmt);
-  $rs = mysqli_stmt_get_result($stmt);
 
-  if($row = mysqli_fetch_assoc($rs)){
-    $desc = ($row["quantity"] != "1" ? "<font color=red>Bought " . $row["quantity"] . "</font> " : "") . "<i>" . $row["title"] . "</i> - " . $row["description"]; 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $confirm === "yes") {
+    verifyCsrfOrDie(true);
 
+    if ($row) {
+        $coBuyersToNotify = trim((string)($row["splitUsers"] ?? ""));
+        $qty = (int)$row["quantity"];
+        $safeDesc = ($qty !== 1 ? "<font color=red>Bought " . $qty . "</font> " : "")
+            . "<i>" . escapeText($row["title"]) . "</i> - " . escapeText($row["description"]);
+
+        $stmt_del = mysqli_prepare($link, "DELETE FROM purchaseHistory WHERE purchaseId = ?");
+        mysqli_stmt_bind_param($stmt_del, "i", $purchaseId);
+        mysqli_stmt_execute($stmt_del);
+
+        if ($coBuyersToNotify !== "") {
+            $subject = "Group Gift Cancelled: " . $name . "'s WishList";
+            $message = "<font color=indianred><b>" . escapeText($_SESSION["fullname"]) .
+                "</b></font> has cancelled the group gift purchase from <b>" .
+                escapeText($name) . "'s</b> WishList:<br><dir>" . $safeDesc . "</dir>";
+            sendEmail($coBuyersToNotify, $viewerUserid, $subject, $message, 0);
+        }
+    }
+
+    if ($returnTo === 'viewLog') {
+        header("Location: " . getFullPath("viewLog.php?recip=" . urlencode($recip) . "&name=" . urlencode($name)));
+    } else {
+        header("Location: " . getFullPath("../viewPurchases.php"));
+    }
+    exit;
+}
 ?>
-<HTML>
-<head><meta name="viewport" content="width=device-width, initial-scale=1.0" /></head>
-
-
-<link rel=stylesheet href=../style.css type=text/css>
-
-<title>Delete Purchase</title>
-<BODY>
-<table cellspacing="0" cellpadding="5" width="100%" height="100%" bgcolor="#FFFFFF" nosave border="0" style="border: 1px solid rgb(128,255,128)">
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="../style.css" type="text/css">
+  <link rel="manifest" href="../manifest.json">
+  <title>Delete Purchase</title>
+</head>
+<body>
+<table class="pagetable">
 <tr>
-<td valign="top" >
-
+<td valign="top">
 <?php
-createNavBar("../home.php:Home|viewList.php?recip=" . $recip . "&name=" . $name . ":View List - " . $name . "|viewLog.php?recip=$recip&name=$name:View Log - $name|:Delete Purchase", false, "");
+createNavBar("../home.php:Home|viewList.php?recip=" . urlencode($recip) . "&name=" . urlencode($name) . ":View List - " . $name . "|viewLog.php?recip=" . urlencode($recip) . "&name=" . urlencode($name) . ":View Log - " . $name . "|:Delete Purchase", false, "");
 ?>
 
-<h2>Delete Purchase</h2>
-<p>
-  <?php echo $desc ?> 
+<?php if ($row): ?>
+  <?php
+  $qty = (int)$row["quantity"];
+  $displayDesc = ($qty !== 1 ? "<font color=\"red\">Bought " . $qty . "</font> " : "")
+      . "<i>" . escapeText($row["title"]) . "</i> - " . formatMultilineText($row["description"]);
+  ?>
+  <h2>Delete Purchase</h2>
+  <p><?php echo $displayDesc; ?></p>
 
-<p>
-<table bgcolor="violet">
-<tr><td>
-<h3>Are you sure you want to delete this purchase?</h3>
-</td><td>
-<form method="post" action="deletePurchase.php">
-<input type="hidden" name="csrf_token" value="<?php echo getCsrfToken(); ?>">
-<input type="hidden" name="purchaseId" value="<?php echo intval($purchaseId); ?>">
-<input type="hidden" name="desc" value="<?php echo htmlspecialchars($desc, ENT_QUOTES); ?>">
-<input type="hidden" name="name" value="<?php echo htmlspecialchars($name, ENT_QUOTES); ?>">
-<input type="hidden" name="recip" value="<?php echo htmlspecialchars($recip, ENT_QUOTES); ?>">
-<input type="hidden" name="confirm" value="yes">
-<input type="submit" value="Yes">
-</form>
-</td><td>
-<form method="post" action="viewLog.php">
-<input type="hidden" name="name" value="<?php echo htmlspecialchars($name, ENT_QUOTES); ?>">
-<input type="hidden" name="recip" value="<?php echo htmlspecialchars($recip, ENT_QUOTES); ?>">
-<input type="submit" value="No">
-</form>
-</td></tr>
-</table>
+  <table bgcolor="violet" cellpadding="6">
+  <tr>
+    <td><h3>Are you sure you want to undo this purchase?</h3></td>
+    <td>
+      <form method="post" action="deletePurchase.php" style="margin:0;">
+        <input type="hidden" name="csrf_token" value="<?php echo escapeText(getCsrfToken()); ?>">
+        <input type="hidden" name="purchaseId" value="<?php echo (int)$purchaseId; ?>">
+        <input type="hidden" name="name" value="<?php echo escapeText($name); ?>">
+        <input type="hidden" name="recip" value="<?php echo escapeText($recip); ?>">
+        <input type="hidden" name="return_to" value="<?php echo escapeText($returnTo); ?>">
+        <input type="hidden" name="confirm" value="yes">
+        <input type="submit" value="Yes" class="buttonstyle">
+      </form>
+    </td>
+    <td>
+      <?php if ($returnTo === 'viewPurchases'): ?>
+        <button type="button" class="buttonstyle" onclick="location.href='../viewPurchases.php'">No</button>
+      <?php else: ?>
+        <form method="get" action="viewLog.php" style="margin:0;">
+          <input type="hidden" name="name" value="<?php echo escapeText($name); ?>">
+          <input type="hidden" name="recip" value="<?php echo escapeText($recip); ?>">
+          <input type="submit" value="No" class="buttonstyle">
+        </form>
+      <?php endif; ?>
+    </td>
+  </tr>
+  </table>
+<?php else: ?>
+  <h2 style="color:#c00;">That purchase was not found or does not belong to you.</h2>
+<?php endif; ?>
 
-
-<?php
-}
-else{
-  print "<h1><font color=red>That purchase does not belong to you!</font></h1>";
-}
-
-}
-
-?>
+</td></tr></table>
+</body>
+</html>

@@ -4,147 +4,89 @@
 // the Free Software Foundation; either version 2 of the License, or
 // (at your option) any later version.
 
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-
 include "funcLib.php";
 
 unset($_SESSION["euserid"]);
 $userid = $_SESSION["userid"];
+$csrf_token = getCsrfToken();
 
-// Fetch pending access requests
-$pending_requests_query = "SELECT ar.*, p.firstname, p.lastname FROM accessRequests ar JOIN people p ON ar.requesterId = p.userid WHERE ar.targetId = ? AND ar.status = 'pending'";
+// Fetch pending access requests for this user's list
+$pending_requests_query = "SELECT ar.*, p.firstname, p.lastname, p.suffix FROM accessRequests ar JOIN people p ON ar.requesterId = p.userid WHERE ar.targetId = ? AND ar.status = 'pending' ORDER BY ar.requestDate DESC";
 $stmt_pending = mysqli_prepare($link, $pending_requests_query);
 mysqli_stmt_bind_param($stmt_pending, "s", $userid);
 mysqli_stmt_execute($stmt_pending);
 $pending_requests_result = mysqli_stmt_get_result($stmt_pending);
 
-// Fetch notifications for the requester
-$notifications_query = "SELECT ar.*, p.firstname, p.lastname FROM accessRequests ar JOIN people p ON ar.targetId = p.userid WHERE ar.requesterId = ? AND ar.status != 'pending' AND ar.notified = 0";
+// Fetch access-request decision notifications for this user (and batch-mark as notified)
+$notifications_query = "SELECT ar.id, ar.status, p.firstname, p.lastname, p.suffix FROM accessRequests ar JOIN people p ON ar.targetId = p.userid WHERE ar.requesterId = ? AND ar.status != 'pending' AND ar.notified = 0";
 $stmt_notif = mysqli_prepare($link, $notifications_query);
 mysqli_stmt_bind_param($stmt_notif, "s", $userid);
 mysqli_stmt_execute($stmt_notif);
 $notifications_result = mysqli_stmt_get_result($stmt_notif);
 
-if (mysqli_num_rows($notifications_result) > 0) {
-    echo "<script>";
-    while ($notification = mysqli_fetch_assoc($notifications_result)) {
-        $targetName = $notification['firstname'] . ' ' . $notification['lastname'];
-        if ($notification['status'] == 'approved') {
-            echo "alert('Your request to view " . addslashes($targetName) . "\\'s list has been approved.');";
-        } else {
-            echo "alert('Your request to view " . addslashes($targetName) . "\\'s list has been denied.');";
-        }
-        // Mark as notified
-        $update_notified_query = "UPDATE accessRequests SET notified = 1 WHERE id = " . intval($notification['id']);
-        mysqli_query($link, $update_notified_query);
-    }
-    echo "</script>";
+$access_notifications = [];
+$notif_ids = [];
+while ($notification = mysqli_fetch_assoc($notifications_result)) {
+    $targetName = trim($notification['firstname'] . ' ' . $notification['lastname'] . ' ' . ($notification['suffix'] ?? ''));
+    $statusWord = ($notification['status'] === 'approved') ? 'approved' : 'denied';
+    $access_notifications[] = [
+        'text' => "Your request to view " . $targetName . "'s list has been " . $statusWord . ".",
+        'type' => ($notification['status'] === 'approved') ? 'success' : 'error'
+    ];
+    $notif_ids[] = (int)$notification['id'];
 }
 
-if (isset($_REQUEST["lastname"])) {
-    $lastname = $_REQUEST["lastname"];
-} else {
-    $lastname = "";
+if (!empty($notif_ids)) {
+    $id_list = implode(',', $notif_ids);
+    mysqli_query($link, "UPDATE accessRequests SET notified = 1 WHERE id IN ($id_list)");
 }
 
-$query = "SELECT people.*, MAX(viewList.allowEdit) as allowEdit, MAX(viewList.viewContactInfo) as viewContactInfo FROM people JOIN viewList ON pid = people.userid WHERE viewList.viewer = ? GROUP BY people.userid ORDER BY people.lastname, people.firstname";
+$lastname = $_REQUEST["lastname"] ?? "";
+
+$query = "SELECT people.*, MAX(viewList.allowEdit) AS allowEdit, MAX(viewList.viewContactInfo) AS viewContactInfo FROM people JOIN viewList ON viewList.pid = people.userid WHERE viewList.viewer = ? GROUP BY people.userid ORDER BY people.lastname, people.firstname";
 $stmt_people = mysqli_prepare($link, $query);
 mysqli_stmt_bind_param($stmt_people, "s", $userid);
 mysqli_stmt_execute($stmt_people);
 $result = mysqli_stmt_get_result($stmt_people);
 
-$num_rows = mysqli_num_rows($result);
-
-?>
-<!DOCTYPE html>
-<HTML>
-<head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="WishList">
-<link rel="apple-touch-icon" href="images/icons/icon-192x192.png">
-<link rel="manifest" href="manifest.json">
-<link rel=stylesheet href=style.css type=text/css>
-</head>
-
-<script src="js/jquery-3.7.1.min.js"></script>
-<script language="JavaScript">
-<!-- Begin JavaScript
-function showfamily(lastname) {
-    if ($(lastname).is(":visible")) {
-        $(lastname).slideUp('fast');
-    } else {
-        $(lastname).slideDown('fast');
-    }
+$people_rows = [];
+while ($r = mysqli_fetch_assoc($result)) {
+    $people_rows[] = $r;
 }
+$num_rows = count($people_rows);
 
-$(document).ready(function() {
-  if (screen.width <= 1000) {
-    $("#message").hide();
-  }
-});
-
-var contactInfo = {};
-<?php
-if ($num_rows > 0) {
-    mysqli_data_seek($result, 0);
-    while ($row = mysqli_fetch_assoc($result)) {
-        $allowView = !empty($row["viewContactInfo"]);
-        $new_userid = $row["userid"];
+$contact_map = [];
+foreach ($people_rows as $row) {
+    if (!empty($row["viewContactInfo"])) {
         $name = trim($row["firstname"] . ' ' . $row["lastname"] . ' ' . ($row["suffix"] ?? ''));
-        if ($allowView) {
-            $contact_string = $name . "\n";
-            if (!empty($row['bday']) && $row['bday'] != 0) {
-                $contact_string .= "Birthday: " . $row['bmonth'] . " " . $row['bday'];
-            }
-            echo "contactInfo[" . json_encode($new_userid) . "] = " . json_encode($contact_string) . ";\n";
+        $lines = [$name];
+
+        if (!empty($row['bmonth']) && !empty($row['bday']) && (int)$row['bday'] > 0) {
+            $lines[] = "Birthday: " . $row['bmonth'] . " " . $row['bday'];
         }
+        if (!empty($row['street'])) {
+            $lines[] = $row['street'];
+        }
+        $cityStateZip = trim(
+            ($row['city'] ?? '') .
+            (!empty($row['city']) && !empty($row['state']) ? ', ' : '') .
+            ($row['state'] ?? '') .
+            ((!empty($row['zip']) && $row['zip'] !== '0') ? ' ' . $row['zip'] : '')
+        );
+        if ($cityStateZip !== '') {
+            $lines[] = $cityStateZip;
+        }
+        if (!empty($row['phone'])) {
+            $lines[] = "Home: " . $row['phone'];
+        }
+        if (!empty($row['mobilephone'])) {
+            $lines[] = "Mobile: " . $row['mobilephone'];
+        }
+        $contact_map[$row['userid']] = implode("\n", $lines);
     }
 }
-?>
-  var theObject;
-  navName = navigator.appName;
-  navVer = parseInt(navigator.appVersion);
-
-  function show_record(obj, txtArea, PersonName) {
-    if ((theObject != obj) && (screen.width > 1000)) {
-      if (contactInfo[PersonName]) {
-        txtArea.value = contactInfo[PersonName];
-      }
-      theObject = obj;
-    }
-  }
-// End JavaScript-->
-</script>
-
-<title>WishList Home Page</title>
-<BODY>
-<table class="pagetable">
-<tr>
-
-<td valign="top">
-
-<?php
-createNavBar("home.php:Home|", true);
-?>
-
-<center>
-
-              <table class="headerBox" cellspacing="0" cellpadding="5" nosave border="0" >
-                <tr>
-                  <td class="headerCell" align="center" >
-<?php
 
 $season = getSeason();
-
 if ($season == 1) {
     $image = "winter.png";
 } elseif ($season == 2) {
@@ -157,32 +99,72 @@ if ($season == 1) {
     $image = "waving_santa2.gif";
 }
 ?>
-<script type="text/javascript">
-  if (screen.width <= 1000) {
-    document.write('<img border="0" height=50px src="images/<?php echo $image ?>">');
-  } else {
-    document.write('<img border="0" src="images/<?php echo $image ?>">');
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="WishList">
+  <link rel="apple-touch-icon" href="images/icons/icon-192x192.png">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css" type="text/css">
+  <title>WishList Home Page</title>
+  <script src="js/jquery-3.7.1.min.js"></script>
+  <script>
+  function showfamily(selector) {
+      if ($(selector).is(":visible")) {
+          $(selector).slideUp('fast');
+      } else {
+          $(selector).slideDown('fast');
+      }
   }
-</script>
-</td><td class=headerCell>
-                    Welcome to the WishList Site
-                  </td>
-                </tr>
 
-              </table>
+  $(document).ready(function() {
+      if (window.innerWidth <= 1000) {
+          $("#message").hide();
+      }
+  });
 
-<table border=0>
-<tr><td valign="center">
+  var contactInfo = <?php echo json_encode($contact_map, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
+  var theObject = null;
+
+  function show_record(obj, txtArea, personId) {
+      if ((theObject !== obj) && (window.innerWidth > 1000)) {
+          if (txtArea && contactInfo[personId]) {
+              txtArea.value = contactInfo[personId];
+          }
+          theObject = obj;
+      }
+  }
+  </script>
+</head>
+<body>
+<table class="pagetable">
+<tr>
+<td valign="top">
+
+<?php createNavBar("home.php:Home|", true); ?>
+
+<center>
+  <table class="headerBox" cellspacing="0" cellpadding="5" border="0">
+    <tr>
+      <td class="headerCell" align="center">
+        <img border="0" src="images/<?php echo escapeText($image); ?>" alt="" style="max-height: 90px; height: auto; width: auto;">
+      </td>
+      <td class="headerCell">
+        Welcome to the WishList Site
+      </td>
+    </tr>
+  </table>
+
+  <table border="0">
+  <tr><td valign="center">
 <?php
-
-if ($num_rows > 0) {
-    mysqli_data_seek($result, 0);
-}
-
 $oldlast = null;
 $div_last = "<div id='lastnames'>";
-$div_first = "";
-while ($row = mysqli_fetch_assoc($result)) {
+foreach ($people_rows as $row) {
     $family_name = trim($row['lastname'] ?? '');
     $display_family = ($family_name !== '') ? $family_name : 'Other';
 
@@ -191,92 +173,92 @@ while ($row = mysqli_fetch_assoc($result)) {
             $div_last .= "<br></div>\n";
         }
         $oldlast = $family_name;
-        $family_id = "fam_" . md5($family_name);
-        $div_last .= "<button class='buttonstyle' style='width:100%;' onclick=\"showfamily('#" . $family_id . "')\" >" . htmlspecialchars($display_family) . "</button><br>\n";
+        $family_id = "fam_" . md5(strtolower($family_name));
+        $div_last .= "<button class='buttonstyle' style='width:100%;' onclick=\"showfamily('#" . $family_id . "')\">" . escapeText($display_family) . "</button><br>\n";
         $div_last .= "<div id='" . $family_id . "' style='display:none;'>";
     }
 
     $name = trim($row['firstname'] . ' ' . $row['lastname'] . ' ' . ($row['suffix'] ?? ''));
     $name_url = urlencode($name);
     $recip_url = urlencode($row['userid']);
-    $name_esc = htmlspecialchars($name, ENT_QUOTES);
-    $userid_js = htmlspecialchars(json_encode($row['userid']), ENT_QUOTES);
+    $name_esc = escapeText($name);
+    $userid_js = htmlspecialchars(json_encode($row['userid']), ENT_QUOTES, 'UTF-8');
 
-    $div_last .= "<button class='lightbutton' style='width:100%;' onclick='window.location=\"viewList/viewList.php?recip=" . $recip_url . "&name=" . $name_url . "\"' onmouseover='show_record(this, theForm.contact, " . $userid_js . ")'>" . $name_esc . "</button><br>\n";
+    $div_last .= "<button class='lightbutton' style='width:100%;' onclick='window.location=\"viewList/viewList.php?recip=" . $recip_url . "&name=" . $name_url . "\"' onmouseover='show_record(this, document.theForm ? document.theForm.contact : null, " . $userid_js . ")'>" . $name_esc . "</button><br>\n";
 }
 if ($oldlast !== null) {
     $div_last .= "</div>\n";
 }
 $div_last .= "</div>\n";
 
-
 if ($num_rows > 0) {
-    if ($lastname != "") {
-        $message = "Click on a name to view their Wishlist";
-    } else {
-        $message = "Click on a family to view their members";
-    }
+    $message_box = ($lastname !== "")
+        ? "Click on a name to view their Wishlist"
+        : "Click on a family to view their members";
 } else {
-    $message = "You cannot view anybody's list\\nGoto Update Your Account > Manage List Access to add people";
+    $message_box = "You cannot view anybody's list yet.\nGo to Update Your Account to request access to lists.";
 }
 
-$textarea = "<div id=message><form name=theForm><textarea COLS='30' ROWS='3' class='contact' WRAP='physical' noscroll NAME='contact' readonly>" . $message ."</textarea></form></div>";
-echo "<table width=100%><tr><td>";
-echo $div_last."\n";
-echo "</td><td>\n";
-echo $div_first."\n";
-echo "</td></tr></table>\n";
-echo "</td><td>\n";
-echo $textarea."\n";
+$textarea = "<div id='message'><form name='theForm'><textarea cols='32' rows='5' class='contact' name='contact' readonly>" . escapeText($message_box) . "</textarea></form></div>";
+echo "<table width='100%'><tr><td>" . $div_last . "</td><td></td></tr></table>\n";
+echo "</td><td>\n" . $textarea . "\n";
 ?>
-</td></tr><tr><td>
+  </td></tr>
+  <tr><td colspan="2">
+    <div id="options">
+      <hr>
+      <button class="buttonstyle" style="width:100%;" onclick="location.href='modifyList/modifyList.php'">Modify Your List</button><br>
+      <button class="buttonstyle" style="width:100%;" onclick="location.href='viewPurchases.php'">View your Purchases</button><br>
+      <button class="buttonstyle" style="width:100%;" onclick="location.href='messages.php'">Messages</button><br>
+      <button class="buttonstyle" style="width:100%;" onclick="location.href='updateAccount/updateAccount.php'">Update Your Account</button><br>
+      <?php if (!empty($_SESSION["admin"]) && $_SESSION["admin"] == 1): ?>
+      <button class="buttonstyle" style="width:100%;" onclick="location.href='admin.php'">Admin Page</button><br>
+      <?php endif; ?>
+    </div>
+  </td></tr>
+  </table>
 </center>
-<div id=options>
-<hr>
-<button class='buttonstyle' style='width:100%;' onclick="location.href='modifyList/modifyList.php'">Modify Your List</button><br/>
-<button class='buttonstyle' style='width:100%;' onclick="location.href='viewPurchases.php'">View your Purchases</button><br/>
-<button class='buttonstyle' style='width:100%;' onclick="location.href='messages.php'">Messages</button><br/>
-<button class='buttonstyle' style='width:100%;' onclick="location.href='updateAccount/updateAccount.php'">Update Your Account</button><br/>
-<?php
-if ($_SESSION["admin"] == 1) {
-    ?>
-<button class='buttonstyle' style='width:100%;' onclick="location.href='admin.php'">Admin Page</button><br/>
-<?php
-}
-?>
-</div>
-</td></tr></table>
 
 <?php
 // Fetch unread messages for the current user
-$unread_messages_query = "SELECT m.message_id, m.sender_id, m.subject, m.body, m.timestamp, p.firstname, p.lastname FROM messages m LEFT JOIN people p ON m.sender_id = p.userid WHERE m.recipient_id = ? AND m.is_read = 0 AND m.recipient_deleted = 0 ORDER BY m.timestamp DESC";
+$unread_messages_query = "SELECT m.message_id, m.sender_id, m.subject, m.body, m.timestamp, p.firstname, p.lastname, p.suffix FROM messages m LEFT JOIN people p ON m.sender_id = p.userid WHERE m.recipient_id = ? AND m.is_read = 0 AND m.recipient_deleted = 0 ORDER BY m.timestamp DESC";
 $stmt_unread = mysqli_prepare($link, $unread_messages_query);
-mysqli_stmt_bind_param($stmt_unread, "s", $_SESSION['userid']);
+mysqli_stmt_bind_param($stmt_unread, "s", $userid);
 mysqli_stmt_execute($stmt_unread);
 $unread_messages_result = mysqli_stmt_get_result($stmt_unread);
 
-if (mysqli_num_rows($unread_messages_result) > 0) {
+if ($unread_messages_result && mysqli_num_rows($unread_messages_result) > 0) {
     $_SESSION['messages'] = [];
-    while ($message = mysqli_fetch_assoc($unread_messages_result)) {
-        $_SESSION['messages'][] = $message;
+    while ($msg_row = mysqli_fetch_assoc($unread_messages_result)) {
+        $_SESSION['messages'][] = $msg_row;
     }
 } else {
     unset($_SESSION['messages']);
 }
 ?>
 
-<?php if (isset($_SESSION['messages']) && !empty($_SESSION['messages'])): ?>
+<?php if (!empty($_SESSION['messages'])): ?>
 <div id="messageModal" class="modal">
   <div class="modal-content">
     <span class="close-messages">&times;</span>
     <h2>You have new messages</h2>
-    <?php foreach ($_SESSION['messages'] as $message): ?>
+    <?php foreach ($_SESSION['messages'] as $msg): ?>
+      <?php
+        if (empty($msg['sender_id'])) {
+            $senderLabel = 'System';
+        } elseif (!empty($msg['firstname']) || !empty($msg['lastname'])) {
+            $senderLabel = trim($msg['firstname'] . ' ' . $msg['lastname'] . ' ' . ($msg['suffix'] ?? ''));
+        } else {
+            $senderLabel = $msg['sender_id'];
+        }
+      ?>
       <div class="message">
-        <h3><strong>Subject:</strong> <?php echo htmlspecialchars($message['subject']); ?></h3>
-        <p><strong>From:</strong> <?php echo $message['sender_id'] ? htmlspecialchars($message['firstname'] . ' ' . $message['lastname']) : 'System'; ?></p>
-        <p><?php echo formatMessage($message['body']); ?></p>
-        <form action="markMessageAsRead.php" method="post" class="mark-as-read-form">
-          <input type="hidden" name="message_id" value="<?php echo $message['message_id']; ?>">
+        <h3><strong>Subject:</strong> <?php echo escapeText($msg['subject']); ?></h3>
+        <p><strong>From:</strong> <?php echo escapeText($senderLabel); ?></p>
+        <div><?php echo formatMessage($msg['body']); ?></div>
+        <form action="markMessageAsRead.php" method="post" class="mark-as-read-form" style="margin-top:8px;">
+          <input type="hidden" name="csrf_token" value="<?php echo escapeText($csrf_token); ?>">
+          <input type="hidden" name="message_id" value="<?php echo (int)$msg['message_id']; ?>">
           <button type="submit" name="decision" value="read" class="buttonstyle">Mark as Read</button>
         </form>
       </div>
@@ -285,55 +267,21 @@ if (mysqli_num_rows($unread_messages_result) > 0) {
 </div>
 <?php endif; ?>
 
-<script>
-$(document).ready(function() {
-  var modal = document.getElementById("accessRequestModal");
-  if (modal) {
-    var span = document.getElementsByClassName("close")[0];
-    modal.style.display = "block";
-
-    span.onclick = function() {
-      modal.style.display = "none";
-    }
-
-    window.onclick = function(event) {
-      if (event.target == modal) {
-        modal.style.display = "none";
-      }
-    }
-  }
-
-  var messageModal = document.getElementById("messageModal");
-  if (messageModal) {
-    var span = document.getElementsByClassName("close-messages")[0];
-    messageModal.style.display = "block";
-
-    span.onclick = function() {
-      messageModal.style.display = "none";
-    }
-
-    window.onclick = function(event) {
-      if (event.target == messageModal) {
-        messageModal.style.display = "none";
-      }
-    }
-  }
-});
-</script>
-<?php if (mysqli_num_rows($pending_requests_result) > 0): ?>
+<?php if ($pending_requests_result && mysqli_num_rows($pending_requests_result) > 0): ?>
 <div id="accessRequestModal" class="modal">
   <div class="modal-content">
     <span class="close">&times;</span>
     <h2>Access Requests</h2>
     <?php while ($request = mysqli_fetch_assoc($pending_requests_result)): ?>
+      <?php $reqFull = trim($request['firstname'] . ' ' . $request['lastname'] . ' ' . ($request['suffix'] ?? '')); ?>
       <div class="request">
-        <p><b><?php echo htmlspecialchars($request['firstname'] . ' ' . $request['lastname']); ?></b> would like to view your wishlist.</p>
+        <p><b><?php echo escapeText($reqFull); ?></b> would like to view your wishlist.</p>
         <form action="handleAccessRequest.php" method="post">
-          <input type="hidden" name="csrf_token" value="<?php echo getCsrfToken(); ?>">
-          <input type="hidden" name="requestId" value="<?php echo intval($request['id']); ?>">
-          <input type="hidden" name="requesterId" value="<?php echo htmlspecialchars($request['requesterId']); ?>">
+          <input type="hidden" name="csrf_token" value="<?php echo escapeText($csrf_token); ?>">
+          <input type="hidden" name="return_to" value="home">
+          <input type="hidden" name="requestId" value="<?php echo (int)$request['id']; ?>">
           <button type="submit" name="decision" value="approve_readonly" class="buttonstyle">Approve (Read-Only)</button>
-          <button type="submit" name="decision" value="approve_contact" class="buttonstyle">Approve (with List Access)</button>
+          <button type="submit" name="decision" value="approve_contact" class="buttonstyle">Approve (Full Purchasing + Contact)</button>
           <button type="submit" name="decision" value="deny" class="buttonstyle">Deny</button>
         </form>
       </div>
@@ -342,6 +290,51 @@ $(document).ready(function() {
 </div>
 <?php endif; ?>
 
+<script>
+$(document).ready(function() {
+  var accessModal = document.getElementById("accessRequestModal");
+  if (accessModal) {
+    var closeAccess = accessModal.querySelector(".close");
+    accessModal.style.display = "block";
+    if (closeAccess) {
+      closeAccess.addEventListener("click", function() {
+        accessModal.style.display = "none";
+      });
+    }
+  }
+
+  var messageModal = document.getElementById("messageModal");
+  if (messageModal) {
+    var closeMessages = messageModal.querySelector(".close-messages");
+    messageModal.style.display = "block";
+    if (closeMessages) {
+      closeMessages.addEventListener("click", function() {
+        messageModal.style.display = "none";
+      });
+    }
+  }
+
+  window.addEventListener("click", function(event) {
+    if (accessModal && event.target === accessModal) {
+      accessModal.style.display = "none";
+    }
+    if (messageModal && event.target === messageModal) {
+      messageModal.style.display = "none";
+    }
+  });
+
+  var accessNotifs = <?php echo json_encode($access_notifications, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
+  if (Array.isArray(accessNotifs)) {
+    accessNotifs.forEach(function(n) {
+      if (typeof showToast === "function") {
+        showToast(n.text, n.type);
+      } else {
+        alert(n.text);
+      }
+    });
+  }
+});
+</script>
 </td></tr></table>
 </body>
 </html>

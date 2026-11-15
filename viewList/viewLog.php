@@ -4,88 +4,90 @@
 // the Free Software Foundation; either version 2 of the License, or
 // (at your option) any later version.
 
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-
 include "../funcLib.php";
 
-$recip = $_REQUEST["recip"] ?? "";
-$name = $_REQUEST["name"] ?? "";
-$userid = $_SESSION["userid"] ?? "";
+$viewerUserid = $_SESSION["userid"];
+$recip = trim((string)($_REQUEST["recip"] ?? ""));
+$name = trim((string)($_REQUEST["name"] ?? ""));
 
-// Check authorization to view this log: must be list owner, admin, or have view permissions
-if (!isset($_SESSION["admin"]) || $_SESSION["admin"] != 1) {
-    $stmt_perm = mysqli_prepare($link, "SELECT 1 FROM viewList WHERE viewer = ? AND pid = ?");
-    mysqli_stmt_bind_param($stmt_perm, "ss", $userid, $recip);
-    mysqli_stmt_execute($stmt_perm);
-    $perm_res = mysqli_stmt_get_result($stmt_perm);
-    if (!mysqli_fetch_row($perm_res) && $recip != $userid) {
-        header("Location: ../home.php");
-        exit;
-    }
+if ($recip === "") {
+    header("Location: ../home.php");
+    exit;
 }
 
+$access = canViewList($link, $recip, $viewerUserid);
+if (!$access['allowed']) {
+    header("Location: ../home.php");
+    exit;
+}
+
+$stmt_p = mysqli_prepare($link, "SELECT firstname, lastname, suffix FROM people WHERE userid = ?");
+mysqli_stmt_bind_param($stmt_p, "s", $recip);
+mysqli_stmt_execute($stmt_p);
+if ($prow = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt_p))) {
+    $name = trim($prow["firstname"] . " " . $prow["lastname"] . " " . ($prow["suffix"] ?? ""));
+}
 ?>
-<HTML>
-<head><meta name="viewport" content="width=device-width, initial-scale=1.0" /></head>
-
-
-<link rel=stylesheet href=../style.css type=text/css>
-
-<title><?php echo htmlspecialchars($name); ?>'s WishList Change Log</title>
-<BODY>
-<table cellspacing="0" cellpadding="5" width="100%" height="100%" bgcolor="#FFFFFF" nosave border="0" style="border: 1px solid rgb(128,255,128)">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="../style.css" type="text/css">
+  <link rel="manifest" href="../manifest.json">
+  <title><?php echo escapeText($name); ?>'s WishList Change Log</title>
+</head>
+<body>
+<table class="pagetable">
 <tr>
-<td valign="top" >
-
+<td valign="top">
 <?php
-createNavBar("../home.php:Home|viewList.php?recip=" . urlencode($recip) . "&name=" . urlencode($name) . ":View List - " . htmlspecialchars($name) . "|:View Log " . htmlspecialchars($name), false, "");
+createNavBar("../home.php:Home|viewList.php?recip=" . urlencode($recip) . "&name=" . urlencode($name) . ":View List - " . $name . "|:View Log " . $name, false, "");
 ?>
-
 <p>
 <font size="2">
-
 <?php
-
-$query = "SELECT firstname, lastname, suffix, purchaseHistory.userid, purchaseHistory.boughtDate, purchaseHistory.quantity, purchaseHistory.splitWith, title, items.description, purchaseId FROM items, categories, people, purchaseHistory WHERE items.iid=purchaseHistory.iid AND categories.cid=items.cid AND people.userid=purchaseHistory.userid AND categories.userid = ? AND (people.userid = ? OR people.userid IN (SELECT pid FROM viewList WHERE viewer = ? AND allowEdit=1)) ORDER BY purchaseHistory.boughtDate DESC";
+$query = "SELECT people.firstname, people.lastname, people.suffix, purchaseHistory.userid, purchaseHistory.boughtDate, purchaseHistory.quantity, purchaseHistory.splitWith, items.title, items.description, purchaseHistory.purchaseId
+          FROM purchaseHistory
+          JOIN items ON items.iid = purchaseHistory.iid
+          JOIN categories ON categories.cid = items.cid
+          JOIN people ON people.userid = purchaseHistory.userid
+          WHERE categories.userid = ?
+            AND categories.catSortOrder > -1
+            AND (people.userid = ? OR people.userid IN (SELECT pid FROM viewList WHERE viewer = ? AND allowEdit = 1))
+          ORDER BY purchaseHistory.boughtDate DESC";
 
 $stmt_log = mysqli_prepare($link, $query);
-mysqli_stmt_bind_param($stmt_log, "sss", $recip, $userid, $userid);
+mysqli_stmt_bind_param($stmt_log, "sss", $recip, $viewerUserid, $viewerUserid);
 mysqli_stmt_execute($stmt_log);
 $rs = mysqli_stmt_get_result($stmt_log);
- 
-while($row = mysqli_fetch_assoc($rs)){
-?>
 
-  On <font color="indianred"><?php echo parseDate($row["boughtDate"],1) ?></font>, 
-  <font color="navy"><?php echo htmlspecialchars($row["firstname"] . ' ' . $row["lastname"] . ' ' . $row["suffix"]) ?></font>
-  <?php if (!empty($row["splitWith"])) { ?>
-    <font color="purple"><b>(Splitting with <?php echo htmlspecialchars($row["splitWith"]); ?>)</b></font>
-  <?php } ?>
+if ($rs && mysqli_num_rows($rs) > 0) {
+    while ($row = mysqli_fetch_assoc($rs)) {
+        $buyerFull = trim($row["firstname"] . ' ' . $row["lastname"] . ' ' . ($row["suffix"] ?? ''));
+        $qty = (int)$row["quantity"];
+?>
+  On <font color="indianred"><?php echo escapeText(parseDate($row["boughtDate"], 1)); ?></font>,
+  <font color="navy"><?php echo escapeText($buyerFull); ?></font>
+  <?php if (!empty($row["splitWith"])): ?>
+    <font color="purple"><b>(Splitting with <?php echo escapeText($row["splitWith"]); ?>)</b></font>
+  <?php endif; ?>
   made the following changes
-<?php
-  if($row["userid"] == $userid){ 
-?>    <b><a href="deletePurchase.php?recip=<?php echo urlencode($recip); ?>&name=<?php echo urlencode($name); ?>&purchaseId=<?php echo intval($row["purchaseId"]); ?>">[Undo this purchase]</a></b>
-<?php
-}
-?>
+  <b><a href="deletePurchase.php?recip=<?php echo urlencode($recip); ?>&amp;name=<?php echo urlencode($name); ?>&amp;purchaseId=<?php echo (int)$row["purchaseId"]; ?>&amp;return_to=viewLog">[Undo this purchase]</a></b>
   <br>
-  <?php 
-    print $row["quantity"] != "1" ? "<font color=red>Bought " . htmlspecialchars($row["quantity"]) . "</font> " : "" ?><i><?php echo htmlspecialchars($row["title"], ENT_QUOTES, 'UTF-8', false); ?></i> 
-  - <?php echo cleanString($row["description"]); ?> 
-
+  <?php if ($qty !== 1): ?>
+    <font color="red">Bought <?php echo $qty; ?></font>
+  <?php endif; ?>
+  <i><?php echo escapeText($row["title"]); ?></i>
+  - <?php echo formatMultilineText($row["description"]); ?>
   <p>
 <?php
+    }
+} else {
+    echo "<p><i>No purchases recorded by you for this list.</i></p>";
 }
 ?>
 </font>
+</td></tr></table>
 </body>
 </html>
-
-
