@@ -19,15 +19,22 @@ if ($row = mysqli_fetch_assoc($res)) {
 }
 
 $existingItems = [];
-$stmt_exist = mysqli_prepare($link, "SELECT items.iid, items.title, items.link1url, categories.name AS catName FROM items JOIN categories ON items.cid = categories.cid WHERE categories.userid = ?");
+$stmt_exist = mysqli_prepare($link, "SELECT items.iid, items.title, items.link1url, items.link2url, items.link3url, categories.name AS catName FROM items JOIN categories ON items.cid = categories.cid WHERE categories.userid = ?");
 mysqli_stmt_bind_param($stmt_exist, "s", $userid);
 mysqli_stmt_execute($stmt_exist);
 $res_exist = mysqli_stmt_get_result($stmt_exist);
 while ($row_exist = mysqli_fetch_assoc($res_exist)) {
+    $urls = [];
+    foreach (['link1url', 'link2url', 'link3url'] as $lk) {
+        if (!empty($row_exist[$lk])) {
+            $urls[] = html_entity_decode((string)$row_exist[$lk], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        }
+    }
     $existingItems[] = [
         'iid' => (int)$row_exist['iid'],
         'title' => html_entity_decode((string)$row_exist['title'], ENT_QUOTES | ENT_HTML5, 'UTF-8'),
-        'url' => html_entity_decode((string)($row_exist['link1url'] ?? ''), ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+        'url' => $urls[0] ?? '',
+        'urls' => $urls,
         'cat' => html_entity_decode((string)$row_exist['catName'], ENT_QUOTES | ENT_HTML5, 'UTF-8')
     ];
 }
@@ -37,7 +44,7 @@ while ($row_exist = mysqli_fetch_assoc($res_exist)) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="../style.css" type="text/css">
+  <link rel="stylesheet" href="../style.css?v=<?php echo (int)@filemtime(__DIR__ . '/../style.css'); ?>" type="text/css">
   <link rel="manifest" href="../manifest.json">
   <title>Add New Item</title>
 </head>
@@ -72,12 +79,73 @@ while ($row_exist = mysqli_fetch_assoc($res_exist)) {
 </tr>
 
 <tr>
+  <td align="right">
+    <table>
+      <tr><td align="right"><b>Product URL</b></td></tr>
+      <tr><td align="right"><b>Store / Name</b></td></tr>
+    </table>
+  </td>
+  <td bgcolor="#eeeeee">
+    <table width="100%">
+      <tr><td>
+        <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+          <input type="text" style="flex:1 1 240px; min-width:180px; box-sizing:border-box;" name="link1url" id="link1url" placeholder="Paste product link (https://...) to auto-fill!" value="">
+          <button type="button" id="autofillUrlBtn" class="actionButton autofill-btn">✨ Auto-Fill from Link</button>
+        </div>
+        <div id="autofillStatus" class="autofill-status" style="display:none;"></div>
+      </td></tr>
+      <tr><td>
+        <input type="text" style="width:100%;box-sizing:border-box;" name="link1" id="link1" placeholder="Auto-detected from URL, or type store name" value="">
+      </td></tr>
+      <tr id="addMoreStoreBtnRow"><td>
+        <button type="button" class="actionButton" style="font-size:12px; margin-top:2px;" onclick="revealNextStoreRow()">➕ Add another store option (up to 3)</button>
+      </td></tr>
+    </table>
+  </td>
+</tr>
+<tr id="storeRow2" style="display:none;">
+  <td align="right">
+    <table>
+      <tr><td align="right"><b>Store #2</b></td></tr>
+      <tr><td align="right"><b>URL #2</b></td></tr>
+    </table>
+  </td>
+  <td bgcolor="#eeeeee">
+    <table width="100%">
+      <tr><td>
+        <input type="text" style="width:100%;box-sizing:border-box;" name="link2" id="link2" placeholder="Auto-detected from URL, or type store name" value="">
+      </td></tr>
+      <tr><td>
+        <input type="text" style="width:100%;box-sizing:border-box;" name="link2url" id="link2url" placeholder="Paste 2nd store link (optional)" value="">
+      </td></tr>
+    </table>
+  </td>
+</tr>
+<tr id="storeRow3" style="display:none;">
+  <td align="right">
+    <table>
+      <tr><td align="right"><b>Store #3</b></td></tr>
+      <tr><td align="right"><b>URL #3</b></td></tr>
+    </table>
+  </td>
+  <td bgcolor="#eeeeee">
+    <table width="100%">
+      <tr><td>
+        <input type="text" style="width:100%;box-sizing:border-box;" name="link3" id="link3" placeholder="Auto-detected from URL, or type store name" value="">
+      </td></tr>
+      <tr><td>
+        <input type="text" style="width:100%;box-sizing:border-box;" name="link3url" id="link3url" placeholder="Paste 3rd store link (optional)" value="">
+      </td></tr>
+    </table>
+  </td>
+</tr>
+<tr>
   <td align="right"><b>Title</b></td>
-  <td bgcolor="#eeeeee"><input type="text" style="width:100%;" name="title" value="" required></td>
+  <td bgcolor="#eeeeee"><input type="text" style="width:100%;box-sizing:border-box;" name="title" value="" required></td>
 </tr>
 <tr>
   <td align="right"><b>Desc.</b></td>
-  <td bgcolor="#eeeeee"><input type="text" style="width:100%;" name="desc" value=""></td>
+  <td bgcolor="#eeeeee"><input type="text" style="width:100%;box-sizing:border-box;" name="desc" value=""></td>
 </tr>
 <tr>
   <td align="right"><b>Price</b></td>
@@ -89,24 +157,16 @@ while ($row_exist = mysqli_fetch_assoc($res_exist)) {
 </tr>
 <tr>
   <td align="right"><b>Image</b></td>
-  <td bgcolor="#eeeeee"><input type="file" style="width:100%;" name="image" accept="image/jpeg,image/png,image/gif,image/webp"></td>
-</tr>
-<tr>
-  <td align="right">
-    <table>
-      <tr><td align="right"><b>Store / Name</b></td></tr>
-      <tr><td align="right"><b>URL</b></td></tr>
-    </table>
-  </td>
   <td bgcolor="#eeeeee">
-    <table width="100%">
-      <tr><td>
-        <input type="text" style="width:100%;" name="link1" id="link1" placeholder="Auto-detected from URL, or type store name" value="">
-      </td></tr>
-      <tr><td>
-        <input type="text" style="width:100%;" name="link1url" id="link1url" placeholder="Paste item link (https://...)" value="">
-      </td></tr>
-    </table>
+    <input type="hidden" name="fetched_image_url" id="fetchedImageUrl" value="">
+    <div id="fetchedImagePreviewBox" class="autofill-img-preview" style="display:none;">
+      <img id="fetchedImagePreview" src="" alt="Product preview" referrerpolicy="no-referrer">
+      <div>
+        <div style="font-size:12px; font-weight:bold;">Auto-detected product photo</div>
+        <button type="button" id="clearFetchedImageBtn" class="actionButton" style="font-size:11px; padding:2px 6px; margin-top:4px;">✕ Remove photo</button>
+      </div>
+    </div>
+    <input type="file" style="width:100%;" name="image" accept="image/jpeg,image/png,image/gif,image/webp">
   </td>
 </tr>
 <tr>
@@ -139,8 +199,22 @@ while ($row_exist = mysqli_fetch_assoc($res_exist)) {
 
 <script>
 window.existingWishlistItems = <?php echo json_encode($existingItems, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
+function revealNextStoreRow() {
+    var r2 = document.getElementById('storeRow2');
+    var r3 = document.getElementById('storeRow3');
+    var btnRow = document.getElementById('addMoreStoreBtnRow');
+    if (r2 && r2.style.display === 'none') {
+        r2.style.display = '';
+        return;
+    }
+    if (r3 && r3.style.display === 'none') {
+        r3.style.display = '';
+        if (btnRow) btnRow.style.display = 'none';
+    }
+}
 </script>
-<script src="../js/store-detector.js"></script>
-<script src="../js/duplicate-detector.js"></script>
+<script src="../js/store-detector.js?v=<?php echo (int)@filemtime(__DIR__ . '/../js/store-detector.js'); ?>"></script>
+<script src="../js/duplicate-detector.js?v=<?php echo (int)@filemtime(__DIR__ . '/../js/duplicate-detector.js'); ?>"></script>
+<script src="../js/url-autofill.js?v=<?php echo (int)@filemtime(__DIR__ . '/../js/url-autofill.js'); ?>"></script>
 </body>
 </html>

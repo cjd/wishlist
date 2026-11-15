@@ -136,12 +136,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST["requestReset"]) && $_
 <HTML>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<link rel="stylesheet" href="style.css" type="text/css">
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link rel="stylesheet" href="style.css?v=<?php echo (int)@filemtime(__DIR__ . '/style.css'); ?>" type="text/css">
+<link rel="stylesheet" href="css/select2.min.css" type="text/css" />
 <script src="js/jquery-3.7.1.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="js/select2.min.js"></script>
 <script type="text/javascript">window.WISHLIST_BASE_URL = <?php echo json_encode($base_url, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;</script>
-<script src="js/theme.js"></script>
+<script src="js/theme.js?v=<?php echo (int)@filemtime(__DIR__ . '/js/theme.js'); ?>"></script>
 <title>Forgot Password</title>
 </head>
 <BODY <?php echo $step === 'enter_userid' ? 'onload="document.theForm.userid.focus();"' : ''; ?>>

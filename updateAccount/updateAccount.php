@@ -94,69 +94,133 @@ if (in_array($action, $permission_actions, true)) {
             $message = "<h2>Successfully removed " . escapeText($removeuserid) . " from viewing list of " . escapeText($userid) . "</h2>";
         }
     } elseif ($action === "startViewOther") {
-        $adduserid = trim($_POST["userid"] ?? "");
-        $requesterId = $userid;
-
-        if ($adduserid === "" || $adduserid === $requesterId) {
-            $message = "<h2 style='color:#c00;'>Invalid user selection.</h2>";
-        } else {
-            // Check if target exists
-            $stmt_p = mysqli_prepare($link, "SELECT userid FROM people WHERE userid = ?");
-            mysqli_stmt_bind_param($stmt_p, "s", $adduserid);
-            mysqli_stmt_execute($stmt_p);
-            if (!mysqli_fetch_assoc(mysqli_stmt_get_result($stmt_p))) {
-                $message = "<h2 style='color:#c00;'>Selected user does not exist.</h2>";
-            } else {
-                // Check if viewer already has access in viewList
-                $stmt_vl = mysqli_prepare($link, "SELECT 1 FROM viewList WHERE pid = ? AND viewer = ?");
-                mysqli_stmt_bind_param($stmt_vl, "ss", $adduserid, $requesterId);
-                mysqli_stmt_execute($stmt_vl);
-                if (mysqli_fetch_assoc(mysqli_stmt_get_result($stmt_vl))) {
-                    $message = "<h2>You already have access to view this person's list.</h2>";
-                } else {
-                    $stmt = mysqli_prepare($link, "SELECT id, status FROM accessRequests WHERE requesterId = ? AND targetId = ? ORDER BY id DESC LIMIT 1");
-                    mysqli_stmt_bind_param($stmt, "ss", $requesterId, $adduserid);
-                    mysqli_stmt_execute($stmt);
-                    $existing_req = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
-
-                    if ($existing_req && $existing_req['status'] === 'pending') {
-                        $message = "<h2>You already have a pending access request for this person.</h2>";
-                    } elseif ($existing_req) {
-                        // Re-activate previously denied or stale approved request
-                        $req_id = (int)$existing_req['id'];
-                        $stmt_re = mysqli_prepare($link, "UPDATE accessRequests SET status = 'pending', requestDate = NOW(), notified = 0 WHERE id = ?");
-                        mysqli_stmt_bind_param($stmt_re, "i", $req_id);
-                        mysqli_stmt_execute($stmt_re);
-                        $message = "<h2>Your request to view this person's list has been sent. You will be notified when they respond.</h2>";
-                    } else {
-                        $stmt_ins = mysqli_prepare($link, "INSERT INTO accessRequests (requesterId, targetId, status, notified) VALUES (?, ?, 'pending', 0)");
-                        mysqli_stmt_bind_param($stmt_ins, "ss", $requesterId, $adduserid);
-                        mysqli_stmt_execute($stmt_ins);
-                        $message = "<h2>Your request to view this person's list has been sent. You will be notified when they respond.</h2>";
-                    }
+        $selectedIds = [];
+        if (isset($_POST["userids"]) && is_array($_POST["userids"])) {
+            foreach ($_POST["userids"] as $uidItem) {
+                $uidTrim = trim((string)$uidItem);
+                if ($uidTrim !== "") {
+                    $selectedIds[$uidTrim] = true;
                 }
             }
         }
-    } elseif ($action === "startViewMine") {
-        $adduserid = trim($_POST["userid"] ?? "");
-        if ($adduserid !== "") {
+        $singleUid = trim((string)($_POST["userid"] ?? ""));
+        if ($singleUid !== "") {
+            $selectedIds[$singleUid] = true;
+        }
+        $requesterId = $userid;
+        unset($selectedIds[$requesterId]);
+
+        if (empty($selectedIds)) {
+            $message = "<h2 style='color:#c00;'>Please select at least one person whose list you want to view.</h2>";
+        } else {
+            $sentCount = 0;
+            $alreadyViewCount = 0;
+            $alreadyPendingCount = 0;
+
             $stmt_p = mysqli_prepare($link, "SELECT userid FROM people WHERE userid = ?");
-            mysqli_stmt_bind_param($stmt_p, "s", $adduserid);
-            mysqli_stmt_execute($stmt_p);
-            if (!mysqli_fetch_assoc(mysqli_stmt_get_result($stmt_p))) {
-                $message = "<h2 style='color:#c00;'>Selected user does not exist.</h2>";
-            } else {
-                $stmt = mysqli_prepare($link, "SELECT viewer FROM viewList WHERE viewer = ? AND pid = ?");
-                mysqli_stmt_bind_param($stmt, "ss", $adduserid, $userid);
-                mysqli_stmt_execute($stmt);
-                if (mysqli_fetch_assoc(mysqli_stmt_get_result($stmt))) {
-                    $message = "<h2>That person can already view your list.</h2>";
-                } else {
-                    $stmt_ins = mysqli_prepare($link, "INSERT INTO viewList (viewContactInfo, readOnly, allowEdit, pid, viewer, lastViewDate) VALUES (0, 1, 0, ?, ?, NOW())");
-                    mysqli_stmt_bind_param($stmt_ins, "ss", $userid, $adduserid);
-                    mysqli_stmt_execute($stmt_ins);
-                    $message = "<h2>Person added (Read-Only by default; uncheck Read Only below to allow purchasing).</h2>";
+            $stmt_vl = mysqli_prepare($link, "SELECT 1 FROM viewList WHERE pid = ? AND viewer = ?");
+            $stmt_ex = mysqli_prepare($link, "SELECT id, status FROM accessRequests WHERE requesterId = ? AND targetId = ? ORDER BY id DESC LIMIT 1");
+            $stmt_re = mysqli_prepare($link, "UPDATE accessRequests SET status = 'pending', requestDate = NOW(), notified = 0 WHERE id = ?");
+            $stmt_ins = mysqli_prepare($link, "INSERT INTO accessRequests (requesterId, targetId, status, notified) VALUES (?, ?, 'pending', 0)");
+
+            foreach (array_keys($selectedIds) as $adduserid) {
+                mysqli_stmt_bind_param($stmt_p, "s", $adduserid);
+                mysqli_stmt_execute($stmt_p);
+                if (!mysqli_fetch_assoc(mysqli_stmt_get_result($stmt_p))) {
+                    continue;
                 }
+
+                mysqli_stmt_bind_param($stmt_vl, "ss", $adduserid, $requesterId);
+                mysqli_stmt_execute($stmt_vl);
+                if (mysqli_fetch_assoc(mysqli_stmt_get_result($stmt_vl))) {
+                    $alreadyViewCount++;
+                    continue;
+                }
+
+                mysqli_stmt_bind_param($stmt_ex, "ss", $requesterId, $adduserid);
+                mysqli_stmt_execute($stmt_ex);
+                $existing_req = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt_ex));
+
+                if ($existing_req && $existing_req['status'] === 'pending') {
+                    $alreadyPendingCount++;
+                } elseif ($existing_req) {
+                    $req_id = (int)$existing_req['id'];
+                    mysqli_stmt_bind_param($stmt_re, "i", $req_id);
+                    mysqli_stmt_execute($stmt_re);
+                    $sentCount++;
+                } else {
+                    mysqli_stmt_bind_param($stmt_ins, "ss", $requesterId, $adduserid);
+                    mysqli_stmt_execute($stmt_ins);
+                    $sentCount++;
+                }
+            }
+
+            if ($sentCount > 0) {
+                $label = ($sentCount === 1) ? "1 access request has been sent." : ($sentCount . " access requests have been sent.");
+                $message = "<h2>" . escapeText($label) . " You will be notified when they respond.</h2>";
+            } elseif ($alreadyPendingCount > 0) {
+                $message = "<h2>You already have pending access request(s) for the selected user(s).</h2>";
+            } elseif ($alreadyViewCount > 0) {
+                $message = "<h2>You already have access to view the selected list(s).</h2>";
+            } else {
+                $message = "<h2 style='color:#c00;'>Selected user does not exist.</h2>";
+            }
+        }
+    } elseif ($action === "startViewMine") {
+        $selectedIds = [];
+        if (isset($_POST["userids"]) && is_array($_POST["userids"])) {
+            foreach ($_POST["userids"] as $uidItem) {
+                $uidTrim = trim((string)$uidItem);
+                if ($uidTrim !== "") {
+                    $selectedIds[$uidTrim] = true;
+                }
+            }
+        }
+        $singleUid = trim((string)($_POST["userid"] ?? ""));
+        if ($singleUid !== "") {
+            $selectedIds[$singleUid] = true;
+        }
+        unset($selectedIds[$userid]);
+
+        $shareContact = !empty($_POST["share_contact"]) ? 1 : 0;
+
+        if (empty($selectedIds)) {
+            $message = "<h2 style='color:#c00;'>Please select at least one person to add.</h2>";
+        } else {
+            $addedCount = 0;
+            $alreadyCount = 0;
+
+            $stmt_p = mysqli_prepare($link, "SELECT userid FROM people WHERE userid = ?");
+            $stmt_chk = mysqli_prepare($link, "SELECT viewer FROM viewList WHERE viewer = ? AND pid = ?");
+            // Default readOnly = 0 (Full Purchasing) so family members can check off gifts right away
+            $stmt_ins = mysqli_prepare($link, "INSERT INTO viewList (viewContactInfo, readOnly, allowEdit, pid, viewer, lastViewDate) VALUES (?, 0, 0, ?, ?, NOW())");
+
+            foreach (array_keys($selectedIds) as $adduserid) {
+                mysqli_stmt_bind_param($stmt_p, "s", $adduserid);
+                mysqli_stmt_execute($stmt_p);
+                if (!mysqli_fetch_assoc(mysqli_stmt_get_result($stmt_p))) {
+                    continue;
+                }
+
+                mysqli_stmt_bind_param($stmt_chk, "ss", $adduserid, $userid);
+                mysqli_stmt_execute($stmt_chk);
+                if (mysqli_fetch_assoc(mysqli_stmt_get_result($stmt_chk))) {
+                    $alreadyCount++;
+                    continue;
+                }
+
+                mysqli_stmt_bind_param($stmt_ins, "iss", $shareContact, $userid, $adduserid);
+                mysqli_stmt_execute($stmt_ins);
+                $addedCount++;
+            }
+
+            if ($addedCount > 0) {
+                $whoText = ($addedCount === 1) ? "1 person added" : ($addedCount . " people added");
+                $message = "<h2>" . escapeText($whoText) . " with Full Purchasing access (adjust Read-Only or Contact settings below anytime).</h2>";
+            } elseif ($alreadyCount > 0) {
+                $message = "<h2>Selected person(s) can already view your list.</h2>";
+            } else {
+                $message = "<h2 style='color:#c00;'>Selected user does not exist.</h2>";
             }
         }
     } elseif ($action === "hideContactInfo") {
@@ -197,15 +261,93 @@ $row = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt_info)) ?? [];
 $fullName = trim(($row['firstname'] ?? '') . ' ' . ($row['lastname'] ?? '') . ' ' . ($row['suffix'] ?? ''));
 $bdayDisplay = (!empty($row['bmonth']) && !empty($row['bday'])) ? ($row['bmonth'] . ' ' . $row['bday']) : 'Not set';
 $csrf_token = getCsrfToken();
+
+$addViewerGroups = [];
+$requestListGroups = [];
+if ($can_manage_permissions) {
+    $currentViewersMap = [];
+    $stmt_cv = mysqli_prepare($link, "SELECT viewer FROM viewList WHERE pid = ?");
+    mysqli_stmt_bind_param($stmt_cv, "s", $userid);
+    mysqli_stmt_execute($stmt_cv);
+    $res_cv = mysqli_stmt_get_result($stmt_cv);
+    while ($cv = mysqli_fetch_assoc($res_cv)) {
+        $currentViewersMap[$cv['viewer']] = true;
+    }
+
+    $currentViewableMap = [];
+    $stmt_co = mysqli_prepare($link, "SELECT pid FROM viewList WHERE viewer = ?");
+    mysqli_stmt_bind_param($stmt_co, "s", $userid);
+    mysqli_stmt_execute($stmt_co);
+    $res_co = mysqli_stmt_get_result($stmt_co);
+    while ($co = mysqli_fetch_assoc($res_co)) {
+        $currentViewableMap[$co['pid']] = true;
+    }
+
+    $pendingOutgoingMap = [];
+    $stmt_po = mysqli_prepare($link, "SELECT targetId FROM accessRequests WHERE requesterId = ? AND status = 'pending'");
+    mysqli_stmt_bind_param($stmt_po, "s", $userid);
+    mysqli_stmt_execute($stmt_po);
+    $res_po = mysqli_stmt_get_result($stmt_po);
+    while ($po = mysqli_fetch_assoc($res_po)) {
+        $pendingOutgoingMap[$po['targetId']] = true;
+    }
+
+    $stmt_all_p = mysqli_prepare($link, "SELECT userid, firstname, lastname, suffix FROM people WHERE userid != ? ORDER BY lastname, firstname");
+    mysqli_stmt_bind_param($stmt_all_p, "s", $userid);
+    mysqli_stmt_execute($stmt_all_p);
+    $res_all_p = mysqli_stmt_get_result($stmt_all_p);
+    while ($pr = mysqli_fetch_assoc($res_all_p)) {
+        $fam = trim((string)($pr['lastname'] ?? ''));
+        $famLabel = ($fam !== '' ? ($fam . ' Family') : 'Other');
+        $dispName = trim(($pr['firstname'] ?? '') . ' ' . ($pr['lastname'] ?? '') . ' ' . ($pr['suffix'] ?? ''));
+        if ($dispName === '') {
+            $dispName = $pr['userid'];
+        }
+        $uidKey = $pr['userid'];
+
+        if (empty($currentViewersMap[$uidKey])) {
+            $addViewerGroups[$famLabel][] = [
+                'userid' => $uidKey,
+                'name' => $dispName
+            ];
+        }
+        if (empty($currentViewableMap[$uidKey])) {
+            $requestListGroups[$famLabel][] = [
+                'userid' => $uidKey,
+                'name' => $dispName,
+                'pending' => !empty($pendingOutgoingMap[$uidKey])
+            ];
+        }
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="../style.css" type="text/css">
+  <link rel="stylesheet" href="../style.css?v=<?php echo (int)@filemtime(__DIR__ . '/../style.css'); ?>" type="text/css">
+  <link rel="stylesheet" href="../css/select2.min.css?v=<?php echo (int)@filemtime(__DIR__ . '/../css/select2.min.css'); ?>" type="text/css">
   <link rel="manifest" href="../manifest.json">
   <title>Update Account Information</title>
+  <script src="../js/jquery-3.7.1.min.js"></script>
+  <script src="../js/select2.min.js"></script>
+  <script>
+  $(document).ready(function() {
+    if (typeof $.fn.select2 === 'function') {
+      $('#addViewersSelect').select2({
+        placeholder: 'Search or pick family members to add...',
+        allowClear: true,
+        width: '100%'
+      });
+      $('#requestListsSelect').select2({
+        placeholder: 'Search or pick family members to request...',
+        allowClear: true,
+        width: '100%'
+      });
+    }
+  });
+  </script>
 </head>
 <body>
 <table class="pagetable">
@@ -266,39 +408,31 @@ $csrf_token = getCsrfToken();
     <table style="border-collapse: collapse;" border="0" cellpadding="2" cellspacing="0" width="100%">
       <tr>
         <td align="center" bgcolor="#6702cc">
-          <font size="3" color="white"><b>Add a person so they can view your list</b></font>
+          <font size="3" color="white"><b>Add people so they can view your list</b></font>
         </td>
       </tr>
       <tr>
-        <td>
-          Enter the person's name or username:<br>
-          <form method="post" action="updateAccount.php">
+        <td style="padding:8px 6px;">
+          <form method="post" action="updateAccount.php" style="margin:0;">
             <input type="hidden" name="csrf_token" value="<?php echo escapeText($csrf_token); ?>">
             <input type="hidden" name="target_userid" value="<?php echo escapeText($userid); ?>">
-            <input type="hidden" name="action" value="addUser">
-            <input type="text" size="20" name="searchUser" value="<?php echo $action === 'addUser' ? escapeText($_REQUEST['searchUser'] ?? '') : ''; ?>">
-            <input type="submit" value="Go">
+            <input type="hidden" name="action" value="startViewMine">
+            <div style="margin-bottom:6px; font-size:13px;">Select one or more family members (granted <b>Full Purchasing</b> access by default):</div>
+            <select name="userids[]" id="addViewersSelect" multiple style="width:100%; max-width:360px;">
+              <?php foreach ($addViewerGroups as $famGroup => $members): ?>
+                <optgroup label="<?php echo escapeText($famGroup); ?>">
+                  <?php foreach ($members as $m): ?>
+                    <option value="<?php echo escapeText($m['userid']); ?>"><?php echo escapeText($m['name']); ?> (<?php echo escapeText($m['userid']); ?>)</option>
+                  <?php endforeach; ?>
+                </optgroup>
+              <?php endforeach; ?>
+            </select>
+            <label style="display:block; margin:8px 0; font-size:13px; cursor:pointer;">
+              <input type="checkbox" name="share_contact" value="1" checked>
+              Also share Birthday &amp; Shipping/Contact Info
+            </label>
+            <input type="submit" value="➕ Grant Access" class="buttonstyle">
           </form>
-          <?php
-          if ($action === "addUser") {
-              $searchUser = trim($_REQUEST["searchUser"] ?? "");
-              $search = "%" . $searchUser . "%";
-              $stmt_add = mysqli_prepare($link, "SELECT firstname, lastname, suffix, userid FROM people WHERE (userid LIKE ? OR firstname LIKE ? OR lastname LIKE ?) AND userid != ? ORDER BY lastname, firstname");
-              mysqli_stmt_bind_param($stmt_add, "ssss", $search, $search, $search, $userid);
-              mysqli_stmt_execute($stmt_add);
-              $res_add = mysqli_stmt_get_result($stmt_add);
-              while ($srow = mysqli_fetch_assoc($res_add)) {
-                  $sName = trim($srow["firstname"] . " " . $srow["lastname"] . " " . ($srow["suffix"] ?? ""));
-                  echo '<form method="post" action="updateAccount.php" style="display:inline; margin:0;">';
-                  echo '<input type="hidden" name="csrf_token" value="' . escapeText($csrf_token) . '">';
-                  echo '<input type="hidden" name="action" value="startViewMine">';
-                  echo '<input type="hidden" name="target_userid" value="' . escapeText($userid) . '">';
-                  echo '<input type="hidden" name="userid" value="' . escapeText($srow["userid"]) . '">';
-                  echo '<button type="submit" class="menuLink" style="background:none;border:none;padding:0;color:#0000cc;cursor:pointer;text-decoration:underline;">[Add]</button>';
-                  echo '</form> ' . escapeText($sName) . '<br>';
-              }
-          }
-          ?>
         </td>
       </tr>
     </table>
@@ -375,42 +509,31 @@ $csrf_token = getCsrfToken();
     <table style="border-collapse: collapse;" border="0" cellpadding="2" cellspacing="0" width="100%">
       <tr>
         <td align="center" bgcolor="#6702cc">
-          <font size="3" color="white"><b>Find someone else's list to view</b></font>
+          <font size="3" color="white"><b>Find lists to view</b></font>
         </td>
       </tr>
       <tr>
-        <td>
-          Enter the person's name or username:<br>
-          <form method="post" action="updateAccount.php">
+        <td style="padding:8px 6px;">
+          <form method="post" action="updateAccount.php" style="margin:0 0 12px 0;">
             <input type="hidden" name="csrf_token" value="<?php echo escapeText($csrf_token); ?>">
             <input type="hidden" name="target_userid" value="<?php echo escapeText($userid); ?>">
-            <input type="hidden" name="action" value="findUser">
-            <input type="text" size="20" name="searchUser" value="<?php echo $action === 'findUser' ? escapeText($_REQUEST['searchUser'] ?? '') : ''; ?>">
-            <input type="submit" value="Go">
+            <input type="hidden" name="action" value="startViewOther">
+            <div style="margin-bottom:6px; font-size:13px;">Select one or more family members to request access to their wishlists:</div>
+            <select name="userids[]" id="requestListsSelect" multiple style="width:100%; max-width:360px;">
+              <?php foreach ($requestListGroups as $famGroup => $members): ?>
+                <optgroup label="<?php echo escapeText($famGroup); ?>">
+                  <?php foreach ($members as $m): ?>
+                    <option value="<?php echo escapeText($m['userid']); ?>"<?php echo !empty($m['pending']) ? ' disabled' : ''; ?>>
+                      <?php echo escapeText($m['name']); ?> (<?php echo escapeText($m['userid']); ?>)<?php echo !empty($m['pending']) ? ' — Pending Request' : ''; ?>
+                    </option>
+                  <?php endforeach; ?>
+                </optgroup>
+              <?php endforeach; ?>
+            </select>
+            <div style="margin-top:8px;">
+              <input type="submit" value="📩 Request Access" class="buttonstyle">
+            </div>
           </form>
-
-          <?php
-          if ($action === "findUser") {
-              $searchUser = trim($_REQUEST["searchUser"] ?? "");
-              $search = "%" . $searchUser . "%";
-              $stmt_find = mysqli_prepare($link, "SELECT firstname, lastname, suffix, userid FROM people WHERE (userid LIKE ? OR firstname LIKE ? OR lastname LIKE ?) AND userid != ? ORDER BY lastname, firstname");
-              mysqli_stmt_bind_param($stmt_find, "ssss", $search, $search, $search, $userid);
-              mysqli_stmt_execute($stmt_find);
-              $res_find = mysqli_stmt_get_result($stmt_find);
-
-              while ($frow = mysqli_fetch_assoc($res_find)) {
-                  $fName = trim($frow["firstname"] . " " . $frow["lastname"] . " " . ($frow["suffix"] ?? ""));
-                  echo '<form method="post" action="updateAccount.php" style="display:inline; margin:0;">';
-                  echo '<input type="hidden" name="csrf_token" value="' . escapeText($csrf_token) . '">';
-                  echo '<input type="hidden" name="action" value="startViewOther">';
-                  echo '<input type="hidden" name="target_userid" value="' . escapeText($userid) . '">';
-                  echo '<input type="hidden" name="userid" value="' . escapeText($frow["userid"]) . '">';
-                  echo '<button type="submit" class="menuLink" style="background:none;border:none;padding:0;color:#0000cc;cursor:pointer;text-decoration:underline;">[Request Access]</button>';
-                  echo '</form> ' . escapeText($fName) . '<br>';
-              }
-              echo "<br>";
-          }
-          ?>
 
           <table style="border-collapse: collapse;" border="0" cellpadding="3" cellspacing="0" width="100%">
             <tr>

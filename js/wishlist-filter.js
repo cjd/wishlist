@@ -13,11 +13,14 @@ function filterWishlist(query) {
 
     categories.forEach(function(cat) {
         var items = cat.querySelectorAll('.sortable-item');
+        var headerEl = cat.querySelector('.categoryHeader');
+        var headerText = headerEl ? headerEl.textContent.toLowerCase() : '';
+        var catHeaderMatches = filter !== '' && headerText.indexOf(filter) !== -1;
         var catHasVisible = false;
 
         items.forEach(function(item) {
             var text = item.textContent.toLowerCase();
-            if (filter === '' || text.indexOf(filter) !== -1) {
+            if (filter === '' || catHeaderMatches || text.indexOf(filter) !== -1) {
                 item.style.display = '';
                 catHasVisible = true;
                 totalMatches++;
@@ -26,8 +29,8 @@ function filterWishlist(query) {
             }
         });
 
-        // Hide category if no items matched and filter is non-empty
-        if (filter !== '' && !catHasVisible && items.length > 0) {
+        // Hide category while filtering unless its header or at least one item matched
+        if (filter !== '' && !catHasVisible && !catHeaderMatches) {
             cat.style.display = 'none';
         } else {
             cat.style.display = '';

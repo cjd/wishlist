@@ -53,23 +53,41 @@ $qtyRaw = $_POST["quantity"] ?? 1;
 $quantity = is_numeric($qtyRaw) ? max(1, (int)$qtyRaw) : 1;
 
 $subdesc = trim((string)($_POST["subdesc"] ?? ''));
-$link1 = trim((string)($_POST["link1"] ?? ''));
-$link1url_in = trim((string)($_POST["link1url"] ?? ''));
 
-$link1url = '';
-if ($link1url_in !== '') {
-    if (!preg_match('#^https?://#i', $link1url_in)) {
-        $link1url_in = 'https://' . $link1url_in;
+$parseLinkPair = function($nameKey, $urlKey) {
+    $nameVal = trim((string)($_POST[$nameKey] ?? ''));
+    $urlIn = trim((string)($_POST[$urlKey] ?? ''));
+    $cleanUrl = '';
+    if ($urlIn !== '') {
+        if (!preg_match('#^https?://#i', $urlIn)) {
+            $urlIn = 'https://' . $urlIn;
+        }
+        $cleanUrl = sanitizeHttpUrl($urlIn, false);
     }
-    $link1url = sanitizeHttpUrl($link1url_in, false);
-}
+    if ($cleanUrl === '') {
+        return ['', ''];
+    }
+    if ($nameVal === '' || strtolower($nameVal) === 'link') {
+        $host = parse_url($cleanUrl, PHP_URL_HOST);
+        $nameVal = $host ? preg_replace('/^www\./i', '', $host) : 'Link';
+    }
+    return [$nameVal, $cleanUrl];
+};
 
-if ($link1url === '') {
-    $link1 = '';
-} elseif ($link1 === '' || strtolower($link1) === 'link') {
-    $host = parse_url($link1url, PHP_URL_HOST);
-    $link1 = $host ? preg_replace('/^www\./i', '', $host) : 'Link';
+$rawPairs = [
+    $parseLinkPair('link1', 'link1url'),
+    $parseLinkPair('link2', 'link2url'),
+    $parseLinkPair('link3', 'link3url')
+];
+$filledPairs = array_values(array_filter($rawPairs, function($p) {
+    return $p[1] !== '';
+}));
+while (count($filledPairs) < 3) {
+    $filledPairs[] = ['', ''];
 }
+[$link1, $link1url] = $filledPairs[0];
+[$link2, $link2url] = $filledPairs[1];
+[$link3, $link3url] = $filledPairs[2];
 
 $allowCheck = !empty($_POST["allowCheck"]) ? "true" : "false";
 $addStar = !empty($_POST["addStar"]) ? "1" : "0";
@@ -88,8 +106,8 @@ try {
         $iso = max(0, (int)($row_iso["next_iso"] ?? 0));
     }
 
-    $stmt = mysqli_prepare($link, "UPDATE items SET title = ?, description = ?, quantity = ?, subdesc = ?, price = ?, allowCheck = ?, addStar = ?, link1 = ?, link1url = ?, itemSortOrder = ?, cid = ? WHERE iid = ?");
-    mysqli_stmt_bind_param($stmt, "ssisdsissiii", $title, $description, $quantity, $subdesc, $price, $allowCheck, $addStar, $link1, $link1url, $iso, $movecid, $iid);
+    $stmt = mysqli_prepare($link, "UPDATE items SET title = ?, description = ?, quantity = ?, subdesc = ?, price = ?, allowCheck = ?, addStar = ?, link1 = ?, link1url = ?, link2 = ?, link2url = ?, link3 = ?, link3url = ?, itemSortOrder = ?, cid = ? WHERE iid = ?");
+    mysqli_stmt_bind_param($stmt, "ssisdssssssssiii", $title, $description, $quantity, $subdesc, $price, $allowCheck, $addStar, $link1, $link1url, $link2, $link2url, $link3, $link3url, $iso, $movecid, $iid);
     mysqli_stmt_execute($stmt);
 
     if (abs($price - $oldPrice) >= 0.005) {

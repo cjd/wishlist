@@ -8,9 +8,9 @@ $registrationDisabled = true;
 <HTML>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<link rel="stylesheet" href="style.css" type="text/css">
+<link rel="stylesheet" href="style.css?v=<?php echo (int)@filemtime(__DIR__ . '/style.css'); ?>" type="text/css">
 <script type="text/javascript">window.WISHLIST_BASE_URL = <?php echo json_encode($base_url, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;</script>
-<script src="js/theme.js"></script>
+<script src="js/theme.js?v=<?php echo (int)@filemtime(__DIR__ . '/js/theme.js'); ?>"></script>
 <title>WishList Register</title>
 </head>
 <BODY>

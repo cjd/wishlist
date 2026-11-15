@@ -19,14 +19,15 @@ A modern, responsive PHP-based web application designed to manage gift lists for
   * Reorder items within a category or drag items across different categories.
   * Reorder entire categories using the category drag handle (☰) with instant auto-saving and toast confirmations.
 * **Real-Time Duplicate Item Detection:** Checks against all existing items across every category as you type an item title or paste a store URL (preserving product query parameters while stripping tracking tags), displaying an instant warning banner on matches.
-* **Retailer Auto-Detection & Web Bookmarklet:** Automatically recognizes major retailers from product hostnames (Amazon, Big W, Kmart, Target, EB Games, JB Hi-Fi, Bunnings, Officeworks, Myer, Apple, eBay, Best Buy, Walmart, LEGO, Old Navy, Gap, etc.), formatting **"Find at [Store] ↗"** badges. Includes a browser **"Add to WishList"** bookmarklet ([wishlist_button.php](wishlist_button.php)) to clip items from any store page.
+* **One-Click Product URL Auto-Fill & Multi-Store Links:** Paste a product URL and click **✨ Auto-Fill from Link** (`modifyList/fetchUrlMetadata.php`, SSRF-hardened against private/loopback IPs) to extract Schema.org / OpenGraph title, price, retailer name, and thumbnail image automatically. Supports up to **3 retail store links** per item, a browser bookmarklet ([wishlist_button.php](wishlist_button.php)), and Android PWA **Web Share Target** (`manifest.json`).
+* **Interactive Post-Holiday Cleanup:** Spoiler-gated review in `modifyList/removeCrossedItems.php` lets owners per-item **Delete**, **Move to "Items Under Consideration"**, or **Keep remaining unbought quantity** without triggering buyer deletion warnings.
 * **Hardened Image Uploads & Thumbnails:** Supports JPEG, PNG, GIF, and WebP with `finfo` MIME validation, decompression-bomb protection, EXIF orientation auto-rotation, alpha-channel white-canvas compositing, non-destructive replacement on edit, and cache-busting URLs.
 * **Priority Star Marking:** Highlight most-wanted gifts with star priority badges.
 
 ### 3. 👀 Wishlist Browsing & Viewing
 * **Batched Query Performance:** Loads categories, items, and purchase histories in 3 indexed SQL queries (eliminating N+1 query overhead).
-* **Instant Live Search & Unsaved-Changes Bar:** Real-time search filter bar atop every wishlist plus a sticky save bar whenever purchase selections are modified.
-* **Hover Zoom Image Popover:** Hover over any item thumbnail for an instant zoomed preview; click to view in full resolution via Featherlight.
+* **Instant Live Search, NEW Item Badges & Unsaved-Changes Bar:** Real-time category/item search filter bar, `🟢 N new` / `✨ NEW` badges for items added since your last visit, upcoming 45-day Birthday/Holiday banner on `home.php`, collapsible Shipping Address & Birthday copy drawer on `viewList.php`, and a sticky save bar whenever purchase selections are modified.
+* **Native `<dialog>` Image Lightbox:** Click or tap any item thumbnail to view full resolution in a lightweight, self-hosted `<dialog>` lightbox (`js/lightbox.js`).
 * **Spoiler-Free & Checklist Printing:** Dedicated **🖨️ Print List** views strip navigation and action clutter—preserving purchase marks for shoppers while hiding all purchase indicators on the list owner's print view so surprises stay safe.
 * **Secret Viewer Comments:** A private comments section visible exclusively to authorized viewers and hidden from the list owner.
 
@@ -36,7 +37,8 @@ A modern, responsive PHP-based web application designed to manage gift lists for
   * **Searchable User Picker:** Select registered co-buyers via a Select2 multi-select dropdown and add optional split notes (e.g., *"50/50 with Sarah"*).
   * **Targeted Co-Buyer Notifications:** Automatically links the purchase into **View Purchases** for all selected co-buyers and sends internal notifications *only* to those co-buyers (solo purchases never broadcast messages).
   * **Public Badges:** Displays purple **`👥 Split with [Names]`** badges to fellow viewers so nobody buys a duplicate.
-* **Secret Gift Suggestion Box:** Viewers can propose off-list gift ideas via **"💡 Suggest Secret Gift Idea"** with title, retail URL, estimated price, and private notes—rendered as styled suggestion cards for viewers while completely invisible to the recipient.
+* **Claimable Secret Gift Suggestion Box:** Viewers can propose off-list gift ideas via **"💡 Suggest Secret Gift Idea"** with title, retail URL, estimated price, and private notes—and fellow shoppers can click **`🎁 Claim / Mark Bought`** (with optional co-buyer split) so nobody buys the same off-list gift twice. Claimed secret suggestions are protected from comment expiration and included in **View Purchases** spending totals.
+* **Anonymous Gift Shopper Questions:** Shoppers can send size/detail questions anonymously as **`🕵️ A Gift Shopper`** from `viewList.php` without spoiling their identity.
 
 ### 5. 💰 Gift Purchases & Budgeting
 * **Purchase History Log:** Track every gift purchased (including shared group gifts) across all family wishlists with one-click purchase undo.
@@ -45,12 +47,12 @@ A modern, responsive PHP-based web application designed to manage gift lists for
 
 ### 6. 🌙 Modern UI & Mobile Experience
 * **Seamless Dark Mode:** Complete dark theme with system preference auto-detection and persistent toggle control in the navigation bar.
-* **Privacy-Safe Progressive Web App (PWA):** Installable on iOS, Android, and Desktop via `manifest.json` and `service-worker.js` (`wishlist-v2`), strictly caching static UI assets while never caching authenticated HTML pages or private `/uploads/` images.
+* **Privacy-Safe Progressive Web App (PWA):** Installable on iOS, Android, and Desktop via `manifest.json` (with `share_target`) and `service-worker.js` (`wishlist-v9`), using network-first caching for CSS/JS and never caching authenticated HTML pages or private `/uploads/` images. All frontend libraries are 100% self-hosted.
 * **Interactive Help Center:** Searchable, deep-linkable FAQ in [help.php](help.php) with category tabs and collapsible accordions.
 
 ### 7. 💬 Internal Messaging & Administration
 * **Direct Messaging:** Send internal messages to authorized list viewers with safe HTML formatting, Secret Gift card rendering, read/unread toggles, and deletion from both **Inbox** and **Sent Messages**.
-* **Access Requests:** Streamlined list access requests with login modal notifications for owners and requesters.
+* **Access Requests & Family Sharing:** Family-grouped Select2 multi-select pickers in `updateAccount.php` (defaulting to Full Purchasing) plus one-click **"🔄 Approve & Request Their List Back"** on `home.php`.
 * **Transactional Admin Control Panel:** Create users, rename User IDs transactionally across all relational tables, perform cascading user deletions (including uploaded images), manage admin roles, and track automatic schema migrations.
 
 ---
@@ -58,9 +60,9 @@ A modern, responsive PHP-based web application designed to manage gift lists for
 ## 🛠️ Technology Stack
 
 * **Server:** PHP 8.x (`mysqli` prepared statements, `.user.ini` hardening)
-* **Database:** MySQL 8.x / MariaDB (`InnoDB`, `utf8mb4_unicode_ci`, versioned migrations `db/V1_schema.sql` – `db/V3_schema.sql`)
+* **Database:** MySQL 8.x / MariaDB (`InnoDB`, `utf8mb4_unicode_ci`, versioned migrations `db/V1_schema.sql` – `db/V4_schema.sql`)
 * **Frontend:** HTML5, CSS3 (Light, Dark, and Print stylesheets), Vanilla JS
-* **Libraries:** jQuery 3.7.1, SortableJS, Select2 4.1, Featherlight Lightbox
+* **Libraries (100% Self-Hosted):** jQuery 3.7.1, SortableJS 1.15.6, Select2 4.1, Native `<dialog>` Lightbox (`js/lightbox.js`)
 * **Deployment:** Docker / Nginx / PHP-FPM / Syncthing (`.stignore` configured)
 
 ---
@@ -70,5 +72,5 @@ A modern, responsive PHP-based web application designed to manage gift lists for
 1. **Clone or Extract:** Place the files in your web server's document root (e.g., `/var/www/lists/`).
 2. **Access Setup:** Open the web application in your browser (e.g., `https://your-domain.com/`). If unconfigured, it routes to the setup wizard (`admin.php?setup=true`).
 3. **Database Configuration:** Provide database credentials (host, database name, user, password).
-4. **Create Administrator:** Complete the setup form to generate `config.php` (`0640` permissions), apply `db/V1_schema.sql` – `db/V3_schema.sql`, and create the primary administrator account.
+4. **Create Administrator:** Complete the setup form to generate `config.php` (`0640` permissions), apply `db/V1_schema.sql` – `db/V4_schema.sql`, and create the primary administrator account.
 5. **Permissions & Uploads:** Ensure the `uploads/` directory is writable by the PHP-FPM user (`www-data`) and excluded from public PHP execution.

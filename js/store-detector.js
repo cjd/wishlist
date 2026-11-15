@@ -87,9 +87,9 @@
         return '';
     }
 
-    function initStoreDetector() {
-        var urlInput = document.querySelector('input[name="link1url"]');
-        var nameInput = document.querySelector('input[name="link1"]');
+    function bindLinkPair(urlFieldName, nameFieldName) {
+        var urlInput = document.querySelector('input[name="' + urlFieldName + '"]');
+        var nameInput = document.querySelector('input[name="' + nameFieldName + '"]');
 
         if (!urlInput || !nameInput) return;
 
@@ -114,6 +114,13 @@
             setTimeout(onUrlChange, 50);
         });
         urlInput.addEventListener('change', onUrlChange);
+    }
+
+    function initStoreDetector() {
+        bindLinkPair('link1url', 'link1');
+        bindLinkPair('link2url', 'link2');
+        bindLinkPair('link3url', 'link3');
+        bindLinkPair('wlurl', 'wlurlname');
     }
 
     if (document.readyState === 'loading') {

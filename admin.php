@@ -76,6 +76,26 @@ if ($action === "commitDelete") {
             mysqli_stmt_bind_param($stmt, "ss", $delUserid, $delUserid);
             mysqli_stmt_execute($stmt);
 
+            $stmt = mysqli_prepare($link, "UPDATE comments SET claimed_by = NULL, claimed_date = NULL, split_users = '', split_with = '' WHERE claimed_by = ?");
+            mysqli_stmt_bind_param($stmt, "s", $delUserid);
+            mysqli_stmt_execute($stmt);
+
+            $res_csplits = mysqli_query($link, "SELECT commentId, split_users FROM comments WHERE split_users IS NOT NULL AND split_users != ''");
+            if ($res_csplits) {
+              $stmt_upd_csplit = mysqli_prepare($link, "UPDATE comments SET split_users = ? WHERE commentId = ?");
+              while ($csp_row = mysqli_fetch_assoc($res_csplits)) {
+                $cparts = array_filter(array_map('trim', explode(',', $csp_row['split_users'])), function ($u) use ($delUserid) {
+                  return $u !== '' && $u !== $delUserid;
+                });
+                $new_csplit = implode(',', $cparts);
+                if ($new_csplit !== $csp_row['split_users']) {
+                  $cid_int = (int)$csp_row['commentId'];
+                  mysqli_stmt_bind_param($stmt_upd_csplit, "si", $new_csplit, $cid_int);
+                  mysqli_stmt_execute($stmt_upd_csplit);
+                }
+              }
+            }
+
             $stmt = mysqli_prepare($link, "DELETE FROM purchaseHistory WHERE userid = ?");
             mysqli_stmt_bind_param($stmt, "s", $delUserid);
             mysqli_stmt_execute($stmt);
@@ -113,9 +133,8 @@ if ($action === "commitDelete") {
             mysqli_stmt_bind_param($stmt, "ss", $delUserid, $delUserid);
             mysqli_stmt_execute($stmt);
 
-            $loginKey = 'user:' . strtolower($delUserid);
-            $stmt = mysqli_prepare($link, "DELETE FROM loginAttempts WHERE identifier = ?");
-            mysqli_stmt_bind_param($stmt, "s", $loginKey);
+            $stmt = mysqli_prepare($link, "DELETE FROM loginAttempts WHERE userid = ?");
+            mysqli_stmt_bind_param($stmt, "s", $delUserid);
             mysqli_stmt_execute($stmt);
 
             $stmt = mysqli_prepare($link, "DELETE FROM categories WHERE userid = ?");
@@ -179,6 +198,7 @@ if ($action === "commitDelete") {
           ["UPDATE viewList SET viewer = ? WHERE viewer = ?", "ss", [$newUserid, $oldUserid]],
           ["UPDATE comments SET userid = ? WHERE userid = ?", "ss", [$newUserid, $oldUserid]],
           ["UPDATE comments SET comment_userid = ? WHERE comment_userid = ?", "ss", [$newUserid, $oldUserid]],
+          ["UPDATE comments SET claimed_by = ? WHERE claimed_by = ?", "ss", [$newUserid, $oldUserid]],
           ["UPDATE purchaseHistory SET userid = ? WHERE userid = ?", "ss", [$newUserid, $oldUserid]],
           ["UPDATE messages SET sender_id = ? WHERE sender_id = ?", "ss", [$newUserid, $oldUserid]],
           ["UPDATE messages SET recipient_id = ? WHERE recipient_id = ?", "ss", [$newUserid, $oldUserid]],
@@ -215,10 +235,25 @@ if ($action === "commitDelete") {
           }
         }
 
-        $oldKey = 'user:' . strtolower($oldUserid);
-        $newKey = 'user:' . strtolower($newUserid);
-        $stmt_la = mysqli_prepare($link, "UPDATE loginAttempts SET identifier = ? WHERE identifier = ?");
-        mysqli_stmt_bind_param($stmt_la, "ss", $newKey, $oldKey);
+        $res_csplits = mysqli_query($link, "SELECT commentId, split_users FROM comments WHERE split_users IS NOT NULL AND split_users != ''");
+        if ($res_csplits) {
+          $stmt_upd_csplit = mysqli_prepare($link, "UPDATE comments SET split_users = ? WHERE commentId = ?");
+          while ($csp_row = mysqli_fetch_assoc($res_csplits)) {
+            $cparts = array_map(function ($u) use ($oldUserid, $newUserid) {
+              $trimmed = trim($u);
+              return $trimmed === $oldUserid ? $newUserid : $trimmed;
+            }, explode(',', $csp_row['split_users']));
+            $new_csplit = implode(',', $cparts);
+            if ($new_csplit !== $csp_row['split_users']) {
+              $cid_int = (int)$csp_row['commentId'];
+              mysqli_stmt_bind_param($stmt_upd_csplit, "si", $new_csplit, $cid_int);
+              mysqli_stmt_execute($stmt_upd_csplit);
+            }
+          }
+        }
+
+        $stmt_la = mysqli_prepare($link, "UPDATE loginAttempts SET userid = ? WHERE userid = ?");
+        mysqli_stmt_bind_param($stmt_la, "ss", $newUserid, $oldUserid);
         mysqli_stmt_execute($stmt_la);
 
         mysqli_commit($link);
@@ -361,7 +396,7 @@ if ($action === "commitDelete") {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="style.css" type="text/css">
+  <link rel="stylesheet" href="style.css?v=<?php echo (int)@filemtime(__DIR__ . '/style.css'); ?>" type="text/css">
   <link rel="manifest" href="manifest.json">
   <title>WishList Admin Page</title>
 </head>
@@ -634,7 +669,7 @@ function createConfig() {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="style.css" type="text/css">
+  <link rel="stylesheet" href="style.css?v=<?php echo (int)@filemtime(__DIR__ . '/style.css'); ?>" type="text/css">
   <title>WishList Setup</title>
 </head>
 <body>

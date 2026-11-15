@@ -24,15 +24,22 @@ $cname = $item_row["catName"];
 $csrf_token = getCsrfToken();
 
 $existingItems = [];
-$stmt_exist = mysqli_prepare($link, "SELECT items.iid, items.title, items.link1url, categories.name AS catName FROM items JOIN categories ON items.cid = categories.cid WHERE categories.userid = ? AND items.iid != ?");
+$stmt_exist = mysqli_prepare($link, "SELECT items.iid, items.title, items.link1url, items.link2url, items.link3url, categories.name AS catName FROM items JOIN categories ON items.cid = categories.cid WHERE categories.userid = ? AND items.iid != ?");
 mysqli_stmt_bind_param($stmt_exist, "si", $userid, $iid);
 mysqli_stmt_execute($stmt_exist);
 $res_exist = mysqli_stmt_get_result($stmt_exist);
 while ($row_exist = mysqli_fetch_assoc($res_exist)) {
+    $urls = [];
+    foreach (['link1url', 'link2url', 'link3url'] as $lk) {
+        if (!empty($row_exist[$lk])) {
+            $urls[] = html_entity_decode((string)$row_exist[$lk], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        }
+    }
     $existingItems[] = [
         'iid' => (int)$row_exist['iid'],
         'title' => html_entity_decode((string)$row_exist['title'], ENT_QUOTES | ENT_HTML5, 'UTF-8'),
-        'url' => html_entity_decode((string)($row_exist['link1url'] ?? ''), ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+        'url' => $urls[0] ?? '',
+        'urls' => $urls,
         'cat' => html_entity_decode((string)$row_exist['catName'], ENT_QUOTES | ENT_HTML5, 'UTF-8')
     ];
 }
@@ -49,7 +56,7 @@ $imgVer = ($safeImgBase !== '' && is_file($base_dir . "/uploads/" . $safeImgBase
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="../style.css" type="text/css">
+  <link rel="stylesheet" href="../style.css?v=<?php echo (int)@filemtime(__DIR__ . '/../style.css'); ?>" type="text/css">
   <link rel="manifest" href="../manifest.json">
   <title>Edit Item</title>
 </head>
@@ -128,16 +135,47 @@ $imgVer = ($safeImgBase !== '' && is_file($base_dir . "/uploads/" . $safeImgBase
     <input type="number" min="1" step="1" size="7" name="quantity" value="<?php echo max(1, (int)($item_row["quantity"] ?? 1)); ?>" required>
   </td>
 </tr>
+<?php
+$hasLink2 = !empty($item_row["link2url"]);
+$hasLink3 = !empty($item_row["link3url"]);
+?>
 <tr>
   <td align="right">
     <table>
-      <tr><td align="right"><b>Link Name</b></td></tr>
+      <tr><td align="right"><b>Store / Name</b></td></tr>
       <tr><td align="right"><b>URL</b></td></tr>
     </table>
   </td>
   <td bgcolor="#eeeeee">
-    <input type="text" size="50" name="link1" id="link1" value="<?php echo escapeText($item_row["link1"] ?? ''); ?>"><br>
-    <input type="text" size="80" style="width:100%;box-sizing:border-box;" name="link1url" id="link1url" value="<?php echo escapeText($item_row["link1url"] ?? ''); ?>">
+    <input type="text" size="50" name="link1" id="link1" placeholder="Auto-detected from URL, or type store name" value="<?php echo escapeText($item_row["link1"] ?? ''); ?>"><br>
+    <input type="text" size="80" style="width:100%;box-sizing:border-box;" name="link1url" id="link1url" placeholder="Paste item link (https://...)" value="<?php echo escapeText($item_row["link1url"] ?? ''); ?>">
+    <div id="addMoreStoreBtnRow" style="<?php echo ($hasLink2 && $hasLink3) ? 'display:none;' : 'margin-top:4px;'; ?>">
+      <button type="button" class="actionButton" style="font-size:12px;" onclick="revealNextStoreRow()">➕ Add another store option (up to 3)</button>
+    </div>
+  </td>
+</tr>
+<tr id="storeRow2" style="<?php echo $hasLink2 ? '' : 'display:none;'; ?>">
+  <td align="right">
+    <table>
+      <tr><td align="right"><b>Store #2</b></td></tr>
+      <tr><td align="right"><b>URL #2</b></td></tr>
+    </table>
+  </td>
+  <td bgcolor="#eeeeee">
+    <input type="text" size="50" name="link2" id="link2" placeholder="Auto-detected from URL, or type store name" value="<?php echo escapeText($item_row["link2"] ?? ''); ?>"><br>
+    <input type="text" size="80" style="width:100%;box-sizing:border-box;" name="link2url" id="link2url" placeholder="Paste 2nd store link (optional)" value="<?php echo escapeText($item_row["link2url"] ?? ''); ?>">
+  </td>
+</tr>
+<tr id="storeRow3" style="<?php echo $hasLink3 ? '' : 'display:none;'; ?>">
+  <td align="right">
+    <table>
+      <tr><td align="right"><b>Store #3</b></td></tr>
+      <tr><td align="right"><b>URL #3</b></td></tr>
+    </table>
+  </td>
+  <td bgcolor="#eeeeee">
+    <input type="text" size="50" name="link3" id="link3" placeholder="Auto-detected from URL, or type store name" value="<?php echo escapeText($item_row["link3"] ?? ''); ?>"><br>
+    <input type="text" size="80" style="width:100%;box-sizing:border-box;" name="link3url" id="link3url" placeholder="Paste 3rd store link (optional)" value="<?php echo escapeText($item_row["link3url"] ?? ''); ?>">
   </td>
 </tr>
 
@@ -199,8 +237,22 @@ $imgVer = ($safeImgBase !== '' && is_file($base_dir . "/uploads/" . $safeImgBase
 
 <script>
 window.existingWishlistItems = <?php echo json_encode($existingItems, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
+function revealNextStoreRow() {
+    var r2 = document.getElementById('storeRow2');
+    var r3 = document.getElementById('storeRow3');
+    var btnRow = document.getElementById('addMoreStoreBtnRow');
+    if (r2 && r2.style.display === 'none') {
+        r2.style.display = '';
+        if (r3 && r3.style.display !== 'none' && btnRow) btnRow.style.display = 'none';
+        return;
+    }
+    if (r3 && r3.style.display === 'none') {
+        r3.style.display = '';
+        if (btnRow) btnRow.style.display = 'none';
+    }
+}
 </script>
-<script src="../js/store-detector.js"></script>
-<script src="../js/duplicate-detector.js"></script>
+<script src="../js/store-detector.js?v=<?php echo (int)@filemtime(__DIR__ . '/../js/store-detector.js'); ?>"></script>
+<script src="../js/duplicate-detector.js?v=<?php echo (int)@filemtime(__DIR__ . '/../js/duplicate-detector.js'); ?>"></script>
 </body>
 </html>

@@ -900,7 +900,7 @@ input[type=checkbox] {
   background: linear-gradient(135deg, #6d28d9, #5b21b6) !important;
 }
 
-/* Item Image Thumbnail & Hover Zoom Popup */
+/* Item Image Thumbnail */
 .item-thumbnail-wrapper {
   position: relative;
   display: inline-block;
@@ -924,38 +924,6 @@ input[type=checkbox] {
   transform: scale(1.08);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
   border-color: #6702cc;
-}
-
-.item-thumbnail-popup {
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 0;
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
-  padding: 6px;
-  z-index: 1000;
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.2s;
-  transform: translateY(6px) scale(0.95);
-}
-
-.item-thumbnail-popup img {
-  display: block;
-  max-width: 250px;
-  max-height: 250px;
-  border-radius: 5px;
-  object-fit: contain;
-}
-
-.item-thumbnail-wrapper:hover .item-thumbnail-popup {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-  transform: translateY(0) scale(1);
 }
 
 /* Theme Toggle Button */
@@ -1368,12 +1336,6 @@ input[type=checkbox] {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
 }
 
-[data-theme="dark"] .item-thumbnail-popup {
-  background: #22272e !important;
-  border-color: #444c56 !important;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6) !important;
-}
-
 [data-theme="dark"] .back-to-top-btn {
   background-color: #4f46e5 !important;
   color: #ffffff !important;
@@ -1564,6 +1526,7 @@ input[type=checkbox] {
   .toast-container,
   .no-print,
   #unsavedPurchaseBar,
+  .wl-lightbox-dialog,
   hr {
     display: none !important;
   }
@@ -1659,5 +1622,744 @@ input[type=checkbox] {
   }
 }
 
+/* Native Image Lightbox (<dialog>) */
+.wl-lightbox-dialog {
+  border: none;
+  border-radius: 10px;
+  padding: 0;
+  max-width: 92vw;
+  max-height: 92vh;
+  background: #ffffff;
+  color: #1e293b;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+}
 
+.wl-lightbox-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.wl-lightbox-inner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px;
+}
+
+.wl-lightbox-img {
+  display: block;
+  max-width: 86vw;
+  max-height: 80vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 6px;
+}
+
+.wl-lightbox-caption {
+  margin-top: 10px;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  max-width: 80vw;
+}
+
+.wl-lightbox-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  background: rgba(255, 255, 255, 0.92);
+  color: #111827;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wl-lightbox-close:hover {
+  background: #ef4444;
+  color: #ffffff;
+  border-color: #ef4444;
+}
+
+[data-theme="dark"] .wl-lightbox-dialog {
+  background: #22272e;
+  color: #e4e6eb;
+  border: 1px solid #444c56;
+}
+
+[data-theme="dark"] .wl-lightbox-close {
+  background: rgba(34, 39, 46, 0.92);
+  color: #e4e6eb;
+  border-color: #444c56;
+}
+
+/* Upcoming Celebrations Banner (home.php) & Recipient Contact Card (viewList.php) */
+.celebrations-banner {
+  max-width: 720px;
+  margin: 10px auto 12px auto;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, #fefce8 0%, #fff7ed 100%);
+  border: 1px solid #fcd34d;
+  border-radius: 8px;
+  text-align: left;
+  font-family: Arial, sans-serif;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.celebrations-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #92400e;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.celebrations-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.celebration-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid #f59e0b;
+  color: #1e293b !important;
+  font-size: 13px;
+  text-decoration: none !important;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+a.celebration-pill:hover {
+  background: #fef3c7;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+}
+
+.celebration-holiday {
+  border-color: #16a34a;
+  background: #f0fdf4;
+}
+
+.celebration-when {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.recipient-contact-card {
+  margin: 0 0 10px 0;
+  padding: 8px 12px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+}
+
+.recipient-contact-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.recipient-bday-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e3a8a;
+  font-size: 13px;
+}
+
+.recipient-contact-drawer {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed #cbd5e1;
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+.recipient-address-block {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.recipient-phones-block {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  color: #334155;
+}
+
+[data-theme="dark"] .celebrations-banner {
+  background: #22272e;
+  border-color: #6e541b;
+}
+
+[data-theme="dark"] .celebrations-title {
+  color: #facc15;
+}
+
+[data-theme="dark"] .celebration-pill {
+  background: #2d333b;
+  border-color: #85641e;
+  color: #e4e6eb !important;
+}
+
+[data-theme="dark"] a.celebration-pill:hover {
+  background: #373e47;
+}
+
+[data-theme="dark"] .celebration-holiday {
+  background: #1d2d24;
+  border-color: #2ea043;
+}
+
+[data-theme="dark"] .celebration-when {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .recipient-contact-card {
+  background: #22272e;
+  border-color: #444c56;
+  color: #e4e6eb;
+}
+
+[data-theme="dark"] .recipient-bday-pill {
+  background: #1f2937;
+  border-color: #3b82f6;
+  color: #93c5fd;
+}
+
+[data-theme="dark"] .recipient-contact-drawer {
+  border-top-color: #444c56;
+}
+
+[data-theme="dark"] .recipient-phones-block {
+  color: #cbd5e1;
+}
+
+/* Global Navbar Quick Bar & Proxy List Switcher */
+.navQuickCell {
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.28);
+}
+
+.nav-quick-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.nav-quick-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+a.navQuickLink:link,
+a.navQuickLink:visited {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.16);
+  color: #ffffff;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-decoration: none;
+  text-shadow: none;
+  transition: background 0.15s ease;
+}
+
+a.navQuickLink:hover {
+  background: rgba(0, 0, 0, 0.32);
+  color: #ffffff;
+}
+
+.nav-pill-badge {
+  display: inline-block;
+  min-width: 16px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
+  text-shadow: none;
+}
+
+.nav-jump-select {
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.95);
+  color: #1e293b;
+  font-size: 12.5px;
+  font-weight: 600;
+  max-width: 210px;
+  cursor: pointer;
+}
+
+.proxy-switcher-bar {
+  margin: 8px 0 10px 0;
+  padding: 8px 12px;
+  background: #eff6ff;
+  border: 1px solid #93c5fd;
+  border-radius: 8px;
+  font-family: Arial, sans-serif;
+  font-size: 13.5px;
+  color: #1e3a8a;
+}
+
+.proxy-switcher-bar select {
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid #93c5fd;
+  font-weight: 600;
+}
+
+.proxy-active-pill {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+[data-theme="dark"] .navQuickCell {
+  border-top-color: rgba(255, 255, 255, 0.14);
+}
+
+[data-theme="dark"] a.navQuickLink:link,
+[data-theme="dark"] a.navQuickLink:visited {
+  background: rgba(255, 255, 255, 0.1);
+  color: #e4e6eb;
+}
+
+[data-theme="dark"] a.navQuickLink:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+[data-theme="dark"] .proxy-switcher-bar {
+  background: #1f2937;
+  border-color: #3b82f6;
+  color: #bfdbfe;
+}
+
+[data-theme="dark"] .proxy-active-pill {
+  background: #1e3a8a;
+  color: #dbeafe;
+}
+
+/* --- New Item Count Pills (Home) & NEW Item Badges (View List) --- */
+.new-count-pill {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #86efac;
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1.4;
+  vertical-align: middle;
+}
+
+.new-item-badge {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #6ee7b7;
+  font-size: 11px;
+  font-weight: 700;
+  font-style: normal;
+  letter-spacing: 0.2px;
+  vertical-align: middle;
+}
+
+[data-theme="dark"] .new-count-pill,
+[data-theme="dark"] .new-item-badge {
+  background: #064e3b;
+  color: #a7f3d0;
+  border-color: #059669;
+}
+
+/* --- Claimable Secret Gift Suggestions --- */
+.suggestion-claim-bar {
+  margin-top: 6px;
+  max-width: 650px;
+  font-family: Arial, sans-serif;
+  font-size: 13px;
+}
+
+.suggestion-claim-btn {
+  background: #7e22ce !important;
+  color: #ffffff !important;
+  border-color: #6b21a8 !important;
+  font-weight: 700;
+}
+
+.suggestion-claim-btn:hover {
+  background: #6b21a8 !important;
+}
+
+.suggestion-claimed-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #86efac;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+[data-theme="dark"] .suggestion-claimed-badge {
+  background: #064e3b;
+  color: #a7f3d0;
+  border-color: #059669;
+}
+
+/* --- One-Click Product URL Auto-Fill --- */
+.autofill-btn {
+  background: #4f46e5 !important;
+  color: #ffffff !important;
+  border-color: #4338ca !important;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.autofill-btn:hover {
+  background: #4338ca !important;
+}
+
+.autofill-btn:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.autofill-status {
+  margin-top: 5px;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.autofill-status-ok {
+  color: #047857;
+}
+
+.autofill-status-warn {
+  color: #b45309;
+}
+
+.autofill-img-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  padding: 6px 10px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+}
+
+.autofill-img-preview img {
+  width: 58px;
+  height: 58px;
+  object-fit: contain;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+}
+
+[data-theme="dark"] .autofill-status-ok {
+  color: #6ee7b7;
+}
+
+[data-theme="dark"] .autofill-status-warn {
+  color: #fcd34d;
+}
+
+[data-theme="dark"] .autofill-img-preview {
+  background: #1f2937;
+  border-color: #374151;
+}
+
+/* --- Anonymous Gift Shopper Toggle --- */
+.anon-shopper-toggle {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 8px;
+  max-width: 440px;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 8px 0 6px 0;
+  padding: 8px 10px;
+  background: #f5f3ff;
+  border: 1px solid #c4b5fd;
+  border-radius: 6px;
+  text-align: left;
+  font-family: Arial, sans-serif;
+  font-size: 13px;
+  color: #4c1d95;
+  cursor: pointer;
+}
+
+.anon-shopper-toggle input[type="checkbox"] {
+  margin-top: 3px;
+}
+
+.anon-shopper-toggle small {
+  color: #5b21b6;
+  font-size: 11.5px;
+}
+
+[data-theme="dark"] .anon-shopper-toggle {
+  background: #2e1065;
+  border-color: #7c3aed;
+  color: #ede9fe;
+}
+
+[data-theme="dark"] .anon-shopper-toggle small {
+  color: #ddd6fe;
+}
+
+/* --- Post-Holiday Cleanup Review & Select2 Dark Theme --- */
+.cleanup-review-wrap {
+  max-width: 920px;
+  margin: 18px auto 32px auto;
+  padding: 0 12px;
+  font-family: Arial, sans-serif;
+}
+
+.spoiler-gate-card {
+  max-width: 620px;
+  margin: 18px auto;
+  padding: 18px 20px;
+  background: #fffbeb;
+  border: 1px solid #f59e0b;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  line-height: 1.5;
+}
+
+.spoiler-gate-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #92400e;
+  margin-bottom: 8px;
+}
+
+.spoiler-gate-actions {
+  margin-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.cleanup-bulk-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.cleanup-review-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  overflow: hidden;
+  font-size: 14px;
+}
+
+.cleanup-review-table th {
+  background: #6702cc;
+  color: #ffffff;
+  text-align: left;
+  padding: 9px 12px;
+  font-size: 13px;
+}
+
+.cleanup-review-table td {
+  padding: 10px 12px;
+  border-top: 1px solid #e2e8f0;
+  vertical-align: middle;
+}
+
+.cleanup-thumb {
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  flex-shrink: 0;
+}
+
+.cleanup-status-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.cleanup-status-full {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #86efac;
+}
+
+.cleanup-status-partial {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+}
+
+.cleanup-action-select {
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid #94a3b8;
+  font-size: 13px;
+  width: 100%;
+  max-width: 280px;
+}
+
+@media (max-width: 680px) {
+  .cleanup-review-table thead {
+    display: none;
+  }
+  .cleanup-review-table,
+  .cleanup-review-table tbody,
+  .cleanup-review-table tr,
+  .cleanup-review-table td {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .cleanup-review-table tr {
+    border-top: 2px solid #cbd5e1;
+    padding: 6px 0;
+  }
+  .cleanup-review-table td {
+    border-top: none;
+    padding: 5px 12px;
+  }
+  .cleanup-action-select {
+    max-width: 100%;
+  }
+}
+
+[data-theme="dark"] .spoiler-gate-card {
+  background: #22272e !important;
+  border-color: #85641e !important;
+  color: #e4e6eb !important;
+}
+
+[data-theme="dark"] .spoiler-gate-title {
+  color: #facc15 !important;
+}
+
+[data-theme="dark"] .cleanup-bulk-bar,
+[data-theme="dark"] .cleanup-review-table {
+  background: #22272e;
+  border-color: #444c56;
+  color: #e4e6eb;
+}
+
+[data-theme="dark"] .cleanup-review-table td {
+  border-top-color: #373e47;
+}
+
+[data-theme="dark"] .cleanup-status-full {
+  background: #064e3b;
+  color: #a7f3d0;
+  border-color: #059669;
+}
+
+[data-theme="dark"] .cleanup-status-partial {
+  background: #451a03;
+  color: #fde68a;
+  border-color: #b45309;
+}
+
+[data-theme="dark"] .cleanup-action-select {
+  background: #1c2128;
+  color: #e4e6eb;
+  border-color: #444c56;
+}
+
+[data-theme="dark"] .select2-container--default .select2-selection--multiple {
+  background-color: #1c2128;
+  border-color: #444c56;
+  color: #e4e6eb;
+}
+
+[data-theme="dark"] .select2-container--default .select2-selection--multiple .select2-selection__choice {
+  background-color: #2d333b;
+  border-color: #539bf5;
+  color: #e4e6eb;
+}
+
+[data-theme="dark"] .select2-dropdown {
+  background-color: #22272e;
+  border-color: #444c56;
+  color: #e4e6eb;
+}
+
+[data-theme="dark"] .select2-results__group {
+  background-color: #1c2128;
+  color: #93c5fd;
+  font-weight: 700;
+}
+
+[data-theme="dark"] .select2-container--default .select2-results__option--selected {
+  background-color: #2d333b;
+}
+
+[data-theme="dark"] .select2-search--inline .select2-search__field {
+  color: #e4e6eb;
+}
 

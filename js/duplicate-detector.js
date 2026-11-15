@@ -38,7 +38,11 @@
         if (!Array.isArray(existing) || existing.length === 0) return;
 
         var titleInput = document.querySelector('input[name="title"]');
-        var urlInput = document.querySelector('input[name="link1url"]');
+        var urlInputs = [
+            document.querySelector('input[name="link1url"]'),
+            document.querySelector('input[name="link2url"]'),
+            document.querySelector('input[name="link3url"]')
+        ].filter(Boolean);
         var warningRow = document.getElementById('dupWarningRow');
         var titleSpan = document.getElementById('dupItemTitle');
         var catSpan = document.getElementById('dupItemCat');
@@ -47,9 +51,13 @@
 
         function check() {
             var titleVal = (titleInput.value || '').trim().toLowerCase();
-            var urlVal = urlInput ? normalizeUrl(urlInput.value || '') : '';
+            var enteredUrls = [];
+            urlInputs.forEach(function(inp) {
+                var nu = normalizeUrl(inp.value || '');
+                if (nu) enteredUrls.push(nu);
+            });
 
-            if (!titleVal && !urlVal) {
+            if (!titleVal && enteredUrls.length === 0) {
                 warningRow.style.display = 'none';
                 return;
             }
@@ -57,12 +65,22 @@
             var match = null;
             for (var i = 0; i < existing.length; i++) {
                 var item = existing[i];
-                var itemNormUrl = normalizeUrl(item.url);
+                var itemUrls = Array.isArray(item.urls) ? item.urls : (item.url ? [item.url] : []);
                 var itemTitle = (item.title || '').trim().toLowerCase();
 
-                if (urlVal && itemNormUrl && urlVal === itemNormUrl) {
-                    match = item;
-                    break;
+                if (enteredUrls.length > 0 && itemUrls.length > 0) {
+                    var urlMatched = false;
+                    for (var u = 0; u < itemUrls.length; u++) {
+                        var itemNormUrl = normalizeUrl(itemUrls[u]);
+                        if (itemNormUrl && enteredUrls.indexOf(itemNormUrl) !== -1) {
+                            urlMatched = true;
+                            break;
+                        }
+                    }
+                    if (urlMatched) {
+                        match = item;
+                        break;
+                    }
                 }
 
                 if (titleVal && titleVal.length >= 4 && itemTitle === titleVal) {
@@ -81,12 +99,12 @@
         }
 
         titleInput.addEventListener('input', check);
-        if (urlInput) {
-            urlInput.addEventListener('input', check);
-            urlInput.addEventListener('paste', function() {
+        urlInputs.forEach(function(inp) {
+            inp.addEventListener('input', check);
+            inp.addEventListener('paste', function() {
                 setTimeout(check, 100);
             });
-        }
+        });
     }
 
     if (document.readyState === 'loading') {

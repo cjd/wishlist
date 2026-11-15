@@ -36,16 +36,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST["confirm"])) {
     verifyCsrfOrDie(true);
 
     $isSuggestion = !empty($_POST["is_suggestion"]);
+    $isSuggestionInt = 0;
+    $suggestTitleDb = '';
+    $suggestPriceDb = 0.0;
+    $claimImmediately = false;
     if ($isSuggestion) {
         $initialType = 'suggestion';
+        $isSuggestionInt = 1;
         $s_title = trim((string)($_POST["suggest_title"] ?? ''));
         $s_url_in = trim((string)($_POST["suggest_url"] ?? ''));
         $s_price = trim((string)($_POST["suggest_price"] ?? ''));
         $s_notes = trim((string)($_POST["suggest_notes"] ?? ''));
+        $claimImmediately = (!empty($_POST["claim_immediately"]) && !$access['readOnly']);
 
         if ($s_title === '') {
             $error_msg = "Please enter a Gift Title for your secret suggestion.";
         } else {
+            $suggestTitleDb = $s_title;
+            $priceNumericRaw = str_replace([',', '$'], '', $s_price);
+            if (is_numeric($priceNumericRaw)) {
+                $suggestPriceDb = max(0.0, round((float)$priceNumericRaw, 2));
+            }
+
             $safe_url = '';
             if ($s_url_in !== '') {
                 if (!preg_match('#^https?://#i', $s_url_in)) {
@@ -56,7 +68,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST["confirm"])) {
 
             $badgeHtml = "<div class='secret-suggestion-card'>";
             $badgeHtml .= "<div class='suggestion-badge-row'><span class='suggestion-pill'>💡 Secret Gift Idea</span>";
-            if ($s_price !== '') {
+            if ($suggestPriceDb > 0) {
+                $badgeHtml .= " <span class='price-badge'>$" . number_format($suggestPriceDb, 2) . "</span>";
+            } elseif ($s_price !== '') {
                 $cleanPrice = ltrim($s_price, '$ ');
                 $badgeHtml .= " <span class='price-badge'>$" . escapeText($cleanPrice) . "</span>";
             }
@@ -87,8 +101,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST["confirm"])) {
     }
 
     if ($error_msg === '') {
-        $stmt = mysqli_prepare($link, "INSERT INTO comments (userid, comment_userid, comment, date) VALUES (?, ?, ?, NOW())");
-        mysqli_stmt_bind_param($stmt, "sss", $recip, $viewerUserid, $comment);
+        if ($claimImmediately) {
+            $stmt = mysqli_prepare($link, "INSERT INTO comments (userid, comment_userid, comment, date, is_suggestion, suggest_title, suggest_price, claimed_by, claimed_date) VALUES (?, ?, ?, NOW(), ?, ?, ?, ?, NOW())");
+            mysqli_stmt_bind_param($stmt, "sssisds", $recip, $viewerUserid, $comment, $isSuggestionInt, $suggestTitleDb, $suggestPriceDb, $viewerUserid);
+        } else {
+            $stmt = mysqli_prepare($link, "INSERT INTO comments (userid, comment_userid, comment, date, is_suggestion, suggest_title, suggest_price) VALUES (?, ?, ?, NOW(), ?, ?, ?)");
+            mysqli_stmt_bind_param($stmt, "sssisd", $recip, $viewerUserid, $comment, $isSuggestionInt, $suggestTitleDb, $suggestPriceDb);
+        }
         mysqli_stmt_execute($stmt);
 
         if (!empty($_POST["recipients"]) && is_array($_POST["recipients"])) {
@@ -125,7 +144,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST["confirm"])) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="../style.css" type="text/css">
+  <link rel="stylesheet" href="../style.css?v=<?php echo (int)@filemtime(__DIR__ . '/../style.css'); ?>" type="text/css">
   <link rel="manifest" href="../manifest.json">
   <title><?php echo escapeText($name); ?>'s WishList - Add Comment</title>
   <script>
@@ -200,7 +219,13 @@ createNavBar("../home.php:Home|viewList.php?recip=" . urlencode($recip) . "&name
   <input type="text" name="suggest_price" id="suggestPrice" value="<?php echo escapeText($_POST['suggest_price'] ?? ''); ?>" style="width:140px; padding:6px; box-sizing:border-box; margin: 4px 0 10px 0;" placeholder="e.g. $79.00"><br>
 
   <label><b>Notes / Comments for other viewers:</b></label><br>
-  <textarea name="suggest_notes" id="suggestNotes" rows="3" style="width:100%; padding:6px; box-sizing:border-box; margin: 4px 0 4px 0;" placeholder="e.g. Found this on sale, thought it would be perfect for their upcoming trip!"><?php echo escapeText($_POST['suggest_notes'] ?? ''); ?></textarea>
+  <textarea name="suggest_notes" id="suggestNotes" rows="3" style="width:100%; padding:6px; box-sizing:border-box; margin: 4px 0 8px 0;" placeholder="e.g. Found this on sale, thought it would be perfect for their upcoming trip!"><?php echo escapeText($_POST['suggest_notes'] ?? ''); ?></textarea>
+  <?php if (!$access['readOnly']): ?>
+  <label style="display:block; margin-top:4px; cursor:pointer; font-size:13.5px; color:#4c1d95;">
+    <input type="checkbox" name="claim_immediately" value="1" <?php echo !empty($_POST['claim_immediately']) ? 'checked' : ''; ?>>
+    🎁 <b>I am buying this gift</b> (mark as Claimed right away so others don't buy it)
+  </label>
+  <?php endif; ?>
 </div>
 
 </td></tr>

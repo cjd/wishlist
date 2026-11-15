@@ -30,6 +30,7 @@ $recipient_ids = array_values(array_unique(array_filter(array_map(function ($r) 
 $subject = trim((string)($_POST['subject'] ?? ''));
 $body = trim((string)($_POST['body'] ?? ''));
 $sender_id = $_SESSION['userid'];
+$send_anonymous = !empty($_POST['anonymous_shopper']);
 
 if (empty($recipient_ids) || $subject === '' || $body === '') {
     if ($is_ajax) {
@@ -39,6 +40,61 @@ if (empty($recipient_ids) || $subject === '' || $body === '') {
         exit;
     }
     header("Location: messages.php?error=missing_parameters");
+    exit;
+}
+
+if ($send_anonymous) {
+    $clientIp = getClientIp();
+    $normSender = strtolower((string)$sender_id);
+    $rl = checkRateLimit($link, $clientIp, $normSender, 'anon_msg', 5, 600);
+    if ($rl['blocked']) {
+        if ($is_ajax) {
+            http_response_code(429);
+            header('Content-Type: application/json');
+            echo json_encode(['ok' => false, 'error' => 'Too many anonymous questions sent recently. Please wait a few minutes and try again.']);
+            exit;
+        }
+        header("Location: messages.php?error=rate_limited");
+        exit;
+    }
+
+    // Anonymous shopper mode is strictly limited to wishlist owners the sender has permission to view
+    $anon_recipients = [];
+    foreach ($recipient_ids as $rid) {
+        if ($rid !== '' && $rid !== $sender_id) {
+            $acc = canViewList($link, $rid, $sender_id);
+            if (!empty($acc['allowed'])) {
+                $anon_recipients[] = $rid;
+            }
+        }
+    }
+    if (empty($anon_recipients)) {
+        if ($is_ajax) {
+            http_response_code(403);
+            header('Content-Type: application/json');
+            echo json_encode(['ok' => false, 'error' => 'Anonymous questions can only be sent to someone whose WishList you can view.']);
+            exit;
+        }
+        header("Location: messages.php?error=invalid_recipient");
+        exit;
+    }
+
+    recordRateLimitAttempt($link, $clientIp, $normSender, 'anon_msg');
+
+    $anonSubject = (stripos($subject, '[Anonymous Gift Shopper]') === 0)
+        ? $subject
+        : ('[Anonymous Gift Shopper] ' . $subject);
+    $anonBody = escapeText($body)
+        . "\n\n<hr><i>💡 <b>Tip:</b> This question was sent anonymously by someone shopping your WishList so the surprise stays intact! Since you cannot reply directly to an anonymous shopper, please update the item's description or your top-of-list notes under <b>Modify Your List</b> so they can see your answer.</i>";
+
+    sendEmail(implode(',', $anon_recipients), '', $anonSubject, $anonBody, 0);
+
+    if ($is_ajax) {
+        header('Content-Type: application/json');
+        echo json_encode(['ok' => true, 'anonymous' => true]);
+        exit;
+    }
+    header("Location: messages.php?sent=1");
     exit;
 }
 

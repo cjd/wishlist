@@ -21,7 +21,7 @@ $escapedHref = htmlspecialchars($bookmarkletHref, ENT_QUOTES, 'UTF-8');
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="style.css" type="text/css">
+<link rel="stylesheet" href="style.css?v=<?php echo (int)@filemtime(__DIR__ . '/style.css'); ?>" type="text/css">
 <title>Add To Your Wishlist from the Web</title>
 </head>
 
@@ -58,11 +58,16 @@ and select &quot;Add to Favorites&quot; or &quot;Bookmark Link&quot;.
 <p>
 Once you have the <b>WishList Site</b> bookmark in your browser you can find the specific product you're wishing for anywhere on the Web, then click the <b>WishList Site</b> bookmark to easily add that product's page and title directly to your WishList!
 </p>
+<hr style="max-width:650px;">
+<p style="max-width:650px; text-align:left;">
+<b>📱 On Phones &amp; Tablets (Share Sheet):</b><br>
+If you install this site as an app (<b>Install App</b> / <b>Add to Home Screen</b> in Chrome, Edge, or Android browsers), <b>WishList</b> appears directly in your device's native <b>Share</b> menu! While browsing in store apps (like Amazon, Target, or eBay) or your mobile browser, simply tap <b>Share &rarr; WishList</b> to send the item straight to your list.
+</p>
 </td></tr>
 </table>
 </center>
 <?php if (!isset($_SESSION["userid"])): ?>
-<script type="text/javascript" src="js/theme.js"></script>
+<script type="text/javascript" src="js/theme.js?v=<?php echo (int)@filemtime(__DIR__ . '/js/theme.js'); ?>"></script>
 <?php endif; ?>
 </body>
 </html>

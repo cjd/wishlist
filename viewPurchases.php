@@ -42,6 +42,30 @@ $query = "(SELECT 'item' AS type,
          OR FIND_IN_SET(?, purchaseHistory.splitUsers) > 0)
     AND categories.userid != ?)
 UNION ALL
+(SELECT 'claimed_suggestion' AS type,
+    TRIM(CONCAT_WS(' ', p1.firstname, p1.lastname, NULLIF(p1.suffix, ''))) AS recipient,
+    TRIM(CONCAT_WS(' ', p2.firstname, p2.lastname, NULLIF(p2.suffix, ''))) AS buyer,
+    p1.userid AS userid,
+    p2.userid AS actor_userid,
+    COALESCE(comments.claimed_date, comments.date) AS boughtDate,
+    comments.commentId AS recordId,
+    comments.comment AS content,
+    1 AS quantity,
+    comments.suggest_title AS description,
+    comments.suggest_price AS price,
+    p1.firstname AS firstname,
+    p1.lastname AS lastname,
+    comments.split_with AS splitWith
+  FROM comments
+  JOIN people AS p1 ON p1.userid = comments.userid
+  JOIN people AS p2 ON p2.userid = comments.claimed_by
+  WHERE comments.claimed_by IS NOT NULL
+    AND comments.claimed_by != ''
+    AND (comments.claimed_by = ?
+         OR comments.claimed_by IN (SELECT pid FROM viewList WHERE viewer = ? AND allowEdit = 1)
+         OR FIND_IN_SET(?, comments.split_users) > 0)
+    AND comments.userid != ?)
+UNION ALL
 (SELECT 'comment' AS type,
     TRIM(CONCAT_WS(' ', p1.firstname, p1.lastname, NULLIF(p1.suffix, ''))) AS recipient,
     TRIM(CONCAT_WS(' ', p2.firstname, p2.lastname, NULLIF(p2.suffix, ''))) AS buyer,
@@ -51,7 +75,7 @@ UNION ALL
     comments.commentId AS recordId,
     comments.comment AS content,
     0 AS quantity,
-    '' AS description,
+    COALESCE(comments.claimed_by, '') AS description,
     0 AS price,
     p1.firstname AS firstname,
     p1.lastname AS lastname,
@@ -61,11 +85,12 @@ UNION ALL
   JOIN people AS p2 ON p2.userid = comments.comment_userid
   WHERE (comments.comment_userid = ?
          OR comments.comment_userid IN (SELECT pid FROM viewList WHERE viewer = ? AND allowEdit = 1))
-    AND comments.userid != ?)
+    AND comments.userid != ?
+    AND COALESCE(comments.claimed_by, '') != comments.comment_userid)
 ORDER BY lastname, firstname, userid, boughtDate DESC";
 
 $stmt = mysqli_prepare($link, $query);
-mysqli_stmt_bind_param($stmt, "sssssss", $userid, $userid, $userid, $userid, $userid, $userid, $userid);
+mysqli_stmt_bind_param($stmt, "sssssssssss", $userid, $userid, $userid, $userid, $userid, $userid, $userid, $userid, $userid, $userid, $userid);
 mysqli_stmt_execute($stmt);
 $rs = mysqli_stmt_get_result($stmt);
 
@@ -75,8 +100,16 @@ $totalGifts = 0;
 $personSummary = [];
 
 while ($r = mysqli_fetch_assoc($rs)) {
+    if ($r["type"] === "claimed_suggestion" && (float)($r["price"] ?? 0) <= 0) {
+        if (preg_match("#<span class=['\"]price-badge['\"]>\\\$([0-9,.]+)</span>#i", (string)$r["content"], $pm)) {
+            $parsedP = (float)str_replace(',', '', $pm[1]);
+            if ($parsedP > 0) {
+                $r["price"] = $parsedP;
+            }
+        }
+    }
     $rows[] = $r;
-    if ($r["type"] === "item") {
+    if ($r["type"] === "item" || $r["type"] === "claimed_suggestion") {
         $qty = (int)($r["quantity"] ?? 1);
         if ($qty <= 0) {
             $qty = 1;
@@ -100,8 +133,8 @@ while ($r = mysqli_fetch_assoc($rs)) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="style.css" type="text/css">
-  <link rel="stylesheet" href="print.css" type="text/css" media="print">
+  <link rel="stylesheet" href="style.css?v=<?php echo (int)@filemtime(__DIR__ . '/style.css'); ?>" type="text/css">
+  <link rel="stylesheet" href="print.css?v=<?php echo (int)@filemtime(__DIR__ . '/print.css'); ?>" type="text/css" media="print">
   <link rel="manifest" href="manifest.json">
   <title>Your Purchases</title>
 </head>
@@ -182,6 +215,9 @@ foreach ($rows as $row) {
             echo (int)$row["quantity"] . " x ";
         }
         echo escapeText($row["content"]);
+    } elseif ($row["type"] === "claimed_suggestion") {
+        echo formatMessage((string)$row["content"]);
+        echo "<div style='margin-top:4px;'><span class='suggestion-claimed-badge'>✅ Claimed Secret Gift</span></div>";
     } else {
         $cText = (string)$row["content"];
         if (strpos($cText, "<div class='secret-suggestion-card'>") === 0 || strpos($cText, '<div class="secret-suggestion-card">') === 0) {
@@ -193,7 +229,7 @@ foreach ($rows as $row) {
     echo "</td>";
 
     echo "<td class=\"" . $style . "\">";
-    if ($row["type"] === "item" && ((float)$row["price"] * (int)$row["quantity"]) > 0) {
+    if (($row["type"] === "item" || $row["type"] === "claimed_suggestion") && ((float)$row["price"] * (int)$row["quantity"]) > 0) {
         echo "<span class='price-secret'>$" . number_format((float)$row["price"] * (int)$row["quantity"], 2) . "</span>";
     }
     echo "</td>";
@@ -214,8 +250,25 @@ foreach ($rows as $row) {
         } else {
             echo "<small>(Co-buyer)</small>";
         }
+    } elseif ($row["type"] === "claimed_suggestion") {
+        $canUndoClaim = ($row["actor_userid"] === $userid || isset($proxy_pids[$row["actor_userid"]]));
+        if ($canUndoClaim) {
+            echo "<form method=\"post\" action=\"viewList/claimSuggestion.php\" style=\"display:inline; margin:0;\">";
+            echo "<input type=\"hidden\" name=\"csrf_token\" value=\"" . escapeText($csrf_token) . "\">";
+            echo "<input type=\"hidden\" name=\"commentId\" value=\"" . (int)$row["recordId"] . "\">";
+            echo "<input type=\"hidden\" name=\"action\" value=\"unclaim\">";
+            echo "<input type=\"hidden\" name=\"recip\" value=\"" . escapeText($row["userid"]) . "\">";
+            echo "<input type=\"hidden\" name=\"name\" value=\"" . escapeText($row["recipient"]) . "\">";
+            echo "<input type=\"hidden\" name=\"return_to\" value=\"viewPurchases\">";
+            echo "<button type=\"submit\" class=\"menuLink\" style=\"background:none;border:none;padding:0;color:#0000cc;cursor:pointer;font-weight:bold;text-decoration:underline;\">[Undo Claim]</button>";
+            echo "</form>";
+        } else {
+            echo "<small>(Co-buyer)</small>";
+        }
     } else {
-        if ($row["actor_userid"] === $userid) {
+        if (!empty($row["description"])) {
+            echo "<small>(Claimed by shopper)</small>";
+        } elseif ($row["actor_userid"] === $userid) {
             echo "<form method=\"post\" action=\"viewList/deleteComment.php\" style=\"display:inline; margin:0;\">";
             echo "<input type=\"hidden\" name=\"csrf_token\" value=\"" . escapeText($csrf_token) . "\">";
             echo "<input type=\"hidden\" name=\"commentId\" value=\"" . (int)$row["recordId"] . "\">";

@@ -6,6 +6,37 @@
 
 include "../funcLib.php";
 
+$selfUserid = $_SESSION["userid"];
+$editableAccounts = [];
+$stmt_ed = mysqli_prepare(
+    $link,
+    "SELECT p.userid, p.firstname, p.lastname, p.suffix
+     FROM people p
+     JOIN viewList v ON v.pid = p.userid
+     WHERE v.viewer = ? AND v.allowEdit = 1 AND p.userid != ?
+     ORDER BY p.lastname, p.firstname"
+);
+if ($stmt_ed) {
+    mysqli_stmt_bind_param($stmt_ed, "ss", $selfUserid, $selfUserid);
+    mysqli_stmt_execute($stmt_ed);
+    $res_ed = mysqli_stmt_get_result($stmt_ed);
+    while ($erow = mysqli_fetch_assoc($res_ed)) {
+        $editableAccounts[$erow['userid']] = trim($erow['firstname'] . ' ' . $erow['lastname'] . ' ' . ($erow['suffix'] ?? ''));
+    }
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['switch_edit_userid'])) {
+    verifyCsrfOrDie(true);
+    $reqEditUser = trim((string)$_POST['switch_edit_userid']);
+    if ($reqEditUser === '' || $reqEditUser === $selfUserid) {
+        unset($_SESSION['euserid']);
+    } elseif (isset($editableAccounts[$reqEditUser])) {
+        $_SESSION['euserid'] = $reqEditUser;
+    }
+    header("Location: " . getFullPath("modifyList.php"));
+    exit;
+}
+
 $displayName = "Your ";
 if ($userid !== $_SESSION["userid"]) {
     $stmt_name = mysqli_prepare($link, "SELECT firstname FROM people WHERE userid = ?");
@@ -26,15 +57,14 @@ $csrf_token = getCsrfToken();
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="../style.css" type="text/css">
-  <link rel="stylesheet" href="../print.css" type="text/css" media="print">
-  <link rel="stylesheet" href="../css/featherlight.min.css" type="text/css">
+  <link rel="stylesheet" href="../style.css?v=<?php echo (int)@filemtime(__DIR__ . '/../style.css'); ?>" type="text/css">
+  <link rel="stylesheet" href="../print.css?v=<?php echo (int)@filemtime(__DIR__ . '/../print.css'); ?>" type="text/css" media="print">
   <link rel="manifest" href="../manifest.json">
   <title>Modify List</title>
   <script src="../js/jquery-3.7.1.min.js"></script>
-  <script src="../js/featherlight.min.js"></script>
-  <script src="../js/wishlist-filter.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+  <script src="../js/lightbox.js?v=<?php echo (int)@filemtime(__DIR__ . '/../js/lightbox.js'); ?>"></script>
+  <script src="../js/wishlist-filter.js?v=<?php echo (int)@filemtime(__DIR__ . '/../js/wishlist-filter.js'); ?>"></script>
+  <script src="../js/Sortable.min.js"></script>
 </head>
 <body>
 <table class="pagetable">
@@ -42,6 +72,28 @@ $csrf_token = getCsrfToken();
 <td valign="top">
 
 <?php createNavBar("../home.php:Home|:Modify WishList"); ?>
+
+<?php if (!empty($editableAccounts)): ?>
+<div class="proxy-switcher-bar no-print">
+  <form method="post" action="modifyList.php" style="margin:0; display:flex; flex-wrap:wrap; align-items:center; gap:8px;">
+    <input type="hidden" name="csrf_token" value="<?php echo escapeText($csrf_token); ?>">
+    <label for="switchEditUserSelect">👥 <b>Managing List For:</b></label>
+    <select id="switchEditUserSelect" name="switch_edit_userid" onchange="this.form.submit()">
+      <option value="<?php echo escapeText($selfUserid); ?>"<?php echo ($userid === $selfUserid) ? ' selected' : ''; ?>>
+        Myself (<?php echo escapeText($_SESSION['fullname'] ?? $selfUserid); ?>)
+      </option>
+      <?php foreach ($editableAccounts as $edUid => $edFullName): ?>
+        <option value="<?php echo escapeText($edUid); ?>"<?php echo ($userid === $edUid) ? ' selected' : ''; ?>>
+          <?php echo escapeText($edFullName); ?>
+        </option>
+      <?php endforeach; ?>
+    </select>
+    <?php if ($userid !== $selfUserid): ?>
+      <span class="proxy-active-pill">Editing <?php echo escapeText($editableAccounts[$userid] ?? $userid); ?>'s list</span>
+    <?php endif; ?>
+  </form>
+</div>
+<?php endif; ?>
 
 <table width="100%"><tr><td>
   <font face="arial" size="5" color="red"><b><?php echo escapeText($displayName); ?>List</b></font> -
@@ -80,6 +132,7 @@ echo "</tr></table><p>";
   <form method="get" action="addCategory.php" style="display:inline-block;">
     <input type="submit" value="Add New Category" class="buttonstyle">
   </form>
+  <input type="button" value="🔖 Add from Web / Phone" class="buttonstyle" onclick="location.href='../wishlist_button.php'">
   <input type="button" value="🖨️ Print List" class="buttonstyle" onclick="location.href='print.php'">
 </td></tr>
 </table>

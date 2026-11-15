@@ -33,7 +33,7 @@ if ($prow = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt_p))) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="../style.css" type="text/css">
+  <link rel="stylesheet" href="../style.css?v=<?php echo (int)@filemtime(__DIR__ . '/../style.css'); ?>" type="text/css">
   <link rel="manifest" href="../manifest.json">
   <title><?php echo escapeText($name); ?>'s WishList Change Log</title>
 </head>

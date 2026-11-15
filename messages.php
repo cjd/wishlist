@@ -37,11 +37,11 @@ $sent_ok = !empty($_GET['sent']);
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="style.css" type="text/css">
+  <link rel="stylesheet" href="style.css?v=<?php echo (int)@filemtime(__DIR__ . '/style.css'); ?>" type="text/css">
+  <link rel="stylesheet" href="css/select2.min.css" type="text/css">
   <link rel="manifest" href="manifest.json">
-  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
   <script src="js/jquery-3.7.1.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+  <script src="js/select2.min.js"></script>
   <title>Messages</title>
 </head>
 <body>
@@ -72,7 +72,9 @@ $sent_ok = !empty($_GET['sent']);
       <?php while ($message = mysqli_fetch_assoc($messages_result)): ?>
       <?php
         if (empty($message['sender_id'])) {
-            $fromLabel = 'System';
+            $fromLabel = (stripos((string)($message['subject'] ?? ''), '[Anonymous Gift Shopper]') === 0)
+                ? '🕵️ A Gift Shopper (Anonymous)'
+                : 'System';
         } elseif (!empty($message['firstname']) || !empty($message['lastname'])) {
             $fromLabel = trim($message['firstname'] . ' ' . $message['lastname'] . ' ' . ($message['suffix'] ?? ''));
         } else {

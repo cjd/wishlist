@@ -1,5 +1,5 @@
 --
--- WishList Database Schema (Baseline V3 - InnoDB / utf8mb4)
+-- WishList Database Schema (Baseline V4 - InnoDB / utf8mb4)
 --
 
 DROP TABLE IF EXISTS `accessRequests`;
@@ -36,9 +36,17 @@ CREATE TABLE `comments` (
   `comment` text NOT NULL,
   `commentId` int unsigned NOT NULL AUTO_INCREMENT,
   `date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `is_suggestion` tinyint(1) NOT NULL DEFAULT '0',
+  `suggest_title` varchar(255) NOT NULL DEFAULT '',
+  `suggest_price` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `claimed_by` varchar(50) DEFAULT NULL,
+  `claimed_date` datetime DEFAULT NULL,
+  `split_users` varchar(255) NOT NULL DEFAULT '',
+  `split_with` varchar(255) NOT NULL DEFAULT '',
   PRIMARY KEY (`commentId`),
   KEY `idx_userid_date` (`userid`, `date`),
-  KEY `idx_comment_userid` (`comment_userid`)
+  KEY `idx_comment_userid` (`comment_userid`),
+  KEY `idx_claimed_by` (`claimed_by`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 DROP TABLE IF EXISTS `favorites`;
@@ -182,4 +190,4 @@ CREATE TABLE `schema_version` (
   PRIMARY KEY (`version`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO `schema_version` (`version`) VALUES (3);
+INSERT INTO `schema_version` (`version`) VALUES (4);

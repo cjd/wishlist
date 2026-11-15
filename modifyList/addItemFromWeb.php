@@ -5,6 +5,35 @@
 $ignoreSession = true;
 include "../funcLib.php";
 
+function extractSharedWebParams() {
+    $wlurl = trim((string)($_REQUEST["wlurl"] ?? ""));
+    $wldesc = trim((string)($_REQUEST["wldesc"] ?? ""));
+    $wltext = trim((string)($_REQUEST["wltext"] ?? ""));
+    $wlurlname = trim((string)($_REQUEST["wlurlname"] ?? ""));
+
+    // Mobile apps (e.g. Amazon) often omit `url` and embed the link inside shared `text`
+    if ($wlurl === "" && $wltext !== "") {
+        if (preg_match('#https?://[^\s<>"\']+#i', $wltext, $m)) {
+            $wlurl = rtrim($m[0], ".,;:!?)>]");
+            $cleanedText = trim(str_replace($m[0], "", $wltext));
+            $cleanedText = preg_replace('/^(?:check\s+this\s+out(?:\s+at\s+[^:]+)?|look\s+what\s+i\s+found)\s*:\s*/i', '', $cleanedText);
+            $cleanedText = trim($cleanedText, " \t\n\r\0\x0B-–—:");
+            if ($wldesc === "" && $cleanedText !== "") {
+                $wldesc = $cleanedText;
+            }
+        } elseif ($wldesc === "") {
+            $wldesc = $wltext;
+        }
+    } elseif ($wldesc === "" && $wltext !== "" && $wltext !== $wlurl) {
+        $cleanedText = trim(str_replace($wlurl, "", $wltext));
+        if ($cleanedText !== "") {
+            $wldesc = $cleanedText;
+        }
+    }
+
+    return [$wlurl, $wldesc, $wlurlname];
+}
+
 if (isset($_SESSION["userid"])) {
     createPage();
     exit;
@@ -79,16 +108,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $loginUserid !== "" && $password !=
     }
 }
 
-$raw_url = trim((string)($_REQUEST["wlurl"] ?? ""));
+[$raw_url, $shared_desc, $shared_linkname] = extractSharedWebParams();
 $parsed_host = $raw_url !== '' ? parse_url($raw_url, PHP_URL_HOST) : '';
-$suggested_linkname = $parsed_host ? preg_replace('/^www\./i', '', $parsed_host) : '';
+$suggested_linkname = $shared_linkname !== '' ? $shared_linkname : ($parsed_host ? preg_replace('/^www\./i', '', $parsed_host) : '');
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="../style.css" type="text/css">
+  <link rel="stylesheet" href="../style.css?v=<?php echo (int)@filemtime(__DIR__ . '/../style.css'); ?>" type="text/css">
   <title>Add New Item From Web</title>
 </head>
 <body bgcolor="#ffffff" onload="if(document.login_form && document.login_form.userid) document.login_form.userid.focus();">
@@ -110,7 +139,7 @@ $suggested_linkname = $parsed_host ? preg_replace('/^www\./i', '', $parsed_host)
 <tr>
   <td align="right"><b>Name</b></td>
   <td bgcolor="white">
-    <input size="50" type="text" name="wldesc" value="<?php echo escapeText($_REQUEST["wldesc"] ?? ""); ?>">
+    <input size="50" type="text" name="wldesc" value="<?php echo escapeText($shared_desc); ?>">
   </td>
 </tr>
 <tr>
@@ -121,7 +150,7 @@ $suggested_linkname = $parsed_host ? preg_replace('/^www\./i', '', $parsed_host)
     </table>
   </td>
   <td bgcolor="#eeeeee">
-    <input size="50" type="text" name="wlurlname" value="<?php echo escapeText($_REQUEST["wlurlname"] ?? $suggested_linkname); ?>"><br>
+    <input size="50" type="text" name="wlurlname" value="<?php echo escapeText($suggested_linkname); ?>"><br>
     <input size="50" type="text" name="wlurl" value="<?php echo escapeText($raw_url); ?>">
   </td>
 </tr>
@@ -144,6 +173,7 @@ $suggested_linkname = $parsed_host ? preg_replace('/^www\./i', '', $parsed_host)
 </form>
 </center>
 </td></tr></table>
+<script src="../js/store-detector.js?v=<?php echo (int)@filemtime(__DIR__ . '/../js/store-detector.js'); ?>"></script>
 </body>
 </html>
 <?php
@@ -168,12 +198,12 @@ function createPage() {
     }
 
     if (empty($categories) && $considerCid === null) {
-        echo "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><link rel=\"stylesheet\" href=\"../style.css\"></head><body>";
+        echo "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><link rel=\"stylesheet\" href=\"../style.css?v=" . (int)@filemtime(__DIR__ . '/../style.css') . "\"></head><body>";
         echo "<p>You have not created any categories yet. <a href=\"modifyList.php\">Go to Modify List</a> to add one first.</p></body></html>";
         return;
     }
 
-    $rawUrl = trim((string)($_REQUEST["wlurl"] ?? ''));
+    [$rawUrl, $sharedTitle, $urlName] = extractSharedWebParams();
     $url = '';
     if ($rawUrl !== '') {
         if (!preg_match('#^https?://#i', $rawUrl)) {
@@ -182,7 +212,6 @@ function createPage() {
         $url = sanitizeHttpUrl($rawUrl, false);
     }
     $parsed_host = $url !== '' ? parse_url($url, PHP_URL_HOST) : '';
-    $urlName = trim((string)($_REQUEST["wlurlname"] ?? ''));
     if ($urlName === '' && $parsed_host) {
         $urlName = preg_replace('/^www\./i', '', $parsed_host);
     }
@@ -192,7 +221,8 @@ function createPage() {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="../style.css" type="text/css">
+  <link rel="stylesheet" href="../style.css?v=<?php echo (int)@filemtime(__DIR__ . '/../style.css'); ?>" type="text/css">
+  <link rel="manifest" href="../manifest.json">
   <title>Add New Item From Web</title>
 </head>
 <body>
@@ -203,8 +233,9 @@ function createPage() {
 
 <center>
 <p>&nbsp;</p>
-<form method="post" action="validate_addItem.php">
+<form method="post" action="validate_addItem.php" enctype="multipart/form-data">
 <input type="hidden" name="csrf_token" value="<?php echo escapeText(getCsrfToken()); ?>">
+<input type="hidden" name="MAX_FILE_SIZE" value="16777216">
 <table style="border-collapse: collapse;" border="1" bordercolor="#111111" cellpadding="4" cellspacing="0" bgcolor="lightyellow">
 <tr>
   <td colspan="2" align="center" bgcolor="#6702cc">
@@ -227,13 +258,13 @@ function createPage() {
 <tr>
   <td align="right"><b>Title</b></td>
   <td bgcolor="#eeeeee">
-    <input type="text" size="50" name="title" value="<?php echo escapeText($_REQUEST["wldesc"] ?? ''); ?>" required>
+    <input type="text" size="50" style="width:100%;box-sizing:border-box;" name="title" value="<?php echo escapeText($sharedTitle); ?>" required>
   </td>
 </tr>
 <tr>
   <td align="right"><b>Description</b></td>
   <td bgcolor="#eeeeee">
-    <input type="text" size="50" name="desc" value="">
+    <input type="text" size="50" style="width:100%;box-sizing:border-box;" name="desc" value="">
   </td>
 </tr>
 <tr>
@@ -249,6 +280,20 @@ function createPage() {
   </td>
 </tr>
 <tr>
+  <td align="right"><b>Image</b></td>
+  <td bgcolor="#eeeeee">
+    <input type="hidden" name="fetched_image_url" id="fetchedImageUrl" value="">
+    <div id="fetchedImagePreviewBox" class="autofill-img-preview" style="display:none;">
+      <img id="fetchedImagePreview" src="" alt="Product preview" referrerpolicy="no-referrer">
+      <div>
+        <div style="font-size:12px; font-weight:bold;">Auto-detected product photo</div>
+        <button type="button" id="clearFetchedImageBtn" class="actionButton" style="font-size:11px; padding:2px 6px; margin-top:4px;">✕ Remove photo</button>
+      </div>
+    </div>
+    <input type="file" style="width:100%;" name="image" accept="image/jpeg,image/png,image/gif,image/webp">
+  </td>
+</tr>
+<tr>
   <td align="right">
     <table>
       <tr><td align="right"><b>Store / Name</b></td></tr>
@@ -256,14 +301,45 @@ function createPage() {
     </table>
   </td>
   <td bgcolor="#eeeeee">
-    <input type="text" size="50" name="link1" id="link1" value="<?php echo escapeText($urlName); ?>"><br>
-    <input type="text" size="50" name="link1url" id="link1url" value="<?php echo escapeText($url); ?>">
+    <input type="text" size="50" style="width:100%;box-sizing:border-box;margin-bottom:4px;" name="link1" id="link1" value="<?php echo escapeText($urlName); ?>">
+    <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+      <input type="text" size="50" style="flex:1 1 220px; min-width:180px; box-sizing:border-box;" name="link1url" id="link1url" value="<?php echo escapeText($url); ?>">
+      <button type="button" id="autofillUrlBtn" class="actionButton autofill-btn">✨ Auto-Fill from Link</button>
+    </div>
+    <div id="autofillStatus" class="autofill-status" style="display:none;"></div>
+    <div id="addMoreStoreBtnRow" style="margin-top:4px;">
+      <button type="button" class="actionButton" style="font-size:12px;" onclick="revealNextStoreRow()">➕ Add another store option (up to 3)</button>
+    </div>
+  </td>
+</tr>
+<tr id="storeRow2" style="display:none;">
+  <td align="right">
+    <table>
+      <tr><td align="right"><b>Store #2</b></td></tr>
+      <tr><td align="right"><b>URL #2</b></td></tr>
+    </table>
+  </td>
+  <td bgcolor="#eeeeee">
+    <input type="text" size="50" style="width:100%;box-sizing:border-box;" name="link2" id="link2" placeholder="Auto-detected from URL, or type store name" value=""><br>
+    <input type="text" size="50" style="width:100%;box-sizing:border-box;" name="link2url" id="link2url" placeholder="Paste 2nd store link (optional)" value="">
+  </td>
+</tr>
+<tr id="storeRow3" style="display:none;">
+  <td align="right">
+    <table>
+      <tr><td align="right"><b>Store #3</b></td></tr>
+      <tr><td align="right"><b>URL #3</b></td></tr>
+    </table>
+  </td>
+  <td bgcolor="#eeeeee">
+    <input type="text" size="50" style="width:100%;box-sizing:border-box;" name="link3" id="link3" placeholder="Auto-detected from URL, or type store name" value=""><br>
+    <input type="text" size="50" style="width:100%;box-sizing:border-box;" name="link3url" id="link3url" placeholder="Paste 3rd store link (optional)" value="">
   </td>
 </tr>
 <tr>
   <td align="right"><b>Additional<br>Information</b></td>
   <td bgcolor="#eeeeee">
-    <textarea rows="3" cols="50" name="subdesc"></textarea>
+    <textarea rows="3" cols="50" style="width:100%;box-sizing:border-box;" name="subdesc"></textarea>
   </td>
 </tr>
 <tr>
@@ -287,7 +363,23 @@ function createPage() {
 </form>
 </center>
 </td></tr></table>
-<script src="../js/store-detector.js"></script>
+<script>
+function revealNextStoreRow() {
+    var r2 = document.getElementById('storeRow2');
+    var r3 = document.getElementById('storeRow3');
+    var btnRow = document.getElementById('addMoreStoreBtnRow');
+    if (r2 && r2.style.display === 'none') {
+        r2.style.display = '';
+        return;
+    }
+    if (r3 && r3.style.display === 'none') {
+        r3.style.display = '';
+        if (btnRow) btnRow.style.display = 'none';
+    }
+}
+</script>
+<script src="../js/store-detector.js?v=<?php echo (int)@filemtime(__DIR__ . '/../js/store-detector.js'); ?>"></script>
+<script src="../js/url-autofill.js?v=<?php echo (int)@filemtime(__DIR__ . '/../js/url-autofill.js'); ?>"></script>
 </body>
 </html>
 <?php

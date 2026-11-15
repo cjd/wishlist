@@ -2,20 +2,23 @@
  * WishList Site Service Worker
  * Caches static UI assets only; never caches authenticated HTML or private uploads.
  */
-const CACHE_NAME = 'wishlist-v2';
+const CACHE_NAME = 'wishlist-v9';
 const STATIC_ASSETS = [
   './style.css',
   './print.css',
   './manifest.json',
+  './css/select2.min.css',
   './js/jquery-3.7.1.min.js',
-  './js/featherlight.min.js',
+  './js/select2.min.js',
+  './js/Sortable.min.js',
+  './js/lightbox.js',
   './js/wishlist-filter.js',
   './js/theme.js',
   './js/toast.js',
   './js/back-to-top.js',
   './js/store-detector.js',
   './js/duplicate-detector.js',
-  './css/featherlight.min.css',
+  './js/url-autofill.js',
   './images/icons/icon-192x192.png',
   './images/icons/icon-512x512.png'
 ];
@@ -44,7 +47,11 @@ function isCacheableStaticAsset(url, request) {
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(STATIC_ASSETS))
+      .then((cache) =>
+        Promise.all(
+          STATIC_ASSETS.map((asset) => cache.add(new Request(asset, { cache: 'reload' })))
+        )
+      )
       .then(() => self.skipWaiting())
   );
 });
@@ -72,9 +79,35 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Stale-while-revalidate strictly for static UI assets
+  const cleanUrl = url.origin + url.pathname;
+  const isCodeAsset = /\.(?:css|js)$/i.test(url.pathname);
+
+  if (isCodeAsset) {
+    // Network-first for CSS and JS so deployments appear immediately, falling back to cache offline
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (
+            response &&
+            response.status === 200 &&
+            !response.redirected &&
+            response.type === 'basic'
+          ) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(cleanUrl, clone);
+            });
+          }
+          return response;
+        })
+        .catch(() => caches.match(cleanUrl))
+    );
+    return;
+  }
+
+  // Stale-while-revalidate strictly for static icons/images/manifest
   event.respondWith(
-    caches.match(request).then((cached) => {
+    caches.match(cleanUrl).then((cached) => {
       const fetchPromise = fetch(request)
         .then((response) => {
           if (
@@ -85,7 +118,7 @@ self.addEventListener('fetch', (event) => {
           ) {
             const clone = response.clone();
             caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, clone);
+              cache.put(cleanUrl, clone);
             });
           }
           return response;

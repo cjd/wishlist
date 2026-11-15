@@ -308,7 +308,7 @@ function getSeason() {
 // $data must be of the form url_1:url_1Name|url_2:url_2Name...|:url_nName
 // $helpLink indicates where to anchor to in help.php
 function createNavBar($data, $displayGreeting = false, $helpLink = '') {
-  global $base_url;
+  global $base_url, $link;
 
   $safeBase = escapeText($base_url);
   $safeHelp = escapeText($helpLink);
@@ -347,11 +347,114 @@ function createNavBar($data, $displayGreeting = false, $helpLink = '') {
   }
 
   print "<td class=navBar align=\"right\"><button type=\"button\" id=\"themeToggleBtn\" class=\"theme-toggle-btn\" onclick=\"toggleTheme()\" title=\"Toggle dark/light theme\" aria-label=\"Toggle theme\">🌙</button> :: <a class=navMenuLink target=\"_blank\" href=\"{$safeBase}/help.php" . ($safeHelp !== '' ? "#{$safeHelp}" : "") . "\">Help</a> :: <a class=\"navMenuLink\" href=\"{$safeBase}/logout.php\">logout</a>";
-  print "</td></tr></table>";
+  print "</td></tr>";
+
+  if (!empty($_SESSION["userid"]) && isset($link) && $link instanceof mysqli) {
+    $navUid = (string)$_SESSION["userid"];
+    $unreadCnt = 0;
+    $pendingReqCnt = 0;
+    $jumpGroups = [];
+
+    try {
+      $st_u = mysqli_prepare($link, "SELECT COUNT(*) AS cnt FROM messages WHERE recipient_id = ? AND is_read = 0 AND recipient_deleted = 0");
+      if ($st_u) {
+        mysqli_stmt_bind_param($st_u, "s", $navUid);
+        mysqli_stmt_execute($st_u);
+        $ru = mysqli_fetch_assoc(mysqli_stmt_get_result($st_u));
+        $unreadCnt = (int)($ru['cnt'] ?? 0);
+      }
+
+      $st_p = mysqli_prepare($link, "SELECT COUNT(*) AS cnt FROM accessRequests WHERE targetId = ? AND status = 'pending'");
+      if ($st_p) {
+        mysqli_stmt_bind_param($st_p, "s", $navUid);
+        mysqli_stmt_execute($st_p);
+        $rp = mysqli_fetch_assoc(mysqli_stmt_get_result($st_p));
+        $pendingReqCnt = (int)($rp['cnt'] ?? 0);
+      }
+
+      $st_j = mysqli_prepare(
+        $link,
+        "SELECT people.userid, people.firstname, people.lastname, people.suffix
+         FROM people
+         JOIN viewList ON viewList.pid = people.userid
+         WHERE viewList.viewer = ? AND people.userid != ?
+         GROUP BY people.userid
+         ORDER BY people.lastname, people.firstname"
+      );
+      if ($st_j) {
+        mysqli_stmt_bind_param($st_j, "ss", $navUid, $navUid);
+        mysqli_stmt_execute($st_j);
+        $rj = mysqli_stmt_get_result($st_j);
+        while ($jrow = mysqli_fetch_assoc($rj)) {
+          $fam = trim((string)($jrow['lastname'] ?? ''));
+          if ($fam === '') {
+            $fam = 'Other';
+          }
+          $full = trim($jrow['firstname'] . ' ' . $jrow['lastname'] . ' ' . ($jrow['suffix'] ?? ''));
+          $jumpGroups[$fam][] = [
+            'userid' => $jrow['userid'],
+            'name' => $full
+          ];
+        }
+      }
+    } catch (Throwable $e) {
+      error_log("Navbar helper query warning: " . $e->getMessage());
+    }
+
+    $colspan = ($displayGreeting && !empty($_SESSION["fullname"])) ? 3 : 2;
+    print "<tr class=\"navQuickRow\"><td colspan=\"{$colspan}\" class=\"navQuickCell\">";
+    print "<div class=\"nav-quick-bar\">";
+    print "<div class=\"nav-quick-links\">";
+    print "<a class=\"navQuickLink\" href=\"{$safeBase}/home.php\">🏠 Home</a>";
+    print "<a class=\"navQuickLink\" href=\"{$safeBase}/modifyList/modifyList.php\">✏️ My List</a>";
+    print "<a class=\"navQuickLink\" href=\"{$safeBase}/viewPurchases.php\">🛍️ Purchases</a>";
+    print "<a class=\"navQuickLink\" href=\"{$safeBase}/messages.php\">✉️ Messages";
+    if ($unreadCnt > 0) {
+      print " <span id=\"navUnreadBadge\" class=\"nav-pill-badge\">" . $unreadCnt . "</span>";
+    } else {
+      print " <span id=\"navUnreadBadge\" class=\"nav-pill-badge\" style=\"display:none;\">0</span>";
+    }
+    print "</a>";
+    print "<a class=\"navQuickLink\" href=\"{$safeBase}/updateAccount/updateAccount.php\">👤 Account";
+    if ($pendingReqCnt > 0) {
+      print " <span class=\"nav-pill-badge\">" . $pendingReqCnt . "</span>";
+    }
+    print "</a>";
+    if (!empty($_SESSION["admin"]) && (int)$_SESSION["admin"] === 1) {
+      print "<a class=\"navQuickLink\" href=\"{$safeBase}/admin.php\">⚙️ Admin</a>";
+    }
+    print "</div>";
+
+    if (!empty($jumpGroups)) {
+      $currentRecip = isset($_GET['recip']) ? (string)$_GET['recip'] : '';
+      print "<div class=\"nav-jump-wrap\">";
+      print "<select class=\"nav-jump-select\" aria-label=\"Jump to wishlist\" onchange=\"if(this.value){window.location.href=this.value;}\">";
+      print "<option value=\"\">Jump to List ▾</option>";
+      foreach ($jumpGroups as $famLabel => $members) {
+        print "<optgroup label=\"" . escapeText($famLabel) . "\">";
+        foreach ($members as $m) {
+          $optUrl = $base_url . "/viewList/viewList.php?recip=" . urlencode($m['userid']) . "&name=" . urlencode($m['name']);
+          $sel = ($currentRecip !== '' && $currentRecip === $m['userid']) ? " selected" : "";
+          print "<option value=\"" . escapeText($optUrl) . "\"{$sel}>" . escapeText($m['name']) . "</option>";
+        }
+        print "</optgroup>";
+      }
+      print "</select>";
+      print "</div>";
+    }
+
+    print "</div>";
+    print "</td></tr>";
+  }
+
+  print "</table>";
+  $themeVer = (int)@filemtime(__DIR__ . '/js/theme.js');
+  $toastVer = (int)@filemtime(__DIR__ . '/js/toast.js');
+  $bttVer = (int)@filemtime(__DIR__ . '/js/back-to-top.js');
   print "<script type=\"text/javascript\">window.WISHLIST_BASE_URL = " . json_encode($base_url, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) . ";</script>";
-  print "<script type=\"text/javascript\" src=\"{$safeBase}/js/theme.js\"></script>";
-  print "<script type=\"text/javascript\" src=\"{$safeBase}/js/toast.js\"></script>";
-  print "<script type=\"text/javascript\" src=\"{$safeBase}/js/back-to-top.js\"></script>";
+  print "<script type=\"text/javascript\" src=\"{$safeBase}/js/theme.js?v={$themeVer}\"></script>";
+  print "<script type=\"text/javascript\" src=\"{$safeBase}/js/toast.js?v={$toastVer}\"></script>";
+  print "<script type=\"text/javascript\" src=\"{$safeBase}/js/back-to-top.js?v={$bttVer}\"></script>";
 }
 
 function getFullPath($url) {
@@ -439,10 +542,6 @@ function convertString($str) {
   $str = str_replace(array("\r\n", "\r", "\n"), "<br>", (string)$str);
   $str = str_replace(chr(34), "&quot;", $str);
   return trim($str);
-}
-
-function convertString_no_escape($str) {
-  return convertString($str);
 }
 
 function formatMessage($body) {
@@ -641,7 +740,7 @@ function fetchItemsByUser($link, $ownerUserid, $includePurchases = false) {
  * $name : The full name of $recip
  * $displayPurchases : if equal to 0 then don't indicate if item has been purchased
  */
-function printList2($recip, $buyerUserId, $name, $displayPurchases = 1) {
+function printList2($recip, $buyerUserId, $name, $displayPurchases = 1, $prevViewDate = null) {
   global $link, $base_url;
 
   $access = canViewList($link, $recip, $buyerUserId);
@@ -719,7 +818,7 @@ function printList2($recip, $buyerUserId, $name, $displayPurchases = 1) {
   foreach ($categories as $row) {
     $cid = (int)$row['cid'];
     $catItems = $itemsByCid[$cid] ?? [];
-    printCategory($row, $name, $displayPurchases, $readOnly, 0, -1, -1, 0, $coBuyers, $catItems);
+    printCategory($row, $name, $displayPurchases, $readOnly, 0, -1, -1, 0, $coBuyers, $catItems, $prevViewDate);
   }
 }
 
@@ -757,12 +856,15 @@ function printModifyList($userid) {
 }
 
 /* printCategory */
-function printCategory($row, $name, $displayPurchases, $readOnly, $modifyList, $i, $last, $printConsider = 0, $coBuyers = [], $preloadedItems = null) {
+function printCategory($row, $name, $displayPurchases, $readOnly, $modifyList, $i, $last, $printConsider = 0, $coBuyers = [], $preloadedItems = null, $prevViewDate = null) {
   global $link;
 
   if (!is_array($row) || empty($row)) {
     return;
   }
+
+  $prevViewTs = (!empty($prevViewDate) && $prevViewDate !== '0000-00-00 00:00:00') ? strtotime($prevViewDate) : false;
+  $minNewTs = strtotime('2020-12-31 23:59:59');
 
   // Handle special categories first
   if ($row["catSortOrder"] < 0) {
@@ -980,10 +1082,14 @@ function printCategory($row, $name, $displayPurchases, $readOnly, $modifyList, $
       print "<div class='item-cell item-content' colspan=2>";
     }
 
+    $itemCreateTs = !empty($row2['createDate']) ? strtotime($row2['createDate']) : false;
+    $isFullyBought = ($row2['allowCheck'] == 'true' && $displayPurchases != 0 && $bought >= $quantity);
+    $isNewItem = (!$modifyList && $prevViewTs && $itemCreateTs && $itemCreateTs > $minNewTs && $itemCreateTs > $prevViewTs && !$isFullyBought);
+
     if ($bought > 0 && $quantity == 1 && $displayPurchases != 0) {
       print "<s>";
     }
-    printItem($row2, $name, $quantity, $bought, $row2['createDateFormatted'] ?? '');
+    printItem($row2, $name, $quantity, $bought, $row2['createDateFormatted'] ?? '', $isNewItem);
     if ($bought > 0 && $quantity == 1 && $displayPurchases != 0) {
       print "</s>";
     }
@@ -1087,7 +1193,7 @@ function formatStoreButton($url, $linkText = "") {
   return "<a class='store-button' target='_blank' rel='noopener noreferrer' href='{$cleanUrl}' title='Open {$cleanUrl}'>{$icon}{$label} <span class='store-button-arrow'>↗</span></a>";
 }
 
-function printItem($row2, $name, $quantity, $bought, $createDateFormatted) {
+function printItem($row2, $name, $quantity, $bought, $createDateFormatted, $isNewItem = false) {
   global $base_url, $base_dir;
 
   $text = "";
@@ -1104,16 +1210,20 @@ function printItem($row2, $name, $quantity, $bought, $createDateFormatted) {
     $imgUrl = escapeText($base_url . "/uploads/" . $imgFile . $ver);
     $imgTitle = escapeText($row2["title"] ?? '');
     $text .= "<div class=\"item-thumbnail-wrapper\">";
-    $text .= "<a href=\"" . $imgUrl . "\" data-featherlight=\"" . $imgUrl . "\" title=\"" . $imgTitle . "\">";
-    $text .= "<img src=\"" . $imgUrl . "\" class=\"item-thumbnail\" alt=\"" . $imgTitle . "\" loading=\"lazy\">";
+    $text .= "<a href=\"" . $imgUrl . "\" data-lightbox=\"" . $imgUrl . "\" title=\"" . $imgTitle . "\">";
+    $text .= "<img src=\"" . $imgUrl . "\" class=\"item-thumbnail\" alt=\"" . $imgTitle . "\" loading=\"lazy\" decoding=\"async\">";
     $text .= "</a>";
-    $text .= "<div class=\"item-thumbnail-popup\"><img src=\"" . $imgUrl . "\" alt=\"" . $imgTitle . "\" loading=\"lazy\"></div>";
     $text .= "</div>";
   }
 
   if (!empty($row2["title"])) {
     $text .= "<i>" . escapeText($row2["title"]) . "</i>";
+    if ($isNewItem) {
+      $text .= " <span class=\"new-item-badge no-print\" title=\"Added since your last visit\">✨ NEW</span>";
+    }
     $dash = 1;
+  } elseif ($isNewItem) {
+    $text .= "<span class=\"new-item-badge no-print\" title=\"Added since your last visit\">✨ NEW</span> ";
   }
 
   if (!empty($row2["description"])) {
@@ -1447,6 +1557,276 @@ function process_image_upload($field, $destination) {
   }
   $result = generate_image_thumbnail($temp_image_path, $destination);
   return $result ? array($temp_image_path, $destination) : false;
+}
+
+/**
+ * SSRF-Safe Public URL Fetching & Remote Thumbnail Import Helpers
+ */
+function isPublicIpAddress($ip) {
+  if (!is_string($ip) || $ip === '') {
+    return false;
+  }
+  return filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) !== false;
+}
+
+function resolveSafePublicHostIps($host) {
+  $cleanHost = strtolower(trim((string)$host, "[] \t\n\r\0\x0B."));
+  if ($cleanHost === '' || $cleanHost === 'localhost' || preg_match('/\.(?:local|internal|localhost|arpa|lan|home)$/i', $cleanHost)) {
+    return [];
+  }
+
+  if (filter_var($cleanHost, FILTER_VALIDATE_IP) !== false) {
+    return isPublicIpAddress($cleanHost) ? [$cleanHost] : [];
+  }
+
+  $ips = [];
+  if (function_exists('dns_get_record')) {
+    $records = @dns_get_record($cleanHost, DNS_A + DNS_AAAA);
+    if (is_array($records)) {
+      foreach ($records as $rec) {
+        if (!empty($rec['ip'])) {
+          $ips[] = $rec['ip'];
+        }
+        if (!empty($rec['ipv6'])) {
+          $ips[] = $rec['ipv6'];
+        }
+      }
+    }
+  }
+  if (empty($ips)) {
+    $v4 = @gethostbynamel($cleanHost);
+    if (is_array($v4)) {
+      $ips = array_merge($ips, $v4);
+    }
+  }
+
+  $ips = array_values(array_unique($ips));
+  if (empty($ips)) {
+    return [];
+  }
+  // Reject if ANY resolved address is private, loopback, link-local, or reserved
+  foreach ($ips as $ip) {
+    if (!isPublicIpAddress($ip)) {
+      return [];
+    }
+  }
+  return $ips;
+}
+
+function resolveRelativeHttpUrl($baseUrl, $relativeUrl) {
+  $rel = trim((string)$relativeUrl);
+  if ($rel === '') {
+    return '';
+  }
+  if (preg_match('#^https?://#i', $rel)) {
+    return $rel;
+  }
+  $baseParts = @parse_url($baseUrl);
+  if (!$baseParts || empty($baseParts['scheme']) || empty($baseParts['host'])) {
+    return '';
+  }
+  $scheme = strtolower($baseParts['scheme']);
+  if ($scheme !== 'http' && $scheme !== 'https') {
+    return '';
+  }
+  if (strpos($rel, '//') === 0) {
+    return $scheme . ':' . $rel;
+  }
+  $portPart = !empty($baseParts['port']) ? (':' . (int)$baseParts['port']) : '';
+  $origin = $scheme . '://' . $baseParts['host'] . $portPart;
+  if ($rel[0] === '/') {
+    return $origin . $rel;
+  }
+  $basePath = $baseParts['path'] ?? '/';
+  $dir = preg_replace('#/[^/]*$#', '/', $basePath);
+  return $origin . $dir . $rel;
+}
+
+function fetchSafePublicUrl($rawUrl, $maxBytes = 1572864, $timeoutSec = 4, $abortOnOverflow = false) {
+  if (!function_exists('curl_init')) {
+    return ['ok' => false, 'error' => 'HTTP client unavailable.'];
+  }
+  $currentUrl = trim((string)$rawUrl);
+  if ($currentUrl === '') {
+    return ['ok' => false, 'error' => 'Missing URL.'];
+  }
+  if (!preg_match('#^https?://#i', $currentUrl)) {
+    $currentUrl = 'https://' . $currentUrl;
+  }
+
+  $maxRedirects = 4;
+  for ($hop = 0; $hop <= $maxRedirects; $hop++) {
+    $parts = @parse_url($currentUrl);
+    if (!$parts || empty($parts['scheme']) || empty($parts['host'])) {
+      return ['ok' => false, 'error' => 'Invalid URL format.'];
+    }
+    $scheme = strtolower($parts['scheme']);
+    if ($scheme !== 'http' && $scheme !== 'https') {
+      return ['ok' => false, 'error' => 'Only http and https links are allowed.'];
+    }
+    if (!empty($parts['user']) || !empty($parts['pass'])) {
+      return ['ok' => false, 'error' => 'Credentials in URLs are not allowed.'];
+    }
+    $defaultPort = ($scheme === 'https') ? 443 : 80;
+    $port = isset($parts['port']) ? (int)$parts['port'] : $defaultPort;
+    if ($port !== 80 && $port !== 443) {
+      return ['ok' => false, 'error' => 'Non-standard ports are not allowed.'];
+    }
+
+    $host = $parts['host'];
+    $safeIps = resolveSafePublicHostIps($host);
+    if (empty($safeIps)) {
+      return ['ok' => false, 'error' => 'Could not resolve a public address for that link.'];
+    }
+    $pinnedIp = $safeIps[0];
+    $resolveHost = trim($host, '[]');
+    $resolveEntry = $resolveHost . ':' . $port . ':' . (strpos($pinnedIp, ':') !== false ? '[' . $pinnedIp . ']' : $pinnedIp);
+
+    $body = '';
+    $overflowed = false;
+    $redirectLocation = '';
+    $contentType = '';
+
+    $ch = curl_init($currentUrl);
+    curl_setopt_array($ch, [
+      CURLOPT_RETURNTRANSFER => false,
+      CURLOPT_FOLLOWLOCATION => false,
+      CURLOPT_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
+      CURLOPT_CONNECTTIMEOUT => 3,
+      CURLOPT_TIMEOUT => max(2, (int)$timeoutSec),
+      CURLOPT_ENCODING => '',
+      CURLOPT_RESOLVE => [$resolveEntry],
+      CURLOPT_USERAGENT => 'Mozilla/5.0 (compatible; WishListMetadataPreview/1.0)',
+      CURLOPT_HTTPHEADER => [
+        'Accept: text/html,application/xhtml+xml,image/avif,image/webp,image/apng,image/*;q=0.8,*/*;q=0.5',
+        'Accept-Language: en-US,en;q=0.9'
+      ],
+      CURLOPT_HEADERFUNCTION => function($ch, $headerLine) use (&$redirectLocation, &$contentType) {
+        $len = strlen($headerLine);
+        $colonPos = strpos($headerLine, ':');
+        if ($colonPos !== false) {
+          $hName = strtolower(trim(substr($headerLine, 0, $colonPos)));
+          $hVal = trim(substr($headerLine, $colonPos + 1));
+          if ($hName === 'location') {
+            $redirectLocation = $hVal;
+          } elseif ($hName === 'content-type') {
+            $contentType = $hVal;
+          }
+        }
+        return $len;
+      },
+      CURLOPT_WRITEFUNCTION => function($ch, $chunk) use (&$body, $maxBytes, $abortOnOverflow, &$overflowed) {
+        $chunkLen = strlen($chunk);
+        $remaining = $maxBytes - strlen($body);
+        if ($remaining <= 0) {
+          $overflowed = true;
+          return 0;
+        }
+        if ($chunkLen > $remaining) {
+          if (!$abortOnOverflow) {
+            $body .= substr($chunk, 0, $remaining);
+          }
+          $overflowed = true;
+          return 0;
+        }
+        $body .= $chunk;
+        return $chunkLen;
+      }
+    ]);
+
+    $execOk = @curl_exec($ch);
+    $curlErrNo = curl_errno($ch);
+    $statusCode = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+    if (PHP_VERSION_ID < 80000) {
+      curl_close($ch);
+    }
+
+    if (in_array($statusCode, [301, 302, 303, 307, 308], true) && $redirectLocation !== '') {
+      if ($hop === $maxRedirects) {
+        return ['ok' => false, 'error' => 'Too many redirects.'];
+      }
+      $nextUrl = resolveRelativeHttpUrl($currentUrl, $redirectLocation);
+      if ($nextUrl === '') {
+        return ['ok' => false, 'error' => 'Invalid redirect target.'];
+      }
+      $currentUrl = $nextUrl;
+      continue;
+    }
+
+    // CURLE_WRITE_ERROR (23) occurs intentionally when we stop early after reaching $maxBytes on large HTML pages
+    if ($abortOnOverflow && $overflowed) {
+      return ['ok' => false, 'error' => 'Remote file exceeds maximum allowed size.'];
+    }
+    if (!$execOk && !(!$abortOnOverflow && $overflowed && $curlErrNo === 23)) {
+      return ['ok' => false, 'error' => 'Could not connect to store page.'];
+    }
+    if ($statusCode < 200 || $statusCode >= 300) {
+      return ['ok' => false, 'error' => 'Store page blocked automated preview (HTTP ' . $statusCode . ').', 'status' => $statusCode];
+    }
+
+    return [
+      'ok' => true,
+      'body' => $body,
+      'final_url' => $currentUrl,
+      'content_type' => $contentType,
+      'status' => $statusCode
+    ];
+  }
+
+  return ['ok' => false, 'error' => 'Failed to fetch URL.'];
+}
+
+function import_remote_image_to_thumbnail($imageUrl, $destination) {
+  $cleanUrl = sanitizeHttpUrl(trim((string)$imageUrl), false);
+  if ($cleanUrl === '') {
+    return false;
+  }
+  $fetched = fetchSafePublicUrl($cleanUrl, 5242880, 5, true);
+  if (empty($fetched['ok']) || empty($fetched['body'])) {
+    return false;
+  }
+
+  $tmpFile = @tempnam(sys_get_temp_dir(), 'wlimg_');
+  if ($tmpFile === false) {
+    return false;
+  }
+
+  $savedOk = false;
+  try {
+    if (@file_put_contents($tmpFile, $fetched['body']) === false) {
+      return false;
+    }
+    if (function_exists('finfo_open')) {
+      $finfo = @finfo_open(FILEINFO_MIME_TYPE);
+      if ($finfo) {
+        $mime = (string)@finfo_file($finfo, $tmpFile);
+        if (PHP_VERSION_ID < 80500) {
+          @finfo_close($finfo);
+        }
+        $allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (!in_array(strtolower($mime), $allowedMimes, true)) {
+          return false;
+        }
+      }
+    }
+    $imgInfo = @getimagesize($tmpFile);
+    if (!$imgInfo) {
+      return false;
+    }
+    $allowedTypes = [IMAGETYPE_GIF, IMAGETYPE_JPEG, IMAGETYPE_PNG];
+    if (defined('IMAGETYPE_WEBP')) {
+      $allowedTypes[] = IMAGETYPE_WEBP;
+    }
+    if (!in_array($imgInfo[2] ?? null, $allowedTypes, true)) {
+      return false;
+    }
+    $savedOk = generate_image_thumbnail($tmpFile, $destination);
+  } finally {
+    if (is_file($tmpFile)) {
+      @unlink($tmpFile);
+    }
+  }
+  return $savedOk;
 }
 
 /**

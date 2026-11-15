@@ -26,8 +26,8 @@ if ($commentId > 0) {
         $stmt = mysqli_prepare($link, "DELETE FROM comments WHERE commentId = ? AND (comment_userid = ? OR userid != ?)");
         mysqli_stmt_bind_param($stmt, "iss", $commentId, $viewerUserid, $viewerUserid);
     } else {
-        $stmt = mysqli_prepare($link, "DELETE FROM comments WHERE commentId = ? AND comment_userid = ?");
-        mysqli_stmt_bind_param($stmt, "is", $commentId, $viewerUserid);
+        $stmt = mysqli_prepare($link, "DELETE FROM comments WHERE commentId = ? AND comment_userid = ? AND (claimed_by IS NULL OR claimed_by = '' OR claimed_by = ?)");
+        mysqli_stmt_bind_param($stmt, "iss", $commentId, $viewerUserid, $viewerUserid);
     }
     mysqli_stmt_execute($stmt);
 }

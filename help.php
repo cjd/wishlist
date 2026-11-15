@@ -10,7 +10,7 @@ include "funcLib.php";
 <meta http-equiv="Expires" content="0"> 
 <meta http-equiv="Pragma" content="no-cache"> 
 <link rel="manifest" href="manifest.json">
-<link rel="stylesheet" type="text/css" media="screen" href="style.css">
+<link rel="stylesheet" type="text/css" media="screen" href="style.css?v=<?php echo (int)@filemtime(__DIR__ . '/style.css'); ?>">
 <title>Help &amp; Frequently Asked Questions</title>
 </head>
 <body>
@@ -122,7 +122,7 @@ if (isset($_SESSION["userid"])) {
 <details class="faq-item" id="imageZoom">
   <summary class="faq-question"><span>How do I view item images up close?</span><span class="faq-icon">▾</span></summary>
   <div class="faq-answer">
-    <p>When an item includes an image, you can hover your mouse cursor over the thumbnail to see an instant zoomed popover preview. Clicking the image will open a high-resolution fullscreen lightbox view.</p>
+    <p>When an item includes an image, click or tap the thumbnail to open a full-size lightbox preview. Click the close button (✕), press Escape, or click outside the image to close it.</p>
   </div>
 </details>
 
@@ -149,8 +149,16 @@ if (isset($_SESSION["userid"])) {
       <li><b>Click "💡 Suggest Secret Gift Idea":</b> At the bottom of the wishlist (in the Comments section), click the suggestion button.</li>
       <li><b>Enter Gift Details:</b> Enter the gift title, an optional retail store link, estimated price, and private notes.</li>
       <li><b>Hidden from Owner:</b> The recipient can <b>never</b> see these suggestions—they only appear to authorized viewers as a purple <i>"💡 Secret Gift Idea"</i> card with direct store buttons and price tags.</li>
+      <li><b>Claim / Mark Bought:</b> Any authorized shopper can click <b>🎁 Claim / Mark Bought</b> (and optionally split with co-buyers) so nobody buys the same off-list gift twice. Claimed secret gifts also appear in <b>View Purchases</b> and your spending summary!</li>
       <li><b>Coordinate via Messages:</b> You can check the names of fellow viewers to dispatch an instant on-site notification message proposing the idea.</li>
     </ul>
+  </div>
+</details>
+
+<details class="faq-item" id="anonymousQuestion">
+  <summary class="faq-question"><span>How can I ask about an item's size or details without spoiling the surprise?</span><span class="faq-icon">▾</span></summary>
+  <div class="faq-answer">
+    <p>When viewing someone's wishlist, click <b>Send Message to [Name]</b> and check <b>🕵️ Send anonymously as "A Gift Shopper"</b>. Your identity is hidden from the recipient, and the message prompts them to update the item's description on their wishlist so you can see their answer without revealing who asked!</p>
   </div>
 </details>
 </div>
@@ -181,8 +189,8 @@ if (isset($_SESSION["userid"])) {
 <details class="faq-item" id="addItem">
   <summary class="faq-question"><span>How do I add items to my list?</span><span class="faq-icon">▾</span></summary>
   <div class="faq-answer">
-    <p>To add an item, go to the 'Modify Your List' page. In the header of each category, you will find a <b>➕ Add Item</b> button. Clicking this button will take you to a form where you can enter the title, description, price, quantity, an optional image, and web links.</p>
-    <p><b>Automatic Store Detection:</b> When you paste a product link from major retailers (such as Amazon, Big W, Kmart, Target, EB Games, JB Hi-Fi, Bunnings, Apple, Best Buy, and many others), the website will automatically detect the retailer and fill in the store name for you. On wishlists, these links display as neat <b>Find at [Store]</b> buttons.</p>
+    <p>To add an item, go to the 'Modify Your List' page and click <b>➕ Add Item</b> in any category header. Paste a product link at the top and click <b>✨ Auto-Fill from Link</b> to automatically fill in the item title, price, store name, and product image when supported by the retailer, or enter details manually (including up to 3 store links).</p>
+    <p><b>Mobile Share Sheet &amp; Bookmarklet:</b> If you install WishList as a mobile app (PWA) on Android, you can share store links directly from your browser's Share menu into WishList, or use the desktop/mobile bookmarklet on the <a href="wishlist_button.php">Add from Web</a> page.</p>
   </div>
 </details>
 
@@ -209,6 +217,13 @@ if (isset($_SESSION["userid"])) {
   <summary class="faq-question"><span>How do I reorder items or move them to a different category?</span><span class="faq-icon">▾</span></summary>
   <div class="faq-answer">
     <p>You can organize your list by dragging and dropping items. Grab the handle icon (☰) on the right side of each item and drag it to your desired position. You can move items within the same category, or drag them into an entirely different category. A confirmation notification will appear when the new order is saved.</p>
+  </div>
+</details>
+
+<details class="faq-item" id="postHolidayCleanup">
+  <summary class="faq-question"><span>How do I clean up bought gifts after my birthday or Christmas?</span><span class="faq-icon">▾</span></summary>
+  <div class="faq-answer">
+    <p>Once your gift exchange has passed, go to <b>Modify Your List</b> and click <b>Remove Crossed Off Items</b>. Behind a spoiler warning gate, you can review each purchased or partially purchased item and choose per item whether to <b>Delete</b> it, <b>Move it to "Items Under Consideration"</b>, or <b>Keep the remaining unbought quantity</b> on your list.</p>
   </div>
 </details>
 </div>
@@ -326,7 +341,7 @@ if (isset($_SESSION["userid"])) {
 <details class="faq-item" id="listAccess">
   <summary class="faq-question"><span>How do I manage who can view my list?</span><span class="faq-icon">▾</span></summary>
   <div class="faq-answer">
-    <p>You have control over who can see your wishlist. Go to <b>Update Your Account</b>. On this page, you can see everyone who currently has access to your list, adjust their permissions, request access to other users' lists, or remove viewers.</p>
+    <p>Go to <b>Update Your Account</b> to manage sharing. Use the searchable family-grouped multi-select pickers to grant access to your list (defaulting to <b>Full Purchasing</b> so family members can check off gifts right away) or request access to multiple relatives' lists at once. When someone requests access to your list on your Home page, you can also click <b>🔄 Approve &amp; Request Their List Back</b> in a single step.</p>
   </div>
 </details>
 </div>
@@ -340,7 +355,7 @@ if (isset($_SESSION["userid"])) {
 </center>
 
 <?php if (!isset($_SESSION["userid"])): ?>
-<script type="text/javascript" src="js/theme.js"></script>
+<script type="text/javascript" src="js/theme.js?v=<?php echo (int)@filemtime(__DIR__ . '/js/theme.js'); ?>"></script>
 <script type="text/javascript" src="js/back-to-top.js"></script>
 <?php endif; ?>
 <script type="text/javascript">

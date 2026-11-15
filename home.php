@@ -10,8 +10,16 @@ unset($_SESSION["euserid"]);
 $userid = $_SESSION["userid"];
 $csrf_token = getCsrfToken();
 
-// Fetch pending access requests for this user's list
-$pending_requests_query = "SELECT ar.*, p.firstname, p.lastname, p.suffix FROM accessRequests ar JOIN people p ON ar.requesterId = p.userid WHERE ar.targetId = ? AND ar.status = 'pending' ORDER BY ar.requestDate DESC";
+// Fetch pending access requests for this user's list (checking whether we already view or requested theirs)
+$pending_requests_query = "
+    SELECT ar.*, p.firstname, p.lastname, p.suffix,
+           EXISTS(SELECT 1 FROM viewList vl WHERE vl.pid = ar.requesterId AND vl.viewer = ar.targetId) AS already_viewing_theirs,
+           EXISTS(SELECT 1 FROM accessRequests ar2 WHERE ar2.requesterId = ar.targetId AND ar2.targetId = ar.requesterId AND ar2.status = 'pending') AS already_requested_theirs
+    FROM accessRequests ar
+    JOIN people p ON ar.requesterId = p.userid
+    WHERE ar.targetId = ? AND ar.status = 'pending'
+    ORDER BY ar.requestDate DESC
+";
 $stmt_pending = mysqli_prepare($link, $pending_requests_query);
 mysqli_stmt_bind_param($stmt_pending, "s", $userid);
 mysqli_stmt_execute($stmt_pending);
@@ -41,6 +49,13 @@ if (!empty($notif_ids)) {
     mysqli_query($link, "UPDATE accessRequests SET notified = 1 WHERE id IN ($id_list)");
 }
 
+if (!empty($_GET['reciprocal_sent'])) {
+    $access_notifications[] = [
+        'text' => "Approved access and sent a request to view their wishlist back!",
+        'type' => 'success'
+    ];
+}
+
 $lastname = $_REQUEST["lastname"] ?? "";
 
 $query = "SELECT people.*, MAX(viewList.allowEdit) AS allowEdit, MAX(viewList.viewContactInfo) AS viewContactInfo FROM people JOIN viewList ON viewList.pid = people.userid WHERE viewList.viewer = ? GROUP BY people.userid ORDER BY people.lastname, people.firstname";
@@ -55,14 +70,87 @@ while ($r = mysqli_fetch_assoc($result)) {
 }
 $num_rows = count($people_rows);
 
+// Count unpurchased public items added since the viewer's lastViewDate (excluding own list)
+$new_counts_by_pid = [];
+$new_items_query = "
+    SELECT c.userid AS pid, COUNT(*) AS new_count
+    FROM viewList vl
+    JOIN categories c ON c.userid = vl.pid AND c.catSortOrder > -1
+    JOIN items i ON i.cid = c.cid
+    LEFT JOIN (
+        SELECT iid, SUM(quantity) AS total_bought
+        FROM purchaseHistory
+        GROUP BY iid
+    ) ph ON ph.iid = i.iid
+    WHERE vl.viewer = ?
+      AND vl.pid != ?
+      AND i.createDate > '2020-12-31 23:59:59'
+      AND i.createDate > vl.lastViewDate
+      AND (i.allowCheck != 'true' OR COALESCE(ph.total_bought, 0) < i.quantity)
+    GROUP BY c.userid
+";
+$stmt_new = mysqli_prepare($link, $new_items_query);
+if ($stmt_new) {
+    mysqli_stmt_bind_param($stmt_new, "ss", $userid, $userid);
+    mysqli_stmt_execute($stmt_new);
+    $res_new = mysqli_stmt_get_result($stmt_new);
+    while ($nrow = mysqli_fetch_assoc($res_new)) {
+        $new_counts_by_pid[$nrow['pid']] = (int)$nrow['new_count'];
+    }
+}
+
+$family_new_counts = [];
+foreach ($people_rows as $prow) {
+    $fam_key = strtolower(trim($prow['lastname'] ?? ''));
+    $p_new = $new_counts_by_pid[$prow['userid']] ?? 0;
+    if ($p_new > 0) {
+        $family_new_counts[$fam_key] = ($family_new_counts[$fam_key] ?? 0) + $p_new;
+    }
+}
+
 $contact_map = [];
+$upcoming_events = [];
+$month_lookup = [
+    'january' => 1, 'february' => 2, 'march' => 3, 'april' => 4,
+    'may' => 5, 'june' => 6, 'july' => 7, 'august' => 8,
+    'september' => 9, 'october' => 10, 'november' => 11, 'december' => 12
+];
+$todayStart = strtotime('today');
+$currentYear = (int)date('Y');
+
 foreach ($people_rows as $row) {
     if (!empty($row["viewContactInfo"])) {
         $name = trim($row["firstname"] . ' ' . $row["lastname"] . ' ' . ($row["suffix"] ?? ''));
         $lines = [$name];
 
-        if (!empty($row['bmonth']) && !empty($row['bday']) && (int)$row['bday'] > 0) {
-            $lines[] = "Birthday: " . $row['bmonth'] . " " . $row['bday'];
+        $bmonthRaw = trim((string)($row['bmonth'] ?? ''));
+        $bdayInt = (int)($row['bday'] ?? 0);
+        if ($bmonthRaw !== '' && $bdayInt >= 1 && $bdayInt <= 31) {
+            $lines[] = "Birthday: " . $bmonthRaw . " " . $bdayInt;
+
+            $mNum = $month_lookup[strtolower($bmonthRaw)] ?? 0;
+            if ($mNum >= 1 && $mNum <= 12) {
+                $targetYear = $currentYear;
+                $dayForYear = ($mNum === 2 && $bdayInt === 29 && !checkdate(2, 29, $targetYear)) ? 28 : $bdayInt;
+                $bdayTs = mktime(0, 0, 0, $mNum, $dayForYear, $targetYear);
+                if ($bdayTs < $todayStart) {
+                    $targetYear = $currentYear + 1;
+                    $dayForYear = ($mNum === 2 && $bdayInt === 29 && !checkdate(2, 29, $targetYear)) ? 28 : $bdayInt;
+                    $bdayTs = mktime(0, 0, 0, $mNum, $dayForYear, $targetYear);
+                }
+                $daysAway = (int)round(($bdayTs - $todayStart) / 86400);
+                if ($daysAway >= 0 && $daysAway <= 45) {
+                    $upcoming_events[] = [
+                        'days' => $daysAway,
+                        'icon' => '🎂',
+                        'name' => $name,
+                        'date_label' => substr(ucfirst(strtolower($bmonthRaw)), 0, 3) . ' ' . $bdayInt,
+                        'url' => ($row['userid'] === $userid)
+                            ? 'modifyList/modifyList.php'
+                            : ('viewList/viewList.php?recip=' . urlencode($row['userid']) . '&name=' . urlencode($name))
+                    ];
+                }
+            }
         }
         if (!empty($row['street'])) {
             $lines[] = $row['street'];
@@ -85,6 +173,24 @@ foreach ($people_rows as $row) {
         $contact_map[$row['userid']] = implode("\n", $lines);
     }
 }
+
+$xmasTs = mktime(0, 0, 0, 12, 25, $currentYear);
+if ($xmasTs >= $todayStart) {
+    $xmasDays = (int)round(($xmasTs - $todayStart) / 86400);
+    if ($xmasDays <= 55) {
+        $upcoming_events[] = [
+            'days' => $xmasDays,
+            'icon' => '🎄',
+            'name' => 'Christmas',
+            'date_label' => 'Dec 25',
+            'url' => ''
+        ];
+    }
+}
+
+usort($upcoming_events, function($a, $b) {
+    return $a['days'] <=> $b['days'];
+});
 
 $season = getSeason();
 if ($season == 1) {
@@ -109,7 +215,7 @@ if ($season == 1) {
   <meta name="apple-mobile-web-app-title" content="WishList">
   <link rel="apple-touch-icon" href="images/icons/icon-192x192.png">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css" type="text/css">
+  <link rel="stylesheet" href="style.css?v=<?php echo (int)@filemtime(__DIR__ . '/style.css'); ?>" type="text/css">
   <title>WishList Home Page</title>
   <script src="js/jquery-3.7.1.min.js"></script>
   <script>
@@ -159,6 +265,36 @@ if ($season == 1) {
     </tr>
   </table>
 
+  <?php if (!empty($upcoming_events)): ?>
+  <div class="celebrations-banner no-print">
+    <div class="celebrations-title">🎉 Upcoming Celebrations</div>
+    <div class="celebrations-pills">
+      <?php foreach ($upcoming_events as $ev): ?>
+        <?php
+          if ($ev['days'] === 0) {
+              $whenText = 'Today!';
+          } elseif ($ev['days'] === 1) {
+              $whenText = 'Tomorrow (' . $ev['date_label'] . ')';
+          } else {
+              $whenText = 'in ' . $ev['days'] . ' days (' . $ev['date_label'] . ')';
+          }
+        ?>
+        <?php if ($ev['url'] !== ''): ?>
+          <a href="<?php echo escapeText($ev['url']); ?>" class="celebration-pill">
+            <span><?php echo $ev['icon']; ?> <b><?php echo escapeText($ev['name']); ?></b></span>
+            <span class="celebration-when"><?php echo escapeText($whenText); ?></span>
+          </a>
+        <?php else: ?>
+          <span class="celebration-pill celebration-holiday">
+            <span><?php echo $ev['icon']; ?> <b><?php echo escapeText($ev['name']); ?></b></span>
+            <span class="celebration-when"><?php echo escapeText($whenText); ?></span>
+          </span>
+        <?php endif; ?>
+      <?php endforeach; ?>
+    </div>
+  </div>
+  <?php endif; ?>
+
   <table border="0">
   <tr><td valign="center">
 <?php
@@ -167,14 +303,17 @@ $div_last = "<div id='lastnames'>";
 foreach ($people_rows as $row) {
     $family_name = trim($row['lastname'] ?? '');
     $display_family = ($family_name !== '') ? $family_name : 'Other';
+    $fam_key = strtolower($family_name);
 
     if ($oldlast === null || strcasecmp($oldlast, $family_name) !== 0) {
         if ($oldlast !== null) {
             $div_last .= "<br></div>\n";
         }
         $oldlast = $family_name;
-        $family_id = "fam_" . md5(strtolower($family_name));
-        $div_last .= "<button class='buttonstyle' style='width:100%;' onclick=\"showfamily('#" . $family_id . "')\">" . escapeText($display_family) . "</button><br>\n";
+        $family_id = "fam_" . md5($fam_key);
+        $fam_new = $family_new_counts[$fam_key] ?? 0;
+        $fam_badge = ($fam_new > 0) ? " <span class='new-count-pill'>🟢 " . $fam_new . " new</span>" : "";
+        $div_last .= "<button class='buttonstyle' style='width:100%;' onclick=\"showfamily('#" . $family_id . "')\">" . escapeText($display_family) . $fam_badge . "</button><br>\n";
         $div_last .= "<div id='" . $family_id . "' style='display:none;'>";
     }
 
@@ -183,8 +322,10 @@ foreach ($people_rows as $row) {
     $recip_url = urlencode($row['userid']);
     $name_esc = escapeText($name);
     $userid_js = htmlspecialchars(json_encode($row['userid']), ENT_QUOTES, 'UTF-8');
+    $person_new = $new_counts_by_pid[$row['userid']] ?? 0;
+    $person_badge = ($person_new > 0) ? " <span class='new-count-pill'>🟢 " . $person_new . " new</span>" : "";
 
-    $div_last .= "<button class='lightbutton' style='width:100%;' onclick='window.location=\"viewList/viewList.php?recip=" . $recip_url . "&name=" . $name_url . "\"' onmouseover='show_record(this, document.theForm ? document.theForm.contact : null, " . $userid_js . ")'>" . $name_esc . "</button><br>\n";
+    $div_last .= "<button class='lightbutton' style='width:100%;' onclick='window.location=\"viewList/viewList.php?recip=" . $recip_url . "&name=" . $name_url . "\"' onmouseover='show_record(this, document.theForm ? document.theForm.contact : null, " . $userid_js . ")'>" . $name_esc . $person_badge . "</button><br>\n";
 }
 if ($oldlast !== null) {
     $div_last .= "</div>\n";
@@ -245,7 +386,9 @@ if ($unread_messages_result && mysqli_num_rows($unread_messages_result) > 0) {
     <?php foreach ($_SESSION['messages'] as $msg): ?>
       <?php
         if (empty($msg['sender_id'])) {
-            $senderLabel = 'System';
+            $senderLabel = (stripos((string)($msg['subject'] ?? ''), '[Anonymous Gift Shopper]') === 0)
+                ? '🕵️ A Gift Shopper (Anonymous)'
+                : 'System';
         } elseif (!empty($msg['firstname']) || !empty($msg['lastname'])) {
             $senderLabel = trim($msg['firstname'] . ' ' . $msg['lastname'] . ' ' . ($msg['suffix'] ?? ''));
         } else {
@@ -273,16 +416,22 @@ if ($unread_messages_result && mysqli_num_rows($unread_messages_result) > 0) {
     <span class="close">&times;</span>
     <h2>Access Requests</h2>
     <?php while ($request = mysqli_fetch_assoc($pending_requests_result)): ?>
-      <?php $reqFull = trim($request['firstname'] . ' ' . $request['lastname'] . ' ' . ($request['suffix'] ?? '')); ?>
+      <?php
+        $reqFull = trim($request['firstname'] . ' ' . $request['lastname'] . ' ' . ($request['suffix'] ?? ''));
+        $canAskBack = empty($request['already_viewing_theirs']) && empty($request['already_requested_theirs']);
+      ?>
       <div class="request">
         <p><b><?php echo escapeText($reqFull); ?></b> would like to view your wishlist.</p>
-        <form action="handleAccessRequest.php" method="post">
+        <form action="handleAccessRequest.php" method="post" style="display:flex; flex-wrap:wrap; gap:6px;">
           <input type="hidden" name="csrf_token" value="<?php echo escapeText($csrf_token); ?>">
           <input type="hidden" name="return_to" value="home">
           <input type="hidden" name="requestId" value="<?php echo (int)$request['id']; ?>">
-          <button type="submit" name="decision" value="approve_readonly" class="buttonstyle">Approve (Read-Only)</button>
+          <?php if ($canAskBack): ?>
+            <button type="submit" name="decision" value="approve_reciprocal" class="buttonstyle">🔄 Approve &amp; Request Their List Back</button>
+          <?php endif; ?>
           <button type="submit" name="decision" value="approve_contact" class="buttonstyle">Approve (Full Purchasing + Contact)</button>
-          <button type="submit" name="decision" value="deny" class="buttonstyle">Deny</button>
+          <button type="submit" name="decision" value="approve_readonly" class="lightbutton">Approve (Read-Only)</button>
+          <button type="submit" name="decision" value="deny" class="lightbutton">Deny</button>
         </form>
       </div>
     <?php endwhile; ?>
@@ -321,6 +470,40 @@ $(document).ready(function() {
     if (messageModal && event.target === messageModal) {
       messageModal.style.display = "none";
     }
+  });
+
+  $(document).on("submit", ".mark-as-read-form", function(e) {
+    e.preventDefault();
+    var $form = $(this);
+    var $card = $form.closest(".message");
+    var $btn = $form.find("button[type='submit']");
+    $btn.prop("disabled", true);
+
+    $.ajax({
+      url: $form.attr("action"),
+      method: "POST",
+      data: $form.serialize(),
+      dataType: "json",
+      headers: { "X-Requested-With": "XMLHttpRequest" }
+    }).done(function(resp) {
+      $card.slideUp(160, function() {
+        $card.remove();
+        if (messageModal && $(messageModal).find(".message").length === 0) {
+          messageModal.style.display = "none";
+        }
+      });
+      var badge = document.getElementById("navUnreadBadge");
+      if (badge && resp && typeof resp.remaining === "number") {
+        if (resp.remaining > 0) {
+          badge.textContent = String(resp.remaining);
+          badge.style.display = "";
+        } else {
+          badge.style.display = "none";
+        }
+      }
+    }).fail(function() {
+      $form.off("submit")[0].submit();
+    });
   });
 
   var accessNotifs = <?php echo json_encode($access_notifications, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;

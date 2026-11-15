@@ -230,8 +230,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (!empty($_POST["userid"]) || !empty
 <link rel="apple-touch-icon" href="images/icons/icon-192x192.png">
 <link rel="manifest" href="manifest.json">
 <script type="text/javascript">window.WISHLIST_BASE_URL = <?php echo json_encode($base_url, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;</script>
-<script type="text/javascript" src="js/theme.js"></script>
-<link rel=stylesheet href=style.css type=text/css>
+<script type="text/javascript" src="js/theme.js?v=<?php echo (int)@filemtime(__DIR__ . '/js/theme.js'); ?>"></script>
+<link rel=stylesheet href="style.css?v=<?php echo (int)@filemtime(__DIR__ . '/style.css'); ?>" type=text/css>
 <title>WishList Login</title>
 </head>
 

@@ -1,12 +1,8 @@
 <?php
 $base_dir = '/var/www/lists/';
-$base_url = '/lists';
-
-$admin_email = 'me@home.com';
+$base_url = 'https://your-domain.com/';
 
 $db_loc = 'localhost';
 $db_name = 'wishlist';
 $db_userid = 'wishlist';
-$db_pass = 'wishlist';
-
-?>
+$db_pass = 'change_me';

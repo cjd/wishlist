@@ -63,7 +63,7 @@ if ('serviceWorker' in navigator) {
             }
         }
         var swPath = basePath + '/service-worker.js';
-        navigator.serviceWorker.register(swPath).catch(function() {
+        navigator.serviceWorker.register(swPath, { updateViaCache: 'none' }).catch(function() {
             // Silently fallback if non-HTTPS or service workers not supported
         });
     });

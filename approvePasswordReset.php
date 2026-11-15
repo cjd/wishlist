@@ -91,7 +91,7 @@ if ($error === "" && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['deci
 <HTML>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<link rel="stylesheet" href="style.css" type="text/css">
+<link rel="stylesheet" href="style.css?v=<?php echo (int)@filemtime(__DIR__ . '/style.css'); ?>" type="text/css">
 <title>Approve Password Reset</title>
 </head>
 <BODY>
