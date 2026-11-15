@@ -4,59 +4,89 @@
 // the Free Software Foundation; either version 2 of the License, or
 // (at your option) any later version.
 
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-
 include "../funcLib.php";
 
-verifyCsrfOrDie();
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    header("Location: updateAccount.php");
+    exit;
+}
+
+verifyCsrfOrDie(true);
 
 $actual_userid = $_SESSION["userid"];
-$requested_userid = $_REQUEST["target_userid"] ?? ($_SESSION["euserid"] ?? "");
-if (!empty($requested_userid) && $requested_userid != $_SESSION["userid"]) {
-    if (isset($_SESSION["admin"]) && $_SESSION["admin"] == 1) {
+$requested_userid = trim((string)($_POST["target_userid"] ?? ($_SESSION["euserid"] ?? "")));
+if ($requested_userid !== "" && $requested_userid !== $_SESSION["userid"]) {
+    if (!empty($_SESSION["admin"]) && $_SESSION["admin"] == 1) {
         $actual_userid = $requested_userid;
     } else {
         $check_perm = mysqli_prepare($link, "SELECT allowEdit FROM viewList WHERE pid = ? AND viewer = ?");
         mysqli_stmt_bind_param($check_perm, "ss", $requested_userid, $_SESSION["userid"]);
         mysqli_stmt_execute($check_perm);
         $res_perm = mysqli_stmt_get_result($check_perm);
-        if ($prow = mysqli_fetch_assoc($res_perm)) {
-            if ($prow["allowEdit"] == '1') {
-                $actual_userid = $requested_userid;
-            } else {
-                die("Unauthorized: You do not have permission to edit this account.");
-            }
+        if (($prow = mysqli_fetch_assoc($res_perm)) && $prow["allowEdit"] == '1') {
+            $actual_userid = $requested_userid;
         } else {
+            http_response_code(403);
             die("Unauthorized: You do not have permission to edit this account.");
         }
     }
 }
 
-$firstname= convertString($_REQUEST["firstname"] ?? '');
-$lastname= convertString($_REQUEST["lastname"] ?? '');
-$suffix= convertString($_REQUEST["suffix"] ?? '');
-$street = convertString($_REQUEST["street"] ?? '');
-$city = convertString($_REQUEST["city"] ?? '');
-$state = convertString($_REQUEST["state"] ?? '');
-$zip = intval($_REQUEST["zip"] ?? 0);
-$phone = convertString($_REQUEST["phone"] ?? '');
-$mobilephone = convertString($_REQUEST["mobilephone"] ?? '');
-$email = '';
-$bmonth = convertString($_REQUEST["bmonth"] ?? '');
-$bday = intval($_REQUEST["bday"] ?? 1);
-$url = convertString($_REQUEST["url"] ?? '');
+$firstname = trim((string)($_POST["firstname"] ?? ''));
+$lastname = trim((string)($_POST["lastname"] ?? ''));
+$suffix = trim((string)($_POST["suffix"] ?? ''));
+$email_in = trim((string)($_POST["email"] ?? ''));
+$street = trim((string)($_POST["street"] ?? ''));
+$city = trim((string)($_POST["city"] ?? ''));
+$state = trim((string)($_POST["state"] ?? ''));
+$zip = substr(trim((string)($_POST["zip"] ?? '')), 0, 20);
+$phone = trim((string)($_POST["phone"] ?? ''));
+$mobilephone = trim((string)($_POST["mobilephone"] ?? ''));
+$bmonth_in = trim((string)($_POST["bmonth"] ?? ''));
+$bday_in = trim((string)($_POST["bday"] ?? ''));
+$url_in = trim((string)($_POST["url"] ?? ''));
 
-$stmt = mysqli_prepare($link, "UPDATE people SET firstname = ?, lastname = ?, suffix = ?, street = ?, city = ?, state = ?, zip = ?, email = ?, phone = ?, mobilephone = ?, url = ?, bmonth = ?, bday = ? WHERE userid = ?");
-mysqli_stmt_bind_param($stmt, "ssssssisssssis", $firstname, $lastname, $suffix, $street, $city, $state, $zip, $email, $phone, $mobilephone, $url, $bmonth, $bday, $actual_userid);
+if ($firstname === '' || $lastname === '') {
+    header("Location: editInfo.php?target_userid=" . urlencode($actual_userid) . "&error=missing_name");
+    exit;
+}
+
+$month_map = [
+    "January" => 1, "February" => 2, "March" => 3, "April" => 4,
+    "May" => 5, "June" => 6, "July" => 7, "August" => 8,
+    "September" => 9, "October" => 10, "November" => 11, "December" => 12
+];
+
+if ($bmonth_in === '' && $bday_in === '') {
+    $bmonth = '';
+    $bday = null;
+} elseif (!isset($month_map[$bmonth_in]) || !ctype_digit($bday_in) || !checkdate($month_map[$bmonth_in], (int)$bday_in, 2024)) {
+    header("Location: editInfo.php?target_userid=" . urlencode($actual_userid) . "&error=invalid_birthday");
+    exit;
+} else {
+    $bmonth = $bmonth_in;
+    $bday = (int)$bday_in;
+}
+
+// Validate optional email (preserve blank if cleared, or valid email)
+$email = ($email_in !== '' && filter_var($email_in, FILTER_VALIDATE_EMAIL)) ? $email_in : '';
+
+// Validate optional URL
+$url = '';
+if ($url_in !== '') {
+    if (!preg_match('#^https?://#i', $url_in)) {
+        $url_in = 'https://' . $url_in;
+    }
+    $url = sanitizeHttpUrl($url_in, false);
+}
+
+$stmt = mysqli_prepare($link, "UPDATE people SET firstname = ?, lastname = ?, suffix = ?, street = ?, city = ?, state = ?, zip = ?, email = ?, phone = ?, mobilephone = ?, url = ?, bmonth = ?, bday = ?, lastModDate = NOW() WHERE userid = ?");
+mysqli_stmt_bind_param($stmt, "ssssssssssssis", $firstname, $lastname, $suffix, $street, $city, $state, $zip, $email, $phone, $mobilephone, $url, $bmonth, $bday, $actual_userid);
 mysqli_stmt_execute($stmt);
+
+if ($actual_userid === $_SESSION["userid"]) {
+    $_SESSION["fullname"] = trim($firstname . " " . $lastname . " " . $suffix);
+}
 
 header("Location: " . getFullPath("updateAccount.php?target_userid=" . urlencode($actual_userid)));
 exit;
-?>
