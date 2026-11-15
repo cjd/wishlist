@@ -288,8 +288,15 @@ function formatMessage($body) {
     // 2. Strip document structural tags (<html>, </html>, <body>, </body>, <head>, etc.)
     $body = preg_replace('~</?(?:html|body|head|meta|title|doctype)\b[^>]*>~is', '', $body);
 
-    // 3. Escape HTML special characters for security
-    $body = htmlspecialchars($body, ENT_QUOTES, 'UTF-8');
+    // 3. Unescape any previously double-encoded entities
+    $body = str_replace(
+        array('&amp;quot;', '&amp;#039;', '&amp;&#39;', '&amp;amp;'),
+        array('&quot;', '&#039;', '&#39;', '&amp;'),
+        $body
+    );
+
+    // 4. Escape HTML special characters for security without double-encoding existing entities
+    $body = htmlspecialchars($body, ENT_QUOTES, 'UTF-8', false);
 
     // 4. Restore safe formatting tags (case-insensitive)
     $simple_replacements = array(
@@ -839,7 +846,7 @@ function printItem($row2, $name, $quantity, $bought, $createDateFormatted){
 
   if($row2["image"] != "") {
     $imgUrl = htmlspecialchars($base_url . "/uploads/image-" . $row2["iid"] . ".jpg", ENT_QUOTES);
-    $imgTitle = htmlspecialchars($row2["title"] ?? '', ENT_QUOTES);
+    $imgTitle = htmlspecialchars($row2["title"] ?? '', ENT_QUOTES, 'UTF-8', false);
     $text .= "<div class=\"item-thumbnail-wrapper\">";
     $text .= "<a href=\"" . $imgUrl . "\" data-featherlight=\"" . $imgUrl . "\" title=\"" . $imgTitle . "\">";
     $text .= "<img src=\"" . $imgUrl . "\" class=\"item-thumbnail\" alt=\"" . $imgTitle . "\" loading=\"lazy\">";

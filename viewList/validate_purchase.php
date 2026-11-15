@@ -93,8 +93,8 @@ if (!empty($ar)) {
       mysqli_stmt_execute($stmt_item);
       $rs_item = mysqli_stmt_get_result($stmt_item);
       if ($row = mysqli_fetch_assoc($rs_item)) {
-        $splitText = !empty($split) ? " <font color=purple><b>(Group gift with " . htmlspecialchars($split) . ")</b></font>" : "";
-        $itemLine = "<font color=red>Bought " . $qty . " of</font> <i>" . htmlspecialchars($row["title"]) . "</i>" . $splitText . " - " . htmlspecialchars($row["description"]) . "<p>";
+        $splitText = !empty($split) ? " <font color=purple><b>(Group gift with " . htmlspecialchars($split, ENT_QUOTES, 'UTF-8', false) . ")</b></font>" : "";
+        $itemLine = "<font color=red>Bought " . $qty . " of</font> <i>" . htmlspecialchars($row["title"], ENT_QUOTES, 'UTF-8', false) . "</i>" . $splitText . " - " . htmlspecialchars($row["description"], ENT_QUOTES, 'UTF-8', false) . "<p>";
 
         foreach ($splitUsers as $cbUser) {
           if (!isset($coBuyerMessages[$cbUser])) {
@@ -110,7 +110,7 @@ if (!empty($ar)) {
   if (!empty($coBuyerMessages)) {
     foreach ($coBuyerMessages as $cbUser => $lines) {
       $cbSubject = "Group Gift: " . $receiverName . "'s WishList";
-      $cbBody = "<font color=indianred><b>" . $_SESSION["fullname"] . "</b></font> has added you as a co-contributor for a group gift on <b>" . htmlspecialchars($receiverName) . "'s</b> WishList:<p><dir>" . implode("", $lines) . "</dir>";
+      $cbBody = "<font color=indianred><b>" . $_SESSION["fullname"] . "</b></font> has added you as a co-contributor for a group gift on <b>" . htmlspecialchars($receiverName, ENT_QUOTES, 'UTF-8', false) . "'s</b> WishList:<p><dir>" . implode("", $lines) . "</dir>";
       sendEmail($cbUser, $userid, $cbSubject, $cbBody, 0);
     }
   }

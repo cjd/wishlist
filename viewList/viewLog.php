@@ -77,7 +77,7 @@ while($row = mysqli_fetch_assoc($rs)){
 ?>
   <br>
   <?php 
-    print $row["quantity"] != "1" ? "<font color=red>Bought " . htmlspecialchars($row["quantity"]) . "</font> " : "" ?><i><?php echo htmlspecialchars($row["title"]); ?></i> 
+    print $row["quantity"] != "1" ? "<font color=red>Bought " . htmlspecialchars($row["quantity"]) . "</font> " : "" ?><i><?php echo htmlspecialchars($row["title"], ENT_QUOTES, 'UTF-8', false); ?></i> 
   - <?php echo cleanString($row["description"]); ?> 
 
   <p>

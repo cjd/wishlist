@@ -155,7 +155,7 @@ foreach ($rows as $row){
   if ($row["quantity"] > 0) {
     echo $row["quantity"]." x ";
   }
-  echo htmlspecialchars($row["title"])."</td>";
+  echo htmlspecialchars($row["title"], ENT_QUOTES, 'UTF-8', false)."</td>";
   echo "<td class=".$style.">";
   if ($row["price"]*$row["quantity"] > 0) {
     echo "<span class='price-secret'>$" . number_format($row["price"]*$row["quantity"], 2) . "</span>";

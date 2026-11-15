@@ -95,12 +95,12 @@ while($row = mysqli_fetch_assoc($rs)){
   <tr><td align="right">
     <b>Title</b>
   </td><td bgcolor="#eeeeee">
-    <input type="text" size="100" name="title" value="<?php echo htmlspecialchars($row["title"] ?? '', ENT_QUOTES); ?>">
+    <input type="text" size="100" name="title" value="<?php echo htmlspecialchars($row["title"] ?? '', ENT_QUOTES, 'UTF-8', false); ?>">
   </td></tr>
   <tr><td align="right">
     <b>Description</b>
   </td><td bgcolor="#eeeeee">
-    <input type="text" size="100" name="desc" value="<?php echo htmlspecialchars($row["description"] ?? '', ENT_QUOTES); ?>">
+    <input type="text" size="100" name="desc" value="<?php echo htmlspecialchars($row["description"] ?? '', ENT_QUOTES, 'UTF-8', false); ?>">
   </td></tr>
   <tr><td align="right">
     <b>Price</b>
