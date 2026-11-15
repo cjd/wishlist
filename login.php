@@ -1,17 +1,6 @@
 <?php
-/// This program is free software; you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2 of the License, or
-// (at your option) any later version.
-
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ini_set('display_errors', '0');
+ini_set('log_errors', '1');
 
 if (!headers_sent()) {
   header("X-Frame-Options: SAMEORIGIN");
@@ -19,186 +8,220 @@ if (!headers_sent()) {
   header("Referrer-Policy: strict-origin-when-cross-origin");
 }
 
-@(include 'config.php');
+@(include __DIR__ . '/config.php');
 
-if(!isset($base_dir)){
-  // this should only be true when phpWishList is first
-  // installed so we should be in the root directory.
-  // redirect to admin
+if (!isset($base_dir)) {
   header("Location: admin.php?setup=true");
   exit;
 }
 
+$base_dir = rtrim($base_dir, '/');
+$base_url = rtrim($base_url ?? '', '/');
+
+$isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+  || (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https');
+
+$session_timeout = 604800;
+@ini_set('session.gc_maxlifetime', (string)$session_timeout);
+
 if (PHP_VERSION_ID >= 70300) {
-    session_set_cookie_params([
-        'lifetime' => 0,
-        'path' => '/',
-        'httponly' => true,
-        'samesite' => 'Lax',
-        'secure' => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-    ]);
+  session_set_cookie_params([
+    'lifetime' => $session_timeout,
+    'path' => '/',
+    'httponly' => true,
+    'samesite' => 'Lax',
+    'secure' => $isHttps
+  ]);
 }
 session_name("WishListSite");
 session_start();
 
-if (isset($_REQUEST["action"])) {
-  if ($_REQUEST["action"] == "logout") {
-    session_destroy();
-  }
+if (isset($_SESSION['userid'])) {
+  header("Location: home.php");
+  exit;
 }
 
-if(isset($_SESSION['userid'])){
-   // already logged in
-   header("Location: home.php");
-   exit;
+$isError = false;
+if (!empty($_GET['expired'])) {
+  $errorMessage = "Your session has expired due to inactivity. Please sign in again.";
+  $isError = true;
+} elseif (!empty($_GET['loggedout'])) {
+  $errorMessage = "You have been signed out.";
+} else {
+  $errorMessage = "Please Sign In";
 }
 
-$displayError = True;
-$errorMessage = !empty($_GET['expired']) ? "Your session has expired due to inactivity. Please sign in again." : "Please Sign In";
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && (!empty($_POST["userid"]) || !empty($_POST["password"]))) {
+  $submitted_userid = trim((string)($_POST["userid"] ?? ""));
+  $submitted_password = (string)($_POST["password"] ?? "");
 
-// Check if user is temporarily locked out due to repeated failed logins
-if (!empty($_SESSION['login_lockout_until']) && time() < $_SESSION['login_lockout_until']) {
-    $remaining_minutes = ceil(($_SESSION['login_lockout_until'] - time()) / 60);
-    $errorMessage = "Too many failed login attempts. Please wait $remaining_minutes minute" . ($remaining_minutes > 1 ? "s" : "") . " before trying again.";
-} elseif (!empty($_REQUEST["userid"]) && !empty($_REQUEST["password"])) {
-    if (!empty($_SESSION['login_lockout_until']) && time() >= $_SESSION['login_lockout_until']) {
-        unset($_SESSION['login_attempts']);
-        unset($_SESSION['login_lockout_until']);
-    }
-
-  $link = mysqli_connect($db_loc, $db_userid, $db_pass);
-  if(!$link){
-    error_log("Database connection failed: " . mysqli_connect_error());
-    die("<p><font size=+2>Danger Will Robinson! It looks like the database is down.<p>Please try again later.</font>");
-  }
-  mysqli_select_db($link,$db_name);
-  mysqli_set_charset($link, "utf8mb4");
-
-  // Schema update check
-  $query = "SELECT version FROM schema_version";
-  $result = mysqli_query($link, $query);
-  $current_version = 0;
-  if ($result && mysqli_num_rows($result) > 0) {
-      $row = mysqli_fetch_assoc($result);
-      $current_version = $row['version'];
+  if ($submitted_userid === "" || $submitted_password === "") {
+    $errorMessage = "Please enter both your WishList ID and password.";
+    $isError = true;
   } else {
-    // If the schema_version table doesn't exist, we're at version 1
-    $current_version = 1;
-    $v1_check_query = "SHOW TABLES LIKE 'people'";
-    $v1_result = mysqli_query($link, $v1_check_query);
-    if (mysqli_num_rows($v1_result) > 0) {
-        $create_version_table = "CREATE TABLE `schema_version` (`version` int(11) NOT NULL) ENGINE=MyISAM DEFAULT CHARSET=latin1;";
-        mysqli_query($link, $create_version_table);
-        $insert_version = "INSERT INTO `schema_version` (`version`) VALUES (1);";
-        mysqli_query($link, $insert_version);
+    $link = @mysqli_connect($db_loc, $db_userid, $db_pass);
+    if (!$link) {
+      error_log("Database connection failed: " . mysqli_connect_error());
+      die("<p><font size=+2>Danger Will Robinson! It looks like the database is down.<p>Please try again later.</font>");
     }
-  }
+    mysqli_select_db($link, $db_name);
+    mysqli_set_charset($link, "utf8mb4");
 
-  $schema_files = glob($base_dir . '/db/V*_schema.sql');
-  $highest_version = 0;
-  foreach ($schema_files as $file) {
-      $filename = basename($file);
-      preg_match('/V(\d+)_schema.sql/', $filename, $matches);
-      if (isset($matches[1])) {
-          $version = intval($matches[1]);
+    // Check schema migrations safely
+    try {
+      $current_version = 0;
+      $res_ver = @mysqli_query($link, "SELECT version FROM schema_version LIMIT 1");
+      if ($res_ver && mysqli_num_rows($res_ver) > 0) {
+        $vrow = mysqli_fetch_assoc($res_ver);
+        $current_version = (int)$vrow['version'];
+      }
+
+      $schema_files = glob($base_dir . '/db/V*_schema.sql') ?: [];
+      $highest_version = 0;
+      foreach ($schema_files as $file) {
+        if (preg_match('/V(\d+)_schema\.sql$/', basename($file), $matches)) {
+          $version = (int)$matches[1];
           if ($version > $highest_version) {
-              $highest_version = $version;
+            $highest_version = $version;
           }
+        }
       }
-  }
 
-  if ($current_version < $highest_version) {
-      for ($i = $current_version + 1; $i <= $highest_version; $i++) {
+      if ($current_version > 0 && $current_version < $highest_version) {
+        for ($i = $current_version + 1; $i <= $highest_version; $i++) {
           $schema_file = $base_dir . '/db/V' . $i . '_schema.sql';
-          if (file_exists($schema_file)) {
-              $sql = file_get_contents($schema_file);
-              $statements = array_filter(array_map('trim', explode(';', $sql)));
-              foreach ($statements as $statement) {
-                  if (!mysqli_query($link, $statement)) {
-                      // Handle error
-                      error_log("Error applying schema update V" . $i . ": " . mysqli_error($link));
-                  }
+          if (is_file($schema_file)) {
+            $sql = preg_replace('/^--.*$/m', '', file_get_contents($schema_file));
+            $statements = array_filter(array_map('trim', explode(';', $sql)));
+            foreach ($statements as $statement) {
+              try {
+                mysqli_query($link, $statement);
+              } catch (mysqli_sql_exception $ex) {
+                if (!in_array($ex->getCode(), [1060, 1061, 1068, 1091], true)) {
+                  error_log("Error applying schema update V{$i}: " . $ex->getMessage());
+                }
               }
-              $update_query = "UPDATE schema_version SET version = " . $i;
-              mysqli_query($link, $update_query);
+            }
+            mysqli_query($link, "UPDATE schema_version SET version = " . (int)$i);
           }
+        }
       }
-  }
-
-  $stmt = mysqli_prepare($link, "SELECT * FROM people WHERE userid = ?");
-  mysqli_stmt_bind_param($stmt, "s", $_REQUEST["userid"]);
-  mysqli_stmt_execute($stmt);
-  $result = mysqli_stmt_get_result($stmt);
-
-  if ($row = mysqli_fetch_assoc($result)) {
-    $passValidate = false;
-    $password_from_db = $row["password"];
-    $submitted_password = $_REQUEST["password"];
-
-    // Check if the provided password matches the stored hash
-    if (password_verify($submitted_password, $password_from_db)) {
-        // Modern hash, password is correct
-        $passValidate = 1;
-    }
-    // Legacy check for MD5 (if password_verify fails)
-    else if (md5($submitted_password) === $password_from_db) {
-        // MD5 hash matches. Rehash and update the password in the database.
-        $passValidate = 1;
-        $new_hash = password_hash($submitted_password, PASSWORD_DEFAULT);
-        
-        $update_stmt = mysqli_prepare($link, "UPDATE people SET password = ? WHERE userid = ?");
-        mysqli_stmt_bind_param($update_stmt, "ss", $new_hash, $row["userid"]);
-        mysqli_stmt_execute($update_stmt);
+    } catch (Throwable $e) {
+      error_log("Schema check warning: " . $e->getMessage());
     }
 
-    if(!empty($passValidate)){
-      if (session_status() === PHP_SESSION_NONE) {
-        session_start();
+    $clientIp = substr((string)($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0'), 0, 45);
+    $rateBlocked = false;
+    $remainingMinutes = 5;
+
+    try {
+      $stmt_rl = mysqli_prepare(
+        $link,
+        "SELECT COUNT(*) AS cnt, MIN(UNIX_TIMESTAMP(attempted_at)) AS oldest_ts
+         FROM loginAttempts
+         WHERE action_type = 'login'
+           AND attempted_at >= DATE_SUB(NOW(), INTERVAL 300 SECOND)
+           AND (ip_address = ? OR userid = ?)"
+      );
+      if ($stmt_rl) {
+        mysqli_stmt_bind_param($stmt_rl, "ss", $clientIp, $submitted_userid);
+        mysqli_stmt_execute($stmt_rl);
+        $rs_rl = mysqli_stmt_get_result($stmt_rl);
+        if ($rl_row = mysqli_fetch_assoc($rs_rl)) {
+          if ((int)$rl_row['cnt'] >= 5) {
+            $rateBlocked = true;
+            $remainingMinutes = max(1, (int)ceil((((int)$rl_row['oldest_ts'] + 300) - time()) / 60));
+          }
+        }
       }
-      session_regenerate_id(true);
-      unset($_SESSION['login_attempts']);
-      unset($_SESSION['login_lockout_until']);
+    } catch (Throwable $e) {
+      error_log("Login rate-limit query failed: " . $e->getMessage());
+    }
 
-      $_SESSION['last_activity'] = time();
-      $_SESSION["userid"] = $row["userid"];
-      $_SESSION["fullname"] = $row["firstname"] . " " . $row["lastname"] . ' ' . $row["suffix"];
-      $_SESSION["admin"] = $row["admin"];
-
-      // Check for unread messages
-      $stmt = mysqli_prepare($link, "SELECT * FROM messages WHERE recipient_id = ? AND is_read = 0");
-      mysqli_stmt_bind_param($stmt, "s", $row["userid"]);
+    if ($rateBlocked) {
+      $errorMessage = "Too many failed login attempts. Please wait {$remainingMinutes} minute" . ($remainingMinutes > 1 ? "s" : "") . " before trying again.";
+      $isError = true;
+    } else {
+      $stmt = mysqli_prepare($link, "SELECT * FROM people WHERE userid = ?");
+      mysqli_stmt_bind_param($stmt, "s", $submitted_userid);
       mysqli_stmt_execute($stmt);
-      $messages_result = mysqli_stmt_get_result($stmt);
-      
-      $messages = array();
-      while($message = mysqli_fetch_assoc($messages_result)){
-          $messages[] = $message;
+      $result = mysqli_stmt_get_result($stmt);
+
+      $passValidate = false;
+      // Constant-work dummy bcrypt hash to prevent username timing enumeration
+      $dummyHash = '$2y$10$usesomesillystringfore7hnbRJHxXVLeakoG8K30oukPsA.ztMG';
+
+      if ($row = mysqli_fetch_assoc($result)) {
+        $password_from_db = (string)($row["password"] ?? "");
+
+        if ($password_from_db !== "" && password_verify($submitted_password, $password_from_db)) {
+          $passValidate = true;
+          if (password_needs_rehash($password_from_db, PASSWORD_DEFAULT)) {
+            $new_hash = password_hash($submitted_password, PASSWORD_DEFAULT);
+            $upd = mysqli_prepare($link, "UPDATE people SET password = ? WHERE userid = ?");
+            mysqli_stmt_bind_param($upd, "ss", $new_hash, $row["userid"]);
+            mysqli_stmt_execute($upd);
+          }
+        } elseif (strlen($password_from_db) === 32 && hash_equals($password_from_db, md5($submitted_password))) {
+          $passValidate = true;
+          $new_hash = password_hash($submitted_password, PASSWORD_DEFAULT);
+          $update_stmt = mysqli_prepare($link, "UPDATE people SET password = ? WHERE userid = ?");
+          mysqli_stmt_bind_param($update_stmt, "ss", $new_hash, $row["userid"]);
+          mysqli_stmt_execute($update_stmt);
+        }
+      } else {
+        password_verify($submitted_password, $dummyHash);
       }
-      $_SESSION["messages"] = $messages;
-      
-      $stmt_notif = mysqli_prepare($link, "UPDATE people SET lastLoginDate = NOW() WHERE userid = ?");
-      mysqli_stmt_bind_param($stmt_notif, "s", $row["userid"]);
-      mysqli_stmt_execute($stmt_notif);
 
-      mysqli_free_result($result);
+      if ($passValidate && isset($row)) {
+        session_regenerate_id(true);
+        unset($_SESSION['login_attempts'], $_SESSION['login_lockout_until'], $_SESSION['euserid']);
 
-      header("Location: home.php");
-      exit;
-    }
-  }
-  
-  $_SESSION['login_attempts'] = ($_SESSION['login_attempts'] ?? 0) + 1;
-  if ($_SESSION['login_attempts'] >= 5) {
-      $_SESSION['login_lockout_until'] = time() + 300; // 5-minute cooldown
-      $errorMessage = "Too many failed login attempts. Please wait 5 minutes before trying again.";
-  } else {
+        try {
+          $stmt_clr = mysqli_prepare($link, "DELETE FROM loginAttempts WHERE action_type = 'login' AND (ip_address = ? OR userid = ?)");
+          if ($stmt_clr) {
+            mysqli_stmt_bind_param($stmt_clr, "ss", $clientIp, $row["userid"]);
+            mysqli_stmt_execute($stmt_clr);
+          }
+        } catch (Throwable $e) {
+        }
+
+        $_SESSION['last_activity'] = time();
+        $_SESSION["userid"] = $row["userid"];
+        $_SESSION["fullname"] = trim($row["firstname"] . " " . $row["lastname"] . " " . ($row["suffix"] ?? ""));
+        $_SESSION["admin"] = (int)$row["admin"];
+
+        $stmt_notif = mysqli_prepare($link, "UPDATE people SET lastLoginDate = NOW() WHERE userid = ?");
+        mysqli_stmt_bind_param($stmt_notif, "s", $row["userid"]);
+        mysqli_stmt_execute($stmt_notif);
+
+        mysqli_free_result($result);
+        header("Location: home.php");
+        exit;
+      }
+
+      // Record failed attempt in DB
+      try {
+        if (random_int(1, 50) === 1) {
+          mysqli_query($link, "DELETE FROM loginAttempts WHERE attempted_at < DATE_SUB(NOW(), INTERVAL 1 DAY)");
+        }
+        $stmt_ins = mysqli_prepare($link, "INSERT INTO loginAttempts (ip_address, userid, action_type) VALUES (?, ?, 'login')");
+        if ($stmt_ins) {
+          $safeUid = substr($submitted_userid, 0, 50);
+          mysqli_stmt_bind_param($stmt_ins, "ss", $clientIp, $safeUid);
+          mysqli_stmt_execute($stmt_ins);
+        }
+      } catch (Throwable $e) {
+      }
+
       $errorMessage = "Invalid username or password.";
+      $isError = true;
+    }
   }
 }
 ?>
 <!DOCTYPE html>
 <HTML>
-
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -206,6 +229,7 @@ if (!empty($_SESSION['login_lockout_until']) && time() < $_SESSION['login_lockou
 <meta name="apple-mobile-web-app-title" content="WishList">
 <link rel="apple-touch-icon" href="images/icons/icon-192x192.png">
 <link rel="manifest" href="manifest.json">
+<script type="text/javascript">window.WISHLIST_BASE_URL = <?php echo json_encode($base_url, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;</script>
 <script type="text/javascript" src="js/theme.js"></script>
 <link rel=stylesheet href=style.css type=text/css>
 <title>WishList Login</title>
@@ -216,33 +240,32 @@ if (!empty($_SESSION['login_lockout_until']) && time() < $_SESSION['login_lockou
 
 <table class=pagetable>
 <tr>
-
 <td valign="top" align=center>
 <table border=0 cellpadding=0 cellspacing=0 width="100%">
   <tr>
     <td colspan=2 align=center>
       <table class=headerBox>
         <tr>
-	  <td align="center" class=headerCell>
+          <td align="center" class=headerCell>
             <font size=+1 color=white><b>Welcome to the WishList Site!</b></font>
-	  </td>
+          </td>
         </tr>
       </table>
     </td>
   </tr>
   <tr>
-    <td align="center">
-      <font color="green"><b>
-      <?php print $errorMessage ?>
-      </b></font>                                          
+    <td align="center" style="padding: 8px 0;">
+      <font color="<?php echo $isError ? '#c62828' : 'green'; ?>"><b>
+      <?php echo htmlspecialchars($errorMessage, ENT_QUOTES, 'UTF-8'); ?>
+      </b></font>
     </td>
   </tr>
   <tr>
-    <td align="center"> 
-      <table border=0 cellspacing=2 cellpadding=0 >
+    <td align="center">
+      <table border=0 cellspacing=2 cellpadding=0>
         <tr>
           <td align="left" valign="top">
-            <form method=post action=login.php name=login_form>
+            <form method="post" action="login.php" name="login_form">
             <table border="0" cellspacing="6" cellpadding="6" bgcolor="ffffff" width="100%" class="roundedbox">
               <tr bgcolor="eeeeee">
                 <td align="center">
@@ -254,12 +277,10 @@ if (!empty($_SESSION['login_lockout_until']) && time() < $_SESSION['login_lockou
                         <table border="0" cellpadding="2" cellspacing="0">
                           <tr>
                             <td align="right" nowrap>
-                              <font size="-1">
-                              WishList ID:
-                              </font>
+                              <font size="-1">WishList ID:</font>
                             </td>
                             <td>
-                              <input name="userid" size="17" value="">
+                              <input name="userid" size="17" autocomplete="username" value="">
                             </td>
                           </tr>
                           <tr>
@@ -267,18 +288,18 @@ if (!empty($_SESSION['login_lockout_until']) && time() < $_SESSION['login_lockou
                               <font size="-1">Password:</font>
                             </td>
                             <td>
-                              <input name="password" type="password" size="17" maxlength="32">
+                              <input name="password" type="password" size="17" autocomplete="current-password">
                             </td>
                           </tr>
                           <tr>
                             <td>&nbsp;</td>
                             <td>
                               <input name="submitButton" type="submit" value="Sign In" class="buttonstyle">
-                            </td> 
+                            </td>
                           </tr>
                         </table>
                       </td>
-                    </tr> 
+                    </tr>
                   </table>
                 </td>
               </tr>
@@ -288,8 +309,7 @@ if (!empty($_SESSION['login_lockout_until']) && time() < $_SESSION['login_lockou
                     <tr>
                       <td align="center">
                         <font size="-1">
-                        <a href="forgotPassword.php">
-                        Forgot your password?</a>
+                        <a href="forgotPassword.php">Forgot your password?</a>
                         </font>
                       </td>
                     </tr>
@@ -299,23 +319,22 @@ if (!empty($_SESSION['login_lockout_until']) && time() < $_SESSION['login_lockou
             </table>
             </form>
           </td>
-<tr>
-                <td align="center">
-                  <font size=+1><b>New to the WishList Site?</b></font>
-                  <p>
-                  <a href="registerUser.php">
-                  Sign up now</a> to enjoy the WishList site              
-                </td>
-</tr>
         </tr>
-      </table>	
+        <tr>
+          <td align="center">
+            <font size=+1><b>New to the WishList Site?</b></font>
+            <p>
+            <a href="registerUser.php">Sign up now</a> to enjoy the WishList site
+          </td>
+        </tr>
+      </table>
     </td>
   </tr>
-</table>	
+</table>
 
 <p>
 <table>
-<tr><td><a href="wishlist_button.php" >Add the WishList button to your ToolBar!</a></td></tr>
+<tr><td><a href="wishlist_button.php">Add the WishList button to your ToolBar!</a></td></tr>
 </table>
 </center>
 </body>
