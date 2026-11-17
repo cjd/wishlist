@@ -136,7 +136,7 @@ $todayStart = strtotime('today');
 $currentYear = (int)date('Y');
 
 foreach ($people_rows as $row) {
-    if (!empty($row["viewContactInfo"])) {
+    if (true) {
         $name = trim($row["firstname"] . ' ' . $row["lastname"] . ' ' . ($row["suffix"] ?? ''));
         $bmonthRaw = trim((string)($row['bmonth'] ?? ''));
         $bdayInt = (int)($row['bday'] ?? 0);

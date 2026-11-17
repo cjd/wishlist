@@ -45,112 +45,121 @@ $error_code = $_GET['error'] ?? '';
 <table class="pagetable">
 <tr>
 <td valign="top">
-<?php createNavBar("../home.php:Home|" . $back_url . ":Update Account|:Edit Personal Info", false, "changeInfo"); ?>
-<center>
-<p>&nbsp;</p>
+<?php createNavBar("../home.php:Home|" . $back_url . ":Update Account|:Edit Personal Info", true, "changeInfo"); ?>
 
-<?php if ($error_code === 'invalid_birthday'): ?>
-  <p style="color:#c00; font-weight:bold;">Please select a valid calendar date for the birthday (or leave both Month and Day blank).</p>
-<?php elseif ($error_code === 'missing_name'): ?>
-  <p style="color:#c00; font-weight:bold;">First Name and Last Name are required.</p>
-<?php endif; ?>
+<div class="admin-dashboard">
 
-<form method="post" action="validate_editInfo.php">
-<input type="hidden" name="csrf_token" value="<?php echo escapeText(getCsrfToken()); ?>">
-<input type="hidden" name="target_userid" value="<?php echo escapeText($target_userid); ?>">
-<table style="border-collapse: collapse;" border="1" bordercolor="#111111" cellpadding="4" cellspacing="0">
-<tr><td colspan="2" align="center" bgcolor="#6702cc">
-  <b><font size="3" color="#ffffff">Information on File</font></b>
-</td></tr>
+  <?php if ($error_code === 'invalid_birthday'): ?>
+    <div class="admin-alert admin-alert-error">Please select a valid calendar date for the birthday (or leave both Month and Day blank).</div>
+  <?php elseif ($error_code === 'missing_name'): ?>
+    <div class="admin-alert admin-alert-error">First Name and Last Name are required.</div>
+  <?php endif; ?>
 
-<tr><td class="lightYellow" align="right"><b>First Name</b></td>
-<td bgcolor="#eeeeee">
-  <input type="text" size="30" name="firstname" value="<?php echo escapeText($rs['firstname'] ?? ''); ?>" required>
-</td></tr>
+  <form method="post" action="validate_editInfo.php" class="admin-modal-card admin-modal-card-wide">
+    <input type="hidden" name="csrf_token" value="<?php echo escapeText(getCsrfToken()); ?>">
+    <input type="hidden" name="target_userid" value="<?php echo escapeText($target_userid); ?>">
 
-<tr><td class="lightYellow" align="right"><b>Last Name</b></td>
-<td bgcolor="#eeeeee">
-  <input type="text" size="30" name="lastname" value="<?php echo escapeText($rs['lastname'] ?? ''); ?>" required>
-</td></tr>
+    <div class="admin-modal-card-header">
+      <span>Edit Personal Information</span>
+      <span class="admin-family-count"><?php echo escapeText($target_userid); ?></span>
+    </div>
 
-<tr><td class="lightYellow" align="right"><b>Suffix</b></td>
-<td bgcolor="#eeeeee">
-  <input type="text" size="30" name="suffix" value="<?php echo escapeText($rs['suffix'] ?? ''); ?>">
-</td></tr>
+    <div class="admin-modal-card-body">
+      <div class="account-form-grid-2">
+        <div class="admin-form-row">
+          <label for="ei_firstname">First Name *</label>
+          <input type="text" id="ei_firstname" name="firstname" value="<?php echo escapeText($rs['firstname'] ?? ''); ?>" required>
+        </div>
+        <div class="admin-form-row">
+          <label for="ei_lastname">Last Name *</label>
+          <input type="text" id="ei_lastname" name="lastname" value="<?php echo escapeText($rs['lastname'] ?? ''); ?>" required>
+        </div>
+      </div>
 
-<tr><td class="lightYellow" align="right"><b>Email</b></td>
-<td bgcolor="#eeeeee">
-  <input type="email" size="30" name="email" value="<?php echo escapeText($rs['email'] ?? ''); ?>">
-</td></tr>
+      <div class="account-form-grid-2">
+        <div class="admin-form-row">
+          <label for="ei_suffix">Suffix</label>
+          <input type="text" id="ei_suffix" name="suffix" value="<?php echo escapeText($rs['suffix'] ?? ''); ?>" placeholder="Jr., III, etc.">
+        </div>
+        <div class="admin-form-row">
+          <label for="ei_email">Email</label>
+          <input type="email" id="ei_email" name="email" value="<?php echo escapeText($rs['email'] ?? ''); ?>">
+        </div>
+      </div>
 
-<tr><td class="lightYellow" align="right"><b>Street</b></td>
-<td bgcolor="#eeeeee">
-  <input type="text" size="30" name="street" value="<?php echo escapeText($rs['street'] ?? ''); ?>">
-</td></tr>
+      <div class="admin-form-row">
+        <label for="ei_street">Street Address</label>
+        <input type="text" id="ei_street" name="street" value="<?php echo escapeText($rs['street'] ?? ''); ?>">
+      </div>
 
-<tr><td class="lightYellow" align="right"><b>City</b></td>
-<td bgcolor="#eeeeee">
-  <input type="text" size="30" name="city" value="<?php echo escapeText($rs['city'] ?? ''); ?>">
-</td></tr>
+      <div class="account-form-grid-2">
+        <div class="admin-form-row">
+          <label for="ei_city">City / Suburb</label>
+          <input type="text" id="ei_city" name="city" value="<?php echo escapeText($rs['city'] ?? ''); ?>">
+        </div>
+        <div class="admin-form-row">
+          <label for="ei_state">State</label>
+          <input type="text" id="ei_state" name="state" value="<?php echo escapeText($rs['state'] ?? ''); ?>">
+        </div>
+      </div>
 
-<tr><td class="lightYellow" align="right"><b>State</b></td>
-<td bgcolor="#eeeeee">
-  <input type="text" size="30" name="state" value="<?php echo escapeText($rs['state'] ?? ''); ?>">
-</td></tr>
+      <div class="account-form-grid-2">
+        <div class="admin-form-row">
+          <label for="ei_zip">Post Code</label>
+          <input type="text" id="ei_zip" maxlength="20" name="zip" value="<?php echo escapeText((($rs['zip'] ?? '') !== '0') ? ($rs['zip'] ?? '') : ''); ?>">
+        </div>
+        <div class="admin-form-row">
+          <label>Birthday</label>
+          <div class="account-bday-selects">
+            <select name="bmonth" aria-label="Birth Month">
+              <option value="">-- Month --</option>
+              <?php
+              $months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+              $curMonth = $rs['bmonth'] ?? '';
+              foreach ($months as $m) {
+                  $sel = ($m === $curMonth) ? ' selected' : '';
+                  echo '<option value="' . escapeText($m) . '"' . $sel . '>' . escapeText($m) . '</option>';
+              }
+              ?>
+            </select>
+            <select name="bday" aria-label="Birth Day">
+              <option value="">-- Day --</option>
+              <?php
+              $curDay = !empty($rs['bday']) ? (int)$rs['bday'] : 0;
+              for ($i = 1; $i <= 31; $i++) {
+                  $sel = ($i === $curDay) ? ' selected' : '';
+                  echo '<option value="' . $i . '"' . $sel . '>' . $i . '</option>';
+              }
+              ?>
+            </select>
+          </div>
+        </div>
+      </div>
 
-<tr><td class="lightYellow" align="right"><b>Post Code</b></td>
-<td bgcolor="#eeeeee">
-  <input type="text" size="12" maxlength="20" name="zip" value="<?php echo escapeText((($rs['zip'] ?? '') !== '0') ? ($rs['zip'] ?? '') : ''); ?>">
-</td></tr>
+      <div class="account-form-grid-2">
+        <div class="admin-form-row">
+          <label for="ei_phone">Home Phone</label>
+          <input type="text" id="ei_phone" name="phone" value="<?php echo escapeText($rs['phone'] ?? ''); ?>">
+        </div>
+        <div class="admin-form-row">
+          <label for="ei_mobilephone">Mobile Phone</label>
+          <input type="text" id="ei_mobilephone" name="mobilephone" value="<?php echo escapeText($rs['mobilephone'] ?? ''); ?>">
+        </div>
+      </div>
 
-<tr><td class="lightYellow" align="right"><b>Home Phone</b></td>
-<td bgcolor="#eeeeee">
-  <input type="text" size="20" name="phone" value="<?php echo escapeText($rs['phone'] ?? ''); ?>">
-</td></tr>
+      <div class="admin-form-row" style="margin-bottom:0;">
+        <label for="ei_url">Homepage URL</label>
+        <input type="text" id="ei_url" name="url" value="<?php echo escapeText($rs['url'] ?? ''); ?>" placeholder="https://...">
+      </div>
+    </div>
 
-<tr><td class="lightYellow" align="right"><b>Mobile Phone</b></td>
-<td bgcolor="#eeeeee">
-  <input type="text" size="20" name="mobilephone" value="<?php echo escapeText($rs['mobilephone'] ?? ''); ?>">
-</td></tr>
+    <div class="admin-modal-card-footer">
+      <a href="<?php echo escapeText($back_url); ?>" class="admin-nav-btn">Cancel</a>
+      <button type="submit" class="admin-nav-btn admin-nav-btn-primary">Save Changes</button>
+    </div>
+  </form>
 
-<tr><td class="lightYellow" align="right"><b>Birthday</b></td>
-<td bgcolor="#eeeeee">
-  <select name="bmonth" size="1">
-    <option value="">-- Month --</option>
-    <?php
-    $months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-    $curMonth = $rs['bmonth'] ?? '';
-    foreach ($months as $m) {
-        $sel = ($m === $curMonth) ? ' selected' : '';
-        echo '<option value="' . escapeText($m) . '"' . $sel . '>' . escapeText($m) . '</option>';
-    }
-    ?>
-  </select>
-
-  <select name="bday" size="1">
-    <option value="">-- Day --</option>
-    <?php
-    $curDay = !empty($rs['bday']) ? (int)$rs['bday'] : 0;
-    for ($i = 1; $i <= 31; $i++) {
-        $sel = ($i === $curDay) ? ' selected' : '';
-        echo '<option value="' . $i . '"' . $sel . '>' . $i . '</option>';
-    }
-    ?>
-  </select>
-</td></tr>
-
-<tr><td class="lightYellow" align="right"><b>HomePage URL</b></td>
-<td bgcolor="#eeeeee">
-  <input type="text" name="url" size="30" value="<?php echo escapeText($rs['url'] ?? ''); ?>" placeholder="https://...">
-</td></tr>
-
-<tr><td colspan="2" align="center" bgcolor="#c0c0c0">
-  <input type="submit" value="Update" class="buttonstyle">
-</td></tr>
-</table>
-<br>
-</form>
-</center>
+</div>
 </td></tr></table>
 </body>
 </html>

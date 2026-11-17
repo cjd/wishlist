@@ -205,7 +205,7 @@ function canViewList($link, $pid, $viewer) {
         'allowed' => true,
         'readOnly' => $readOnly,
         'allowEdit' => $allowEdit,
-        'viewContactInfo' => (int)$row['viewContactInfo']
+        'viewContactInfo' => 1
       ];
     }
   }
@@ -1281,16 +1281,23 @@ function printItem($row2, $name, $quantity, $bought, $createDateFormatted, $isNe
   }
 
   if (!empty($row2["image"])) {
+    $uploadsDir = rtrim($base_dir, '/') . "/uploads/";
     $imgFile = "image-" . (int)$row2["iid"] . ".jpg";
-    $diskPath = $base_dir . "/uploads/" . $imgFile;
-    $ver = is_file($diskPath) ? ("?v=" . filemtime($diskPath)) : "";
-    $imgUrl = escapeText($base_url . "/uploads/" . $imgFile . $ver);
-    $imgTitle = escapeText($row2["title"] ?? '');
-    $text .= "<div class=\"item-thumbnail-wrapper\">";
-    $text .= "<a href=\"" . $imgUrl . "\" data-lightbox=\"" . $imgUrl . "\" title=\"" . $imgTitle . "\">";
-    $text .= "<img src=\"" . $imgUrl . "\" class=\"item-thumbnail\" alt=\"" . $imgTitle . "\" loading=\"lazy\" decoding=\"async\">";
-    $text .= "</a>";
-    $text .= "</div>";
+    if (!is_file($uploadsDir . $imgFile)) {
+      $fallback = basename((string)$row2["image"]);
+      $imgFile = ($fallback !== '' && is_file($uploadsDir . $fallback)) ? $fallback : '';
+    }
+    if ($imgFile !== '') {
+      $diskPath = $uploadsDir . $imgFile;
+      $ver = "?v=" . filemtime($diskPath);
+      $imgUrl = escapeText(rtrim($base_url, '/') . "/uploads/" . rawurlencode($imgFile) . $ver);
+      $imgTitle = escapeText($row2["title"] ?? '');
+      $text .= "<div class=\"item-thumbnail-wrapper\">";
+      $text .= "<a href=\"" . $imgUrl . "\" data-lightbox=\"" . $imgUrl . "\" title=\"" . $imgTitle . "\">";
+      $text .= "<img src=\"" . $imgUrl . "\" class=\"item-thumbnail\" alt=\"" . $imgTitle . "\" loading=\"lazy\" decoding=\"async\">";
+      $text .= "</a>";
+      $text .= "</div>";
+    }
   }
 
   if (!empty($row2["title"])) {

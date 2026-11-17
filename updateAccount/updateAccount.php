@@ -6,7 +6,8 @@
 
 include "../funcLib.php";
 
-$message = "<h2>&nbsp;</h2>";
+$alert_html = "";
+$alert_type = "success";
 $is_admin = (!empty($_SESSION["admin"]) && $_SESSION["admin"] == 1);
 
 $target_userid = $_SESSION["userid"];
@@ -76,22 +77,26 @@ if (in_array($action, $permission_actions, true)) {
     if ($action === "stopViewOther") {
         $removeuserid = trim($_POST["userid"] ?? "");
         if ($removeuserid === $userid) {
-            $message = "<h2 style='color:#c00;'>You cannot remove your own list entry.</h2>";
+            $alert_type = "error";
+            $alert_html = "You cannot remove your own list entry.";
         } elseif ($removeuserid !== "") {
             $stmt = mysqli_prepare($link, "DELETE FROM viewList WHERE pid = ? AND viewer = ?");
             mysqli_stmt_bind_param($stmt, "ss", $removeuserid, $userid);
             mysqli_stmt_execute($stmt);
-            $message = "<h2>Successfully stopped viewing " . escapeText($removeuserid) . "</h2>";
+            $alert_type = "success";
+            $alert_html = "Stopped viewing <code>" . escapeText($removeuserid) . "</code>'s list.";
         }
     } elseif ($action === "stopViewMine") {
         $removeuserid = trim($_POST["userid"] ?? "");
         if ($removeuserid === $userid) {
-            $message = "<h2 style='color:#c00;'>You cannot remove yourself from your own list.</h2>";
+            $alert_type = "error";
+            $alert_html = "You cannot remove yourself from your own list.";
         } elseif ($removeuserid !== "") {
             $stmt = mysqli_prepare($link, "DELETE FROM viewList WHERE pid = ? AND viewer = ?");
             mysqli_stmt_bind_param($stmt, "ss", $userid, $removeuserid);
             mysqli_stmt_execute($stmt);
-            $message = "<h2>Successfully removed " . escapeText($removeuserid) . " from viewing list of " . escapeText($userid) . "</h2>";
+            $alert_type = "success";
+            $alert_html = "Removed <code>" . escapeText($removeuserid) . "</code> from viewing the list of <code>" . escapeText($userid) . "</code>.";
         }
     } elseif ($action === "startViewOther") {
         $selectedIds = [];
@@ -111,7 +116,8 @@ if (in_array($action, $permission_actions, true)) {
         unset($selectedIds[$requesterId]);
 
         if (empty($selectedIds)) {
-            $message = "<h2 style='color:#c00;'>Please select at least one person whose list you want to view.</h2>";
+            $alert_type = "error";
+            $alert_html = "Please select at least one person whose list you want to view.";
         } else {
             $sentCount = 0;
             $alreadyViewCount = 0;
@@ -157,13 +163,17 @@ if (in_array($action, $permission_actions, true)) {
 
             if ($sentCount > 0) {
                 $label = ($sentCount === 1) ? "1 access request has been sent." : ($sentCount . " access requests have been sent.");
-                $message = "<h2>" . escapeText($label) . " You will be notified when they respond.</h2>";
+                $alert_type = "success";
+                $alert_html = escapeText($label) . " You will be notified when they respond.";
             } elseif ($alreadyPendingCount > 0) {
-                $message = "<h2>You already have pending access request(s) for the selected user(s).</h2>";
+                $alert_type = "success";
+                $alert_html = "You already have pending access request(s) for the selected user(s).";
             } elseif ($alreadyViewCount > 0) {
-                $message = "<h2>You already have access to view the selected list(s).</h2>";
+                $alert_type = "success";
+                $alert_html = "You already have access to view the selected list(s).";
             } else {
-                $message = "<h2 style='color:#c00;'>Selected user does not exist.</h2>";
+                $alert_type = "error";
+                $alert_html = "Selected user does not exist.";
             }
         }
     } elseif ($action === "startViewMine") {
@@ -182,18 +192,17 @@ if (in_array($action, $permission_actions, true)) {
         }
         unset($selectedIds[$userid]);
 
-        $shareContact = !empty($_POST["share_contact"]) ? 1 : 0;
-
         if (empty($selectedIds)) {
-            $message = "<h2 style='color:#c00;'>Please select at least one person to add.</h2>";
+            $alert_type = "error";
+            $alert_html = "Please select at least one person to add.";
         } else {
             $addedCount = 0;
             $alreadyCount = 0;
 
             $stmt_p = mysqli_prepare($link, "SELECT userid FROM people WHERE userid = ?");
             $stmt_chk = mysqli_prepare($link, "SELECT viewer FROM viewList WHERE viewer = ? AND pid = ?");
-            // Default readOnly = 0 (Full Purchasing) so family members can check off gifts right away
-            $stmt_ins = mysqli_prepare($link, "INSERT INTO viewList (viewContactInfo, readOnly, allowEdit, pid, viewer, lastViewDate) VALUES (?, 0, 0, ?, ?, NOW())");
+            // Default readOnly = 0 (Full Purchasing) and viewContactInfo = 1 for all viewers
+            $stmt_ins = mysqli_prepare($link, "INSERT INTO viewList (viewContactInfo, readOnly, allowEdit, pid, viewer, lastViewDate) VALUES (1, 0, 0, ?, ?, NOW())");
 
             foreach (array_keys($selectedIds) as $adduserid) {
                 mysqli_stmt_bind_param($stmt_p, "s", $adduserid);
@@ -209,18 +218,21 @@ if (in_array($action, $permission_actions, true)) {
                     continue;
                 }
 
-                mysqli_stmt_bind_param($stmt_ins, "iss", $shareContact, $userid, $adduserid);
+                mysqli_stmt_bind_param($stmt_ins, "ss", $userid, $adduserid);
                 mysqli_stmt_execute($stmt_ins);
                 $addedCount++;
             }
 
             if ($addedCount > 0) {
                 $whoText = ($addedCount === 1) ? "1 person added" : ($addedCount . " people added");
-                $message = "<h2>" . escapeText($whoText) . " with Full Purchasing access (adjust Read-Only or Contact settings below anytime).</h2>";
+                $alert_type = "success";
+                $alert_html = escapeText($whoText) . " with Full Purchasing access (adjust Read-Only or Edit settings below anytime).";
             } elseif ($alreadyCount > 0) {
-                $message = "<h2>Selected person(s) can already view your list.</h2>";
+                $alert_type = "success";
+                $alert_html = "Selected person(s) can already view your list.";
             } else {
-                $message = "<h2 style='color:#c00;'>Selected user does not exist.</h2>";
+                $alert_type = "error";
+                $alert_html = "Selected user does not exist.";
             }
         }
     } elseif ($action === "hideContactInfo") {
@@ -229,15 +241,13 @@ if (in_array($action, $permission_actions, true)) {
         mysqli_stmt_execute($stmt_viewers);
         $result = mysqli_stmt_get_result($stmt_viewers);
 
-        $contactArr = isset($_POST['admin']) && is_array($_POST['admin']) ? $_POST['admin'] : [];
         $readOnlyArr = isset($_POST['readOnly']) && is_array($_POST['readOnly']) ? $_POST['readOnly'] : [];
         $allowEditArr = isset($_POST['allowEdit']) && is_array($_POST['allowEdit']) ? $_POST['allowEdit'] : [];
 
-        $stmt_upd = mysqli_prepare($link, "UPDATE viewList SET viewContactInfo = ?, readOnly = ?, allowEdit = ? WHERE viewer = ? AND pid = ?");
+        $stmt_upd = mysqli_prepare($link, "UPDATE viewList SET viewContactInfo = 1, readOnly = ?, allowEdit = ? WHERE viewer = ? AND pid = ?");
 
         while ($row_v = mysqli_fetch_assoc($result)) {
             $viewerId = $row_v['viewer'];
-            $viewContactInfo = in_array($viewerId, $contactArr, true) ? 1 : 0;
             $readOnly = in_array($viewerId, $readOnlyArr, true) ? 1 : 0;
             $allowEdit = in_array($viewerId, $allowEditArr, true) ? 1 : 0;
 
@@ -245,11 +255,12 @@ if (in_array($action, $permission_actions, true)) {
                 $readOnly = 0;
             }
 
-            mysqli_stmt_bind_param($stmt_upd, "iiiss", $viewContactInfo, $readOnly, $allowEdit, $viewerId, $userid);
+            mysqli_stmt_bind_param($stmt_upd, "iiss", $readOnly, $allowEdit, $viewerId, $userid);
             mysqli_stmt_execute($stmt_upd);
         }
 
-        $message = "<h2>Privileges updated</h2>";
+        $alert_type = "success";
+        $alert_html = "Sharing privileges updated.";
     }
 }
 
@@ -259,11 +270,20 @@ mysqli_stmt_execute($stmt_info);
 $row = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt_info)) ?? [];
 
 $fullName = trim(($row['firstname'] ?? '') . ' ' . ($row['lastname'] ?? '') . ' ' . ($row['suffix'] ?? ''));
+if ($fullName === '') {
+    $fullName = $userid;
+}
 $bdayDisplay = (!empty($row['bmonth']) && !empty($row['bday'])) ? ($row['bmonth'] . ' ' . $row['bday']) : 'Not set';
 $csrf_token = getCsrfToken();
 
 $addViewerGroups = [];
 $requestListGroups = [];
+$viewersByFamily = [];
+$viewerRows = [];
+$viewableByFamily = [];
+$totalViewersCount = 0;
+$totalViewableCount = 0;
+
 if ($can_manage_permissions) {
     $currentViewersMap = [];
     $stmt_cv = mysqli_prepare($link, "SELECT viewer FROM viewList WHERE pid = ?");
@@ -319,7 +339,52 @@ if ($can_manage_permissions) {
             ];
         }
     }
+
+    // Load people who can view this user's list, grouped into families
+    $stmt_viewers_list = mysqli_prepare($link, "SELECT viewList.viewer, people.firstname, people.lastname, people.suffix, people.userid, viewList.viewContactInfo, viewList.readOnly, viewList.allowEdit FROM viewList JOIN people ON viewList.viewer = people.userid WHERE viewList.pid = ? ORDER BY people.lastname, people.firstname");
+    mysqli_stmt_bind_param($stmt_viewers_list, "s", $userid);
+    mysqli_stmt_execute($stmt_viewers_list);
+    $res_vl = mysqli_stmt_get_result($stmt_viewers_list);
+    while ($vrow = mysqli_fetch_assoc($res_vl)) {
+        $viewerRows[] = $vrow;
+        $totalViewersCount++;
+        $raw_last = trim((string)($vrow['lastname'] ?? ''));
+        $fam_key = ($raw_last !== '') ? strtolower($raw_last) : '_other';
+        if (!isset($viewersByFamily[$fam_key])) {
+            $viewersByFamily[$fam_key] = [
+                'label' => ($raw_last !== '') ? ($raw_last . ' Family') : 'Other',
+                'members' => []
+            ];
+        }
+        $viewersByFamily[$fam_key]['members'][] = $vrow;
+    }
+
+    // Load lists this user can view, grouped into families
+    $stmt_viewable = mysqli_prepare($link, "SELECT people.firstname, people.lastname, people.suffix, people.userid FROM viewList JOIN people ON viewList.pid = people.userid WHERE viewList.viewer = ? ORDER BY people.lastname, people.firstname");
+    mysqli_stmt_bind_param($stmt_viewable, "s", $userid);
+    mysqli_stmt_execute($stmt_viewable);
+    $res_viewable = mysqli_stmt_get_result($stmt_viewable);
+    while ($orow = mysqli_fetch_assoc($res_viewable)) {
+        $totalViewableCount++;
+        $raw_last = trim((string)($orow['lastname'] ?? ''));
+        $fam_key = ($raw_last !== '') ? strtolower($raw_last) : '_other';
+        if (!isset($viewableByFamily[$fam_key])) {
+            $viewableByFamily[$fam_key] = [
+                'label' => ($raw_last !== '') ? ($raw_last . ' Family') : 'Other',
+                'members' => []
+            ];
+        }
+        $viewableByFamily[$fam_key]['members'][] = $orow;
+    }
 }
+
+$svg_edit = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>';
+$svg_pwd = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>';
+$svg_view = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+$svg_delete = '<svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>';
+
+$pwd_href = ($userid !== $_SESSION['userid']) ? ("changePassword.php?userid=" . urlencode($userid)) : "changePassword.php";
+$edit_info_href = "editInfo.php?target_userid=" . urlencode($userid);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -353,232 +418,338 @@ if ($can_manage_permissions) {
 <table class="pagetable">
 <tr>
 <td valign="top">
-<?php createNavBar("../home.php:Home|:Update Account (" . $userid . ")", false, "listAccess"); ?>
-<center>
-<p>&nbsp;</p>
+<?php createNavBar("../home.php:Home|:Update Account (" . $userid . ")", true, "listAccess"); ?>
 
-<?php echo $message; ?>
+<div class="account-dashboard">
 
-<table width="100%">
-<tr><td align="center" valign="top">
-  <form method="post" action="editInfo.php">
-    <input type="hidden" name="target_userid" value="<?php echo escapeText($userid); ?>">
-    <table style="border-collapse: collapse;" border="0" bordercolor="#111111" cellpadding="4" cellspacing="0" bgcolor="lightYellow">
-      <tr>
-        <td colspan="2" align="center" bgcolor="#6702cc">
-          <font size="3" color="white"><b>Information On File</b></font>
-        </td>
-      </tr>
-      <tr>
-        <td align="right"><b>Name</b></td>
-        <td bgcolor="white"><?php echo escapeText($fullName); ?></td>
-      </tr>
-      <tr>
-        <td align="right"><b>Birthday</b></td>
-        <td bgcolor="white"><?php echo escapeText($bdayDisplay); ?></td>
-      </tr>
-      <?php if (!empty($row['email'])): ?>
-      <tr>
-        <td align="right"><b>Email</b></td>
-        <td bgcolor="white"><?php echo escapeText($row['email']); ?></td>
-      </tr>
+  <div class="admin-header-bar">
+    <div class="admin-title-group">
+      <div class="admin-person-primary">
+        <h2><?php echo escapeText($fullName); ?></h2>
+        <span class="admin-userid-pill"><?php echo escapeText($userid); ?></span>
+        <?php if ($userid === $_SESSION['userid']): ?>
+          <span class="admin-you-badge">Your Account</span>
+        <?php else: ?>
+          <span class="admin-family-admin-pill">Managing User</span>
+        <?php endif; ?>
+      </div>
+      <div class="account-info-pills">
+        <span class="account-info-pill">🎂 <b>Birthday:</b> <?php echo escapeText($bdayDisplay); ?></span>
+        <?php if (!empty($row['email'])): ?>
+          <span class="account-info-pill">✉️ <?php echo escapeText($row['email']); ?></span>
+        <?php endif; ?>
+        <?php if (!empty($row['city']) || !empty($row['state'])): ?>
+          <span class="account-info-pill">📍 <?php echo escapeText(trim(($row['city'] ?? '') . (!empty($row['city']) && !empty($row['state']) ? ', ' : '') . ($row['state'] ?? ''))); ?></span>
+        <?php endif; ?>
+      </div>
+    </div>
+
+    <div class="admin-top-actions">
+      <a href="<?php echo escapeText($edit_info_href); ?>" class="admin-nav-btn admin-nav-btn-primary">
+        <span class="admin-legend-item"><?php echo $svg_edit; ?></span> Edit Personal Info
+      </a>
+      <?php if ($can_manage_permissions): ?>
+        <a href="<?php echo escapeText($pwd_href); ?>" class="admin-nav-btn">
+          <span class="admin-legend-item"><?php echo $svg_pwd; ?></span> Change Password
+        </a>
       <?php endif; ?>
-      <tr>
-        <td align="center" colspan="2" bgcolor="#c0c0c0">
-          <input type="submit" value="Edit Personal Info" class="buttonstyle">
-        </td>
-      </tr>
-    </table>
-  </form>
+      <?php if ($is_admin && $userid !== $_SESSION['userid']): ?>
+        <a href="../admin.php" class="admin-nav-btn">← Back to Admin</a>
+      <?php endif; ?>
+    </div>
+  </div>
+
+  <?php if ($alert_html !== ""): ?>
+    <div class="admin-alert <?php echo $alert_type === 'error' ? 'admin-alert-error' : 'admin-alert-success'; ?>" role="status">
+      <?php echo $alert_html; ?>
+    </div>
+  <?php endif; ?>
 
   <?php if ($can_manage_permissions): ?>
-    <?php $pwd_href = ($userid !== $_SESSION['userid']) ? "changePassword.php?userid=" . urlencode($userid) : "changePassword.php"; ?>
-    <button class="buttonstyle" onclick="location.href='<?php echo escapeText($pwd_href); ?>'">Change Password</button><br>
-  <?php endif; ?>
-</td></tr>
-</table>
+    <div class="account-sharing-grid">
 
-<?php if ($can_manage_permissions): ?>
-<table border="0" width="90%">
-<tr>
-<td align="center" valign="top" width="50%">
+      <!-- LEFT COLUMN: People Who Can View/Edit Your List -->
+      <div class="account-column">
+        <div class="account-section-card">
+          <div class="account-section-header">
+            <span>Add People So They Can View Your List</span>
+          </div>
+          <div class="account-section-body">
+            <form method="post" action="updateAccount.php" style="margin:0;">
+              <input type="hidden" name="csrf_token" value="<?php echo escapeText($csrf_token); ?>">
+              <input type="hidden" name="target_userid" value="<?php echo escapeText($userid); ?>">
+              <input type="hidden" name="action" value="startViewMine">
+              <p class="account-picker-help">Select one or more family members (granted <b>Full Purchasing</b> access by default):</p>
+              <select name="userids[]" id="addViewersSelect" multiple style="width:100%;">
+                <?php foreach ($addViewerGroups as $famGroup => $members): ?>
+                  <optgroup label="<?php echo escapeText($famGroup); ?>">
+                    <?php foreach ($members as $m): ?>
+                      <option value="<?php echo escapeText($m['userid']); ?>"><?php echo escapeText($m['name']); ?> (<?php echo escapeText($m['userid']); ?>)</option>
+                    <?php endforeach; ?>
+                  </optgroup>
+                <?php endforeach; ?>
+              </select>
+              <div style="margin-top:8px;">
+                <button type="submit" class="admin-nav-btn admin-nav-btn-primary">➕ Grant Access</button>
+              </div>
+            </form>
+          </div>
+        </div>
 
-  <table bgcolor="lightyellow" style="border-collapse: collapse;" border="0" cellpadding="8" cellspacing="0">
-  <tr><td>
-    <table style="border-collapse: collapse;" border="0" cellpadding="2" cellspacing="0" width="100%">
-      <tr>
-        <td align="center" bgcolor="#6702cc">
-          <font size="3" color="white"><b>Add people so they can view your list</b></font>
-        </td>
-      </tr>
-      <tr>
-        <td style="padding:8px 6px;">
-          <form method="post" action="updateAccount.php" style="margin:0;">
-            <input type="hidden" name="csrf_token" value="<?php echo escapeText($csrf_token); ?>">
-            <input type="hidden" name="target_userid" value="<?php echo escapeText($userid); ?>">
-            <input type="hidden" name="action" value="startViewMine">
-            <div style="margin-bottom:6px; font-size:13px;">Select one or more family members (granted <b>Full Purchasing</b> access by default):</div>
-            <select name="userids[]" id="addViewersSelect" multiple style="width:100%; max-width:360px;">
-              <?php foreach ($addViewerGroups as $famGroup => $members): ?>
-                <optgroup label="<?php echo escapeText($famGroup); ?>">
-                  <?php foreach ($members as $m): ?>
-                    <option value="<?php echo escapeText($m['userid']); ?>"><?php echo escapeText($m['name']); ?> (<?php echo escapeText($m['userid']); ?>)</option>
-                  <?php endforeach; ?>
-                </optgroup>
-              <?php endforeach; ?>
-            </select>
-            <label style="display:block; margin:8px 0; font-size:13px; cursor:pointer;">
-              <input type="checkbox" name="share_contact" value="1" checked>
-              Also share Birthday &amp; Shipping/Contact Info
-            </label>
-            <input type="submit" value="➕ Grant Access" class="buttonstyle">
-          </form>
-        </td>
-      </tr>
-    </table>
+        <form action="updateAccount.php" method="post" id="privForm">
+          <input type="hidden" name="action" value="hideContactInfo">
+          <input type="hidden" name="csrf_token" value="<?php echo escapeText($csrf_token); ?>">
+          <input type="hidden" name="target_userid" value="<?php echo escapeText($userid); ?>">
 
-    <br>
-
-    <form action="updateAccount.php" method="post" id="privForm">
-      <input type="hidden" name="action" value="hideContactInfo">
-      <input type="hidden" name="csrf_token" value="<?php echo escapeText($csrf_token); ?>">
-      <input type="hidden" name="target_userid" value="<?php echo escapeText($userid); ?>">
-      <table style="border-collapse: collapse;" border="0" cellpadding="3" cellspacing="0">
-        <tr>
-          <td colspan="5" align="center" bgcolor="#6702cc">
-            <font size="3" color="white"><b>People who can view your list</b></font>
-          </td>
-        </tr>
-        <tr bgcolor="lightYellow">
-          <td>&nbsp;</td>
-          <td valign="bottom"><b>Name</b></td>
-          <td align="center"><b>Show Birthday &amp;<br>Contact Info</b></td>
-          <td align="center"><b>Read Only<br>Access</b></td>
-          <td align="center"><b>Edit<br>Access</b></td>
-        </tr>
-        <?php
-        $stmt_viewers_list = mysqli_prepare($link, "SELECT viewList.viewer, people.firstname, people.lastname, people.suffix, people.userid, viewList.viewContactInfo, viewList.readOnly, viewList.allowEdit FROM viewList JOIN people ON viewList.viewer = people.userid WHERE viewList.pid = ? ORDER BY people.lastname, people.firstname");
-        mysqli_stmt_bind_param($stmt_viewers_list, "s", $userid);
-        mysqli_stmt_execute($stmt_viewers_list);
-        $res_vl = mysqli_stmt_get_result($stmt_viewers_list);
-        $viewerRows = [];
-        while ($vrow = mysqli_fetch_assoc($res_vl)) {
-            $viewerRows[] = $vrow;
-            $vName = trim($vrow["firstname"] . " " . $vrow["lastname"] . " " . ($vrow["suffix"] ?? ""));
-            $vu = escapeText($vrow["userid"]);
-            echo "<tr>";
-            echo "<td>";
-            if ($vrow["userid"] !== $userid) {
-                echo "<button type=\"submit\" form=\"rmMine_" . $vu . "\" class=\"menuLink\" style=\"background:none;border:none;padding:0;color:#0000cc;cursor:pointer;text-decoration:underline;\">[Remove]</button>";
-            } else {
-                echo "<small>(Self)</small>";
-            }
-            echo "</td>";
-            echo "<td>" . escapeText($vName) . "</td>";
-            echo "<td align=\"center\"><input name=\"admin[]\" value=\"" . $vu . "\" type=\"checkbox\"" . ($vrow["viewContactInfo"] ? " checked" : "") . "></td>";
-            echo "<td align=\"center\"><input name=\"readOnly[]\" value=\"" . $vu . "\" type=\"checkbox\"" . ($vrow["readOnly"] ? " checked" : "") . "></td>";
-            echo "<td align=\"center\"><input name=\"allowEdit[]\" value=\"" . $vu . "\" type=\"checkbox\"" . ($vrow["allowEdit"] ? " checked" : "") . "></td>";
-            echo "</tr>";
-        }
-        ?>
-        <tr>
-          <td colspan="5" align="center" bgcolor="#c0c0c0">
-            <input type="submit" value="Make Changes" style="font-weight:bold">
-          </td>
-        </tr>
-      </table>
-    </form>
-    <?php foreach ($viewerRows as $vrow): ?>
-      <?php if ($vrow["userid"] !== $userid): $vu = escapeText($vrow["userid"]); ?>
-      <form id="rmMine_<?php echo $vu; ?>" method="post" action="updateAccount.php" style="display:none;">
-        <input type="hidden" name="csrf_token" value="<?php echo escapeText($csrf_token); ?>">
-        <input type="hidden" name="action" value="stopViewMine">
-        <input type="hidden" name="target_userid" value="<?php echo escapeText($userid); ?>">
-        <input type="hidden" name="userid" value="<?php echo $vu; ?>">
-      </form>
-      <?php endif; ?>
-    <?php endforeach; ?>
-  </td></tr>
-  </table>
-
-</td>
-<td valign="top" align="center" width="50%">
-
-  <table bgcolor="lightyellow" style="border-collapse: collapse;" border="0" cellpadding="8" cellspacing="0">
-  <tr><td>
-    <table style="border-collapse: collapse;" border="0" cellpadding="2" cellspacing="0" width="100%">
-      <tr>
-        <td align="center" bgcolor="#6702cc">
-          <font size="3" color="white"><b>Find lists to view</b></font>
-        </td>
-      </tr>
-      <tr>
-        <td style="padding:8px 6px;">
-          <form method="post" action="updateAccount.php" style="margin:0 0 12px 0;">
-            <input type="hidden" name="csrf_token" value="<?php echo escapeText($csrf_token); ?>">
-            <input type="hidden" name="target_userid" value="<?php echo escapeText($userid); ?>">
-            <input type="hidden" name="action" value="startViewOther">
-            <div style="margin-bottom:6px; font-size:13px;">Select one or more family members to request access to their wishlists:</div>
-            <select name="userids[]" id="requestListsSelect" multiple style="width:100%; max-width:360px;">
-              <?php foreach ($requestListGroups as $famGroup => $members): ?>
-                <optgroup label="<?php echo escapeText($famGroup); ?>">
-                  <?php foreach ($members as $m): ?>
-                    <option value="<?php echo escapeText($m['userid']); ?>"<?php echo !empty($m['pending']) ? ' disabled' : ''; ?>>
-                      <?php echo escapeText($m['name']); ?> (<?php echo escapeText($m['userid']); ?>)<?php echo !empty($m['pending']) ? ' — Pending Request' : ''; ?>
-                    </option>
-                  <?php endforeach; ?>
-                </optgroup>
-              <?php endforeach; ?>
-            </select>
-            <div style="margin-top:8px;">
-              <input type="submit" value="📩 Request Access" class="buttonstyle">
+          <div class="account-section-card">
+            <div class="account-section-header">
+              <span>People Who Can View/Edit Your List</span>
+              <span class="admin-family-count"><?php echo (int)$totalViewersCount; ?></span>
             </div>
-          </form>
+            <div class="account-section-body" style="padding:8px;">
+              <div class="admin-families-list">
+                <?php foreach ($viewersByFamily as $fam): ?>
+                  <?php $mCount = count($fam['members']); ?>
+                  <details class="admin-family-card" open>
+                    <summary class="admin-family-header">
+                      <div class="admin-family-title-wrap">
+                        <span class="admin-family-name"><?php echo escapeText($fam['label']); ?></span>
+                        <span class="admin-family-count"><?php echo (int)$mCount; ?></span>
+                      </div>
+                      <span class="admin-family-chevron" aria-hidden="true">▾</span>
+                    </summary>
 
-          <table style="border-collapse: collapse;" border="0" cellpadding="3" cellspacing="0" width="100%">
-            <tr>
-              <td colspan="2" align="center" bgcolor="#6702cc">
-                <font size="3" color="white"><b>Lists you can view</b></font>
-              </td>
-            </tr>
-            <?php
-            $stmt_viewable = mysqli_prepare($link, "SELECT people.firstname, people.lastname, people.suffix, people.userid FROM viewList JOIN people ON viewList.pid = people.userid WHERE viewList.viewer = ? ORDER BY people.lastname, people.firstname");
-            mysqli_stmt_bind_param($stmt_viewable, "s", $userid);
-            mysqli_stmt_execute($stmt_viewable);
-            $res_viewable = mysqli_stmt_get_result($stmt_viewable);
+                    <table class="admin-family-table">
+                      <tbody>
+                        <?php foreach ($fam['members'] as $vrow): ?>
+                          <?php
+                            $vName = trim($vrow["firstname"] . " " . $vrow["lastname"] . " " . ($vrow["suffix"] ?? ""));
+                            if ($vName === '') {
+                                $vName = $vrow["userid"];
+                            }
+                            $vNameEsc = escapeText($vName);
+                            $vu = escapeText($vrow["userid"]);
+                            $isSelfRow = ($vrow["userid"] === $userid);
+                            $hasReadOnly = !empty($vrow["readOnly"]);
+                            $hasAllowEdit = !empty($vrow["allowEdit"]);
+                          ?>
+                          <tr>
+                            <td>
+                              <div class="admin-person-primary">
+                                <span class="admin-person-name"><?php echo $vNameEsc; ?></span>
+                                <span class="admin-userid-pill"><?php echo $vu; ?></span>
+                                <?php if ($isSelfRow): ?>
+                                  <span class="admin-you-badge">Self</span>
+                                <?php endif; ?>
+                              </div>
+                            </td>
+                            <td class="col-actions">
+                              <div class="admin-row-actions">
+                                <label class="compact-perm-pill" title="Read-Only Access for <?php echo $vNameEsc; ?>">
+                                  <input
+                                    name="readOnly[]"
+                                    value="<?php echo $vu; ?>"
+                                    type="checkbox"
+                                    class="admin-role-checkbox perm-checkbox"
+                                    data-initial="<?php echo $hasReadOnly ? '1' : '0'; ?>"
+                                    <?php echo $hasReadOnly ? "checked" : ""; ?>
+                                  >
+                                  <span>Read-Only</span>
+                                </label>
+                                <label class="compact-perm-pill" title="Allow <?php echo $vNameEsc; ?> to edit wishlist">
+                                  <input
+                                    name="allowEdit[]"
+                                    value="<?php echo $vu; ?>"
+                                    type="checkbox"
+                                    class="admin-role-checkbox perm-checkbox"
+                                    data-initial="<?php echo $hasAllowEdit ? '1' : '0'; ?>"
+                                    <?php echo $hasAllowEdit ? "checked" : ""; ?>
+                                  >
+                                  <span>Edit</span>
+                                </label>
+                                <?php if (!$isSelfRow): ?>
+                                  <button
+                                    type="submit"
+                                    form="rmMine_<?php echo $vu; ?>"
+                                    class="admin-icon-btn admin-icon-delete"
+                                    title="Remove <?php echo $vNameEsc; ?> from viewing your list"
+                                    aria-label="Remove <?php echo $vNameEsc; ?> from viewing your list"
+                                  ><?php echo $svg_delete; ?></button>
+                                <?php else: ?>
+                                  <span class="admin-icon-spacer" aria-hidden="true"></span>
+                                <?php endif; ?>
+                              </div>
+                            </td>
+                          </tr>
+                        <?php endforeach; ?>
+                      </tbody>
+                    </table>
+                  </details>
+                <?php endforeach; ?>
+              </div>
 
-            while ($orow = mysqli_fetch_assoc($res_viewable)) {
-                $oName = trim($orow["firstname"] . " " . $orow["lastname"] . " " . ($orow["suffix"] ?? ""));
-                echo "<tr><td>";
-                if ($orow["userid"] !== $userid) {
-                    echo '<form method="post" action="updateAccount.php" style="display:inline; margin:0;">';
-                    echo '<input type="hidden" name="csrf_token" value="' . escapeText($csrf_token) . '">';
-                    echo '<input type="hidden" name="action" value="stopViewOther">';
-                    echo '<input type="hidden" name="target_userid" value="' . escapeText($userid) . '">';
-                    echo '<input type="hidden" name="userid" value="' . escapeText($orow["userid"]) . '">';
-                    echo '<button type="submit" class="menuLink" style="background:none;border:none;padding:0;color:#0000cc;cursor:pointer;text-decoration:underline;">[Remove]</button>';
-                    echo '</form>';
-                } else {
-                    echo '<small>(Self)</small>';
-                }
-                echo "</td><td>" . escapeText($oName) . "</td></tr>";
-            }
-            ?>
-          </table>
-        </td>
-      </tr>
-    </table>
-  </td></tr>
-  </table>
+              <div class="admin-save-bar" id="permSaveBar" style="margin-top:8px;">
+                <span class="admin-save-hint" id="permSaveHint">Adjust Read-Only or Edit checkboxes above and save.</span>
+                <button type="submit" class="admin-nav-btn admin-nav-btn-primary">Save Changes</button>
+              </div>
+            </div>
+          </div>
+        </form>
 
-</td>
-</tr>
-</table>
-<?php else: ?>
-  <p><i>Note: You have edit access to manage <?php echo escapeText($fullName); ?>'s wishlist and profile details, while sharing permissions can only be changed by the account owner or an administrator.</i></p>
-<?php endif; ?>
+        <?php foreach ($viewerRows as $vrow): ?>
+          <?php if ($vrow["userid"] !== $userid): $vu = escapeText($vrow["userid"]); ?>
+            <form id="rmMine_<?php echo $vu; ?>" method="post" action="updateAccount.php" style="display:none;">
+              <input type="hidden" name="csrf_token" value="<?php echo escapeText($csrf_token); ?>">
+              <input type="hidden" name="action" value="stopViewMine">
+              <input type="hidden" name="target_userid" value="<?php echo escapeText($userid); ?>">
+              <input type="hidden" name="userid" value="<?php echo $vu; ?>">
+            </form>
+          <?php endif; ?>
+        <?php endforeach; ?>
+      </div>
 
-</center>
+      <!-- RIGHT COLUMN: Lists You Can View -->
+      <div class="account-column">
+        <div class="account-section-card">
+          <div class="account-section-header">
+            <span>Find Lists to View</span>
+          </div>
+          <div class="account-section-body">
+            <form method="post" action="updateAccount.php" style="margin:0;">
+              <input type="hidden" name="csrf_token" value="<?php echo escapeText($csrf_token); ?>">
+              <input type="hidden" name="target_userid" value="<?php echo escapeText($userid); ?>">
+              <input type="hidden" name="action" value="startViewOther">
+              <p class="account-picker-help">Select one or more family members to request access to their wishlists:</p>
+              <select name="userids[]" id="requestListsSelect" multiple style="width:100%;">
+                <?php foreach ($requestListGroups as $famGroup => $members): ?>
+                  <optgroup label="<?php echo escapeText($famGroup); ?>">
+                    <?php foreach ($members as $m): ?>
+                      <option value="<?php echo escapeText($m['userid']); ?>"<?php echo !empty($m['pending']) ? ' disabled' : ''; ?>>
+                        <?php echo escapeText($m['name']); ?> (<?php echo escapeText($m['userid']); ?>)<?php echo !empty($m['pending']) ? ' — Pending Request' : ''; ?>
+                      </option>
+                    <?php endforeach; ?>
+                  </optgroup>
+                <?php endforeach; ?>
+              </select>
+              <div style="margin-top:8px;">
+                <button type="submit" class="admin-nav-btn admin-nav-btn-primary">📩 Request Access</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div class="account-section-card">
+          <div class="account-section-header">
+            <span>Lists You Can View</span>
+            <span class="admin-family-count"><?php echo (int)$totalViewableCount; ?></span>
+          </div>
+          <div class="account-section-body" style="padding:8px;">
+            <div class="admin-families-list">
+              <?php foreach ($viewableByFamily as $fam): ?>
+                <?php $mCount = count($fam['members']); ?>
+                <details class="admin-family-card" open>
+                  <summary class="admin-family-header">
+                    <div class="admin-family-title-wrap">
+                      <span class="admin-family-name"><?php echo escapeText($fam['label']); ?></span>
+                      <span class="admin-family-count"><?php echo (int)$mCount; ?></span>
+                    </div>
+                    <span class="admin-family-chevron" aria-hidden="true">▾</span>
+                  </summary>
+
+                  <table class="admin-family-table">
+                    <tbody>
+                      <?php foreach ($fam['members'] as $orow): ?>
+                        <?php
+                          $oName = trim($orow["firstname"] . " " . $orow["lastname"] . " " . ($orow["suffix"] ?? ""));
+                          if ($oName === '') {
+                              $oName = $orow["userid"];
+                          }
+                          $oNameEsc = escapeText($oName);
+                          $ou = escapeText($orow["userid"]);
+                          $isSelfOther = ($orow["userid"] === $userid);
+                          $viewHref = "../viewList/viewList.php?recip=" . urlencode($orow["userid"]) . "&name=" . urlencode($oName);
+                        ?>
+                        <tr>
+                          <td>
+                            <div class="admin-person-primary">
+                              <span class="admin-person-name"><?php echo $oNameEsc; ?></span>
+                              <span class="admin-userid-pill"><?php echo $ou; ?></span>
+                              <?php if ($isSelfOther): ?>
+                                <span class="admin-you-badge">Self</span>
+                              <?php endif; ?>
+                            </div>
+                          </td>
+                          <td class="col-actions">
+                            <div class="admin-row-actions">
+                              <a
+                                href="<?php echo escapeText($viewHref); ?>"
+                                class="admin-icon-btn"
+                                title="View <?php echo $oNameEsc; ?>'s Wishlist"
+                                aria-label="View <?php echo $oNameEsc; ?>'s Wishlist"
+                              ><?php echo $svg_view; ?></a>
+                              <?php if (!$isSelfOther): ?>
+                                <form method="post" action="updateAccount.php" style="display:inline; margin:0;">
+                                  <input type="hidden" name="csrf_token" value="<?php echo escapeText($csrf_token); ?>">
+                                  <input type="hidden" name="action" value="stopViewOther">
+                                  <input type="hidden" name="target_userid" value="<?php echo escapeText($userid); ?>">
+                                  <input type="hidden" name="userid" value="<?php echo $ou; ?>">
+                                  <button
+                                    type="submit"
+                                    class="admin-icon-btn admin-icon-delete"
+                                    title="Stop viewing <?php echo $oNameEsc; ?>'s list"
+                                    aria-label="Stop viewing <?php echo $oNameEsc; ?>'s list"
+                                  ><?php echo $svg_delete; ?></button>
+                                </form>
+                              <?php else: ?>
+                                <span class="admin-icon-spacer" aria-hidden="true"></span>
+                              <?php endif; ?>
+                            </div>
+                          </td>
+                        </tr>
+                      <?php endforeach; ?>
+                    </tbody>
+                  </table>
+                </details>
+              <?php endforeach; ?>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  <?php else: ?>
+    <div class="admin-alert admin-alert-success">
+      Note: You have edit access to manage <b><?php echo escapeText($fullName); ?></b>'s wishlist and profile details. Sharing permissions can only be changed by the account owner or an administrator.
+    </div>
+  <?php endif; ?>
+
+</div>
+
+<script>
+(function() {
+  var permSaveBar = document.getElementById('permSaveBar');
+  var permSaveHint = document.getElementById('permSaveHint');
+  var permCheckboxes = Array.prototype.slice.call(document.querySelectorAll('.perm-checkbox'));
+
+  function updatePermDirty() {
+    if (!permSaveBar || !permSaveHint) return;
+    var changed = permCheckboxes.some(function(cb) {
+      return cb.checked !== (cb.getAttribute('data-initial') === '1');
+    });
+    if (changed) {
+      permSaveBar.classList.add('is-dirty');
+      permSaveHint.textContent = 'You have unsaved permission changes.';
+    } else {
+      permSaveBar.classList.remove('is-dirty');
+      permSaveHint.textContent = 'Adjust Read-Only or Edit checkboxes above and save.';
+    }
+  }
+
+  permCheckboxes.forEach(function(cb) {
+    cb.addEventListener('change', updatePermDirty);
+  });
+})();
+</script>
 </td>
 </tr>
 </table>

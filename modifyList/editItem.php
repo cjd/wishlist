@@ -183,7 +183,11 @@ $hasLink3 = !empty($item_row["link3url"]);
   <td align="right"><b>Image</b></td>
   <td bgcolor="#eeeeee">
     <?php if ($safeImgBase !== ''): ?>
-      <img src="<?php echo escapeText($base_url . "/uploads/" . rawurlencode($safeImgBase) . $imgVer); ?>" alt="" style="max-width:200px; height:auto; display:block; margin-bottom:6px;">
+      <?php if ($imgVer !== ''): ?>
+        <img src="<?php echo escapeText(rtrim($base_url, '/') . "/uploads/" . rawurlencode($safeImgBase) . $imgVer); ?>" alt="" style="max-width:200px; height:auto; display:block; margin-bottom:6px;">
+      <?php else: ?>
+        <div style="font-size:12.5px; color:#b45309; margin-bottom:6px;">(Saved image file is missing from server)</div>
+      <?php endif; ?>
       <label style="font-size:13px;"><input type="checkbox" name="remove_image" value="1"> Remove current image</label><br><br>
     <?php endif; ?>
     <input type="file" style="width:100%;" name="image" accept="image/jpeg,image/png,image/gif,image/webp">

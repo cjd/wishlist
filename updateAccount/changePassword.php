@@ -96,50 +96,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['password'])) {
 <tr>
 <td valign="top">
 <?php
-createNavBar("../home.php:Home|" . $back_account_url . ":Update Account|:Change Password for " . $target_user, false, "password");
+createNavBar("../home.php:Home|" . $back_account_url . ":Update Account|:Change Password for " . $target_user, true, "password");
 ?>
-<center>
-<?php if ($success): ?>
-  <p><h2>Password Successfully Changed</h2></p>
-  <p><b><a href="<?php echo escapeText($back_account_url); ?>">Back to Account</a></b></p>
-<?php else: ?>
-  <?php if ($error_msg !== ''): ?>
-    <p style="color:#c00; font-weight:bold;"><?php echo escapeText($error_msg); ?></p>
-  <?php endif; ?>
-  <form name="theForm" method="post" action="changePassword.php" onsubmit="return validate(this);">
-    <input type="hidden" name="csrf_token" value="<?php echo escapeText(getCsrfToken()); ?>">
-    <input type="hidden" name="userid" value="<?php echo escapeText($target_user); ?>">
-    <p><b>Changing password for: <code><?php echo escapeText($target_user); ?></code></b></p>
-
-    <table style="border-collapse: collapse;" border="1" bordercolor="#111111" cellpadding="4" cellspacing="0" bgcolor="lightYellow">
-      <tr>
-        <td colspan="2" align="center" bgcolor="#6702cc">
-          <font size="3" color="white"><b>Enter New Password</b></font>
-        </td>
-      </tr>
-      <?php if ($require_current_password): ?>
-      <tr>
-        <td align="right"><b>Current Password</b></td>
-        <td><input type="password" name="current_password" autocomplete="current-password" required></td>
-      </tr>
+<div class="admin-dashboard">
+  <?php if ($success): ?>
+    <div class="admin-alert admin-alert-success">
+      Password successfully changed for <code><?php echo escapeText($target_user); ?></code>.
+    </div>
+    <div style="text-align:center; margin-top:12px;">
+      <a href="<?php echo escapeText($back_account_url); ?>" class="admin-nav-btn admin-nav-btn-primary">← Back to Account</a>
+      <?php if ($is_admin && $target_user !== $_SESSION['userid']): ?>
+        <a href="../admin.php" class="admin-nav-btn">← Back to Admin</a>
       <?php endif; ?>
-      <tr>
-        <td align="right"><b>New Password (min 6 chars)</b></td>
-        <td><input type="password" name="password" minlength="6" autocomplete="new-password" required></td>
-      </tr>
-      <tr>
-        <td align="right"><b>Re-enter New Password</b></td>
-        <td><input type="password" name="challenge" minlength="6" autocomplete="new-password" required></td>
-      </tr>
-      <tr>
-        <td align="center" colspan="2" bgcolor="#c0c0c0">
-          <input type="submit" value="Submit" style="font-weight:bold">
-        </td>
-      </tr>
-    </table>
-  </form>
-<?php endif; ?>
-</center>
+    </div>
+  <?php else: ?>
+    <?php if ($error_msg !== ''): ?>
+      <div class="admin-alert admin-alert-error"><?php echo escapeText($error_msg); ?></div>
+    <?php endif; ?>
+    <form name="theForm" method="post" action="changePassword.php" onsubmit="return validate(this);" class="admin-modal-card">
+      <input type="hidden" name="csrf_token" value="<?php echo escapeText(getCsrfToken()); ?>">
+      <input type="hidden" name="userid" value="<?php echo escapeText($target_user); ?>">
+
+      <div class="admin-modal-card-header">
+        <span>Change Password</span>
+        <span class="admin-family-count"><?php echo escapeText($target_user); ?></span>
+      </div>
+
+      <div class="admin-modal-card-body">
+        <?php if ($require_current_password): ?>
+          <div class="admin-form-row">
+            <label for="cp_current">Current Password *</label>
+            <input type="password" id="cp_current" name="current_password" autocomplete="current-password" required>
+          </div>
+        <?php endif; ?>
+        <div class="admin-form-row">
+          <label for="cp_new">New Password (min 6 chars) *</label>
+          <input type="password" id="cp_new" name="password" minlength="6" autocomplete="new-password" required>
+        </div>
+        <div class="admin-form-row" style="margin-bottom:0;">
+          <label for="cp_confirm">Re-enter New Password *</label>
+          <input type="password" id="cp_confirm" name="challenge" minlength="6" autocomplete="new-password" required>
+        </div>
+      </div>
+
+      <div class="admin-modal-card-footer">
+        <a href="<?php echo escapeText($back_account_url); ?>" class="admin-nav-btn">Cancel</a>
+        <button type="submit" class="admin-nav-btn admin-nav-btn-primary">Update Password</button>
+      </div>
+    </form>
+  <?php endif; ?>
+</div>
 </td>
 </tr>
 </table>
