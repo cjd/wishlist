@@ -478,7 +478,7 @@ if ($recip !== $viewerUserid) {
         }
     }
 
-    $stmt_comm = mysqli_prepare($link, "SELECT comments.*, people.firstname, people.lastname, people.suffix FROM comments JOIN people ON comments.comment_userid = people.userid WHERE comments.userid = ? ORDER BY comments.date DESC");
+    $stmt_comm = mysqli_prepare($link, "SELECT comments.*, people.firstname, people.lastname, people.suffix, COALESCE(NULLIF(TRIM(CONCAT_WS(' ', claimer.firstname, claimer.lastname, NULLIF(claimer.suffix, ''))), ''), comments.claimed_by) AS claimer_name FROM comments JOIN people ON comments.comment_userid = people.userid LEFT JOIN people AS claimer ON claimer.userid = comments.claimed_by WHERE comments.userid = ? ORDER BY comments.date DESC");
     mysqli_stmt_bind_param($stmt_comm, "s", $recip);
     mysqli_stmt_execute($stmt_comm);
     $rs = mysqli_stmt_get_result($stmt_comm);
@@ -511,7 +511,10 @@ if ($recip !== $viewerUserid) {
                 $claimLabel = $isOwnClaim ? '✅ Claimed by You' : '✅ Claimed / Bought';
                 echo '<span class="suggestion-claimed-badge">' . $claimLabel . '</span>';
                 if (!empty($row["split_with"])) {
-                    echo ' <span class="group-gift-badge">👥 Split with ' . escapeText($row["split_with"]) . '</span>';
+                    $splitLabel = formatSplitBetweenText((string)($row["claimer_name"] ?? ""), (string)$row["split_with"]);
+                    if ($splitLabel !== "") {
+                        echo ' <span class="group-gift-badge">👥 ' . escapeText($splitLabel) . '</span>';
+                    }
                 }
                 if ($canUndoClaim) {
                     echo ' <form method="post" action="claimSuggestion.php" style="display:inline; margin:0;">';

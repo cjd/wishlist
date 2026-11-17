@@ -36,7 +36,7 @@ A modern, responsive PHP-based web application designed to manage gift lists for
 * **Split Gift Tracker:** When marking an item as bought, contributors can coordinate group gifts:
   * **Searchable User Picker:** Select registered co-buyers via a Select2 multi-select dropdown and add optional split notes (e.g., *"50/50 with Sarah"*).
   * **Targeted Co-Buyer Notifications:** Automatically links the purchase into **View Purchases** for all selected co-buyers and sends internal notifications *only* to those co-buyers (solo purchases never broadcast messages).
-  * **Public Badges:** Displays purple **`👥 Split with [Names]`** badges to fellow viewers so nobody buys a duplicate.
+  * **Public Badges:** Displays purple **`👥 Split between [Names]`** badges to fellow viewers so nobody buys a duplicate.
 * **Claimable Secret Gift Suggestion Box:** Viewers can propose off-list gift ideas via **"💡 Suggest Secret Gift Idea"** with title, retail URL, estimated price, and private notes—and fellow shoppers can click **`🎁 Claim / Mark Bought`** (with optional co-buyer split) so nobody buys the same off-list gift twice. Claimed secret suggestions are protected from comment expiration and included in **View Purchases** spending totals.
 * **Anonymous Gift Shopper Questions:** Shoppers can send size/detail questions anonymously as **`🕵️ A Gift Shopper`** from `viewList.php` without spoiling their identity.
 

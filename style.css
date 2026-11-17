@@ -402,14 +402,6 @@ td.footercell {
     vertical-align: top;
 }
 
-textarea.contact {
-    background-color: transparent;
-    overflow: hidden;
-    border: 0;
-    white-space: pre-wrap;
-    color: black;
-}
-
 input[type=checkbox] {
     width:32px;
     height:32px;
@@ -2567,5 +2559,71 @@ a.navQuickLink:hover {
   background: #1c2128;
   border-top-color: #373e47;
 }
+
+/* --- Home Menu & Person Contact Hover Card --- */
+.home-menu-table {
+  min-width: min(300px, 92vw);
+  max-width: 100%;
+}
+
+.home-empty-notice {
+  padding: 12px 16px;
+  margin: 8px 0;
+  background: #f8fafc;
+  border: 1px solid #93c5fd;
+  border-radius: 8px;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.45;
+  color: #1e3a8a;
+  text-align: center;
+}
+
+.person-hover-card {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 10000;
+  width: max-content;
+  max-width: calc(100vw - 16px);
+  padding: 7px 12px;
+  background: #ffffff;
+  color: #1e3a8a;
+  border: 1px solid #337fed;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
+  font-family: Arial, sans-serif;
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: left;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(2px);
+  transition: opacity 0.14s ease, transform 0.14s ease, visibility 0.14s;
+  box-sizing: border-box;
+}
+
+.person-hover-card.visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+[data-theme="dark"] .home-empty-notice {
+  background: #1f2937;
+  border-color: #3b82f6;
+  color: #bfdbfe;
+}
+
+[data-theme="dark"] .person-hover-card {
+  background: #22272e;
+  color: #93c5fd;
+  border-color: #388bfd;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+}
+
 
 

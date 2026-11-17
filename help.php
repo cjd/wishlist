@@ -105,7 +105,7 @@ if (isset($_SESSION["userid"])) {
     </ul>
     <p>When you click <b>Save Changes</b>:</p>
     <ul>
-      <li>A purple <b>👥 Split with [Names]</b> badge will be displayed on the list for all viewers so nobody buys a duplicate.</li>
+      <li>A purple <b>👥 Split between [Names]</b> badge will be displayed on the list for all viewers so nobody buys a duplicate.</li>
       <li>The item will automatically appear in <b>View Purchases</b> for you <i>and</i> all selected co-buyers so everyone can keep track of their spending.</li>
       <li>Selected co-buyers receive an on-site message notification detailing the shared purchase.</li>
     </ul>

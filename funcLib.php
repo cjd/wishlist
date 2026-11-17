@@ -677,6 +677,55 @@ function formatMessage($body) {
   return nl2br(trim($body));
 }
 
+function formatSplitNamesList(array $names): string
+{
+  $clean = [];
+  $seen = [];
+  foreach ($names as $n) {
+    $trimmed = trim((string)$n);
+    if ($trimmed === '') {
+      continue;
+    }
+    $key = strtolower($trimmed);
+    if (!isset($seen[$key])) {
+      $seen[$key] = true;
+      $clean[] = $trimmed;
+    }
+  }
+  $count = count($clean);
+  if ($count === 0) {
+    return '';
+  }
+  if ($count === 1) {
+    return $clean[0];
+  }
+  if ($count === 2) {
+    return $clean[0] . ' and ' . $clean[1];
+  }
+  $last = array_pop($clean);
+  return implode(', ', $clean) . ' and ' . $last;
+}
+
+function formatSplitBetweenText(string $buyerName, string $splitWith): string
+{
+  $splitWith = trim($splitWith);
+  if ($splitWith === '') {
+    return '';
+  }
+  $parts = [];
+  if (trim($buyerName) !== '') {
+    $parts[] = trim($buyerName);
+  }
+  foreach (explode(',', $splitWith) as $piece) {
+    $piece = trim($piece);
+    if ($piece !== '') {
+      $parts[] = $piece;
+    }
+  }
+  $joined = formatSplitNamesList($parts);
+  return $joined !== '' ? ('Split between ' . $joined) : '';
+}
+
 /**
  * Batch-load items & aggregated purchases for all categories of a user in 1 query
  */
@@ -692,11 +741,23 @@ function fetchItemsByUser($link, $ownerUserid, $includePurchases = false) {
       FROM items i
       JOIN categories c ON i.cid = c.cid
       LEFT JOIN (
-        SELECT iid,
-               SUM(quantity) AS total_bought,
-               GROUP_CONCAT(NULLIF(splitWith, '') SEPARATOR '\n') AS split_notes
-        FROM purchaseHistory
-        GROUP BY iid
+        SELECT ph_row.iid,
+               SUM(ph_row.quantity) AS total_bought,
+               GROUP_CONCAT(
+                 CASE
+                   WHEN ph_row.splitWith IS NOT NULL AND ph_row.splitWith != ''
+                   THEN CONCAT(
+                     COALESCE(NULLIF(TRIM(CONCAT_WS(' ', pb.firstname, pb.lastname, NULLIF(pb.suffix, ''))), ''), ph_row.userid),
+                     '\t',
+                     ph_row.splitWith
+                   )
+                   ELSE NULL
+                 END
+                 SEPARATOR '\n'
+               ) AS split_notes
+        FROM purchaseHistory ph_row
+        LEFT JOIN people pb ON pb.userid = ph_row.userid
+        GROUP BY ph_row.iid
       ) ph ON ph.iid = i.iid
       WHERE c.userid = ?
       ORDER BY i.cid, i.itemSortOrder
@@ -1032,20 +1093,34 @@ function printCategory($row, $name, $displayPurchases, $readOnly, $modifyList, $
           $bought = (int)$row2['total_bought'];
           if (!empty($row2['split_notes'])) {
             foreach (explode("\n", $row2['split_notes']) as $sn) {
-              if ($sn !== '') {
-                $splitNotes[] = escapeText($sn);
+              if ($sn === '') {
+                continue;
+              }
+              $tabPos = strpos($sn, "\t");
+              if ($tabPos !== false) {
+                $bName = substr($sn, 0, $tabPos);
+                $sWith = substr($sn, $tabPos + 1);
+                $label = formatSplitBetweenText($bName, $sWith);
+              } else {
+                $label = formatSplitBetweenText('', $sn);
+              }
+              if ($label !== '') {
+                $splitNotes[] = escapeText($label);
               }
             }
           }
         } else {
-          $stmt = mysqli_prepare($link, "SELECT quantity, splitWith FROM purchaseHistory WHERE iid = ?");
+          $stmt = mysqli_prepare($link, "SELECT ph.quantity, ph.splitWith, COALESCE(NULLIF(TRIM(CONCAT_WS(' ', p.firstname, p.lastname, NULLIF(p.suffix, ''))), ''), ph.userid) AS buyer_name FROM purchaseHistory ph LEFT JOIN people p ON p.userid = ph.userid WHERE ph.iid = ?");
           mysqli_stmt_bind_param($stmt, "i", $iid);
           mysqli_stmt_execute($stmt);
           $rs = mysqli_stmt_get_result($stmt);
           while ($sumRow = mysqli_fetch_assoc($rs)) {
             $bought += (int)$sumRow["quantity"];
             if (!empty($sumRow["splitWith"])) {
-              $splitNotes[] = escapeText($sumRow["splitWith"]);
+              $label = formatSplitBetweenText((string)($sumRow["buyer_name"] ?? ''), (string)$sumRow["splitWith"]);
+              if ($label !== '') {
+                $splitNotes[] = escapeText($label);
+              }
             }
           }
         }
@@ -1094,7 +1169,9 @@ function printCategory($row, $name, $displayPurchases, $readOnly, $modifyList, $
       print "</s>";
     }
     if (!empty($splitNotes) && $displayPurchases != 0) {
-      print " <span class='group-gift-badge' title='Group gift'>👥 Split with " . implode(', ', $splitNotes) . "</span>";
+      foreach ($splitNotes as $splitNoteEsc) {
+        print " <span class='group-gift-badge' title='Group gift'>👥 " . $splitNoteEsc . "</span>";
+      }
     }
 
     if (!$readOnly && !$modifyList && $displayPurchases != 0 && ($quantity - $bought) > 0) {

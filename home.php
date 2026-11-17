@@ -75,8 +75,6 @@ if (!empty($_GET['reciprocal_sent'])) {
     ];
 }
 
-$lastname = $_REQUEST["lastname"] ?? "";
-
 $query = "SELECT people.*, MAX(viewList.allowEdit) AS allowEdit, MAX(viewList.viewContactInfo) AS viewContactInfo FROM people JOIN viewList ON viewList.pid = people.userid WHERE viewList.viewer = ? GROUP BY people.userid ORDER BY people.lastname, people.firstname";
 $stmt_people = mysqli_prepare($link, $query);
 mysqli_stmt_bind_param($stmt_people, "s", $userid);
@@ -127,7 +125,7 @@ foreach ($people_rows as $prow) {
     }
 }
 
-$contact_map = [];
+$birthday_map = [];
 $upcoming_events = [];
 $month_lookup = [
     'january' => 1, 'february' => 2, 'march' => 3, 'april' => 4,
@@ -140,12 +138,10 @@ $currentYear = (int)date('Y');
 foreach ($people_rows as $row) {
     if (!empty($row["viewContactInfo"])) {
         $name = trim($row["firstname"] . ' ' . $row["lastname"] . ' ' . ($row["suffix"] ?? ''));
-        $lines = [$name];
-
         $bmonthRaw = trim((string)($row['bmonth'] ?? ''));
         $bdayInt = (int)($row['bday'] ?? 0);
         if ($bmonthRaw !== '' && $bdayInt >= 1 && $bdayInt <= 31) {
-            $lines[] = "Birthday: " . $bmonthRaw . " " . $bdayInt;
+            $birthday_map[$row['userid']] = "🎂 Birthday: " . $bmonthRaw . " " . $bdayInt;
 
             $mNum = $month_lookup[strtolower($bmonthRaw)] ?? 0;
             if ($mNum >= 1 && $mNum <= 12) {
@@ -171,25 +167,6 @@ foreach ($people_rows as $row) {
                 }
             }
         }
-        if (!empty($row['street'])) {
-            $lines[] = $row['street'];
-        }
-        $cityStateZip = trim(
-            ($row['city'] ?? '') .
-            (!empty($row['city']) && !empty($row['state']) ? ', ' : '') .
-            ($row['state'] ?? '') .
-            ((!empty($row['zip']) && $row['zip'] !== '0') ? ' ' . $row['zip'] : '')
-        );
-        if ($cityStateZip !== '') {
-            $lines[] = $cityStateZip;
-        }
-        if (!empty($row['phone'])) {
-            $lines[] = "Home: " . $row['phone'];
-        }
-        if (!empty($row['mobilephone'])) {
-            $lines[] = "Mobile: " . $row['mobilephone'];
-        }
-        $contact_map[$row['userid']] = implode("\n", $lines);
     }
 }
 
@@ -238,7 +215,67 @@ if ($season == 1) {
   <title>WishList Home Page</title>
   <script src="js/jquery-3.7.1.min.js"></script>
   <script>
+  var birthdayInfo = <?php echo json_encode($birthday_map, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
+
+  function hidePersonHover() {
+      var card = document.getElementById("personHoverCard");
+      if (card) {
+          card.classList.remove("visible");
+          card.setAttribute("aria-hidden", "true");
+      }
+  }
+
+  function positionPersonHover(btn, card) {
+      card.style.left = "0px";
+      card.style.top = "0px";
+
+      var btnRect = btn.getBoundingClientRect();
+      var cardW = card.offsetWidth;
+      var cardH = card.offsetHeight;
+      var vw = document.documentElement.clientWidth || window.innerWidth;
+      var vh = document.documentElement.clientHeight || window.innerHeight;
+      var gap = 10;
+      var margin = 8;
+      var left, top;
+
+      if (btnRect.right + gap + cardW <= vw - margin) {
+          left = btnRect.right + gap;
+          top = btnRect.top + (btnRect.height - cardH) / 2;
+      } else if (btnRect.left - gap - cardW >= margin) {
+          left = btnRect.left - gap - cardW;
+          top = btnRect.top + (btnRect.height - cardH) / 2;
+      } else {
+          left = btnRect.left + (btnRect.width - cardW) / 2;
+          left = Math.max(margin, Math.min(left, Math.max(margin, vw - cardW - margin)));
+          if (btnRect.top - gap - cardH >= margin) {
+              top = btnRect.top - gap - cardH;
+          } else {
+              top = btnRect.bottom + gap;
+          }
+      }
+
+      top = Math.max(margin, Math.min(top, Math.max(margin, vh - cardH - margin)));
+      card.style.left = Math.round(left) + "px";
+      card.style.top = Math.round(top) + "px";
+  }
+
+  function showPersonHover(btn) {
+      var personId = btn ? btn.getAttribute("data-userid") : null;
+      var bdayText = personId ? birthdayInfo[personId] : null;
+      var card = document.getElementById("personHoverCard");
+      if (!card || !bdayText) {
+          hidePersonHover();
+          return;
+      }
+
+      card.textContent = bdayText;
+      positionPersonHover(btn, card);
+      card.classList.add("visible");
+      card.setAttribute("aria-hidden", "false");
+  }
+
   function showfamily(selector) {
+      hidePersonHover();
       if ($(selector).is(":visible")) {
           $(selector).slideUp('fast');
       } else {
@@ -247,22 +284,24 @@ if ($season == 1) {
   }
 
   $(document).ready(function() {
-      if (window.innerWidth <= 1000) {
-          $("#message").hide();
-      }
-  });
+      var lastPointerWasTouch = false;
+      document.addEventListener("pointerdown", function(e) {
+          lastPointerWasTouch = (e.pointerType === "touch");
+      }, true);
 
-  var contactInfo = <?php echo json_encode($contact_map, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
-  var theObject = null;
-
-  function show_record(obj, txtArea, personId) {
-      if ((theObject !== obj) && (window.innerWidth > 1000)) {
-          if (txtArea && contactInfo[personId]) {
-              txtArea.value = contactInfo[personId];
+      $(document).on("mouseenter focusin", ".person-list-btn", function() {
+          if (!lastPointerWasTouch) {
+              showPersonHover(this);
           }
-          theObject = obj;
-      }
-  }
+      });
+
+      $(document).on("mouseleave focusout click", ".person-list-btn", function() {
+          hidePersonHover();
+      });
+
+      window.addEventListener("scroll", hidePersonHover, { passive: true });
+      window.addEventListener("resize", hidePersonHover);
+  });
   </script>
 </head>
 <body>
@@ -314,7 +353,7 @@ if ($season == 1) {
   </div>
   <?php endif; ?>
 
-  <table border="0">
+  <table border="0" class="home-menu-table">
   <tr><td valign="center">
 <?php
 $oldlast = null;
@@ -332,7 +371,7 @@ foreach ($people_rows as $row) {
         $family_id = "fam_" . md5($fam_key);
         $fam_new = $family_new_counts[$fam_key] ?? 0;
         $fam_badge = ($fam_new > 0) ? " <span class='new-count-pill'>🟢 " . $fam_new . " new</span>" : "";
-        $div_last .= "<button class='buttonstyle' style='width:100%;' onclick=\"showfamily('#" . $family_id . "')\">" . escapeText($display_family) . $fam_badge . "</button><br>\n";
+        $div_last .= "<button type='button' class='buttonstyle' style='width:100%;' onclick=\"showfamily('#" . $family_id . "')\">" . escapeText($display_family) . $fam_badge . "</button><br>\n";
         $div_last .= "<div id='" . $family_id . "' style='display:none;'>";
     }
 
@@ -340,11 +379,11 @@ foreach ($people_rows as $row) {
     $name_url = urlencode($name);
     $recip_url = urlencode($row['userid']);
     $name_esc = escapeText($name);
-    $userid_js = htmlspecialchars(json_encode($row['userid']), ENT_QUOTES, 'UTF-8');
+    $userid_attr = escapeText($row['userid']);
     $person_new = $new_counts_by_pid[$row['userid']] ?? 0;
     $person_badge = ($person_new > 0) ? " <span class='new-count-pill'>🟢 " . $person_new . " new</span>" : "";
 
-    $div_last .= "<button class='lightbutton' style='width:100%;' onclick='window.location=\"viewList/viewList.php?recip=" . $recip_url . "&name=" . $name_url . "\"' onmouseover='show_record(this, document.theForm ? document.theForm.contact : null, " . $userid_js . ")'>" . $name_esc . $person_badge . "</button><br>\n";
+    $div_last .= "<button type='button' class='lightbutton person-list-btn' data-userid='" . $userid_attr . "' style='width:100%;' onclick='window.location=\"viewList/viewList.php?recip=" . $recip_url . "&name=" . $name_url . "\"'>" . $name_esc . $person_badge . "</button><br>\n";
 }
 if ($oldlast !== null) {
     $div_last .= "</div>\n";
@@ -352,19 +391,13 @@ if ($oldlast !== null) {
 $div_last .= "</div>\n";
 
 if ($num_rows > 0) {
-    $message_box = ($lastname !== "")
-        ? "Click on a name to view their Wishlist"
-        : "Click on a family to view their members";
+    echo $div_last;
 } else {
-    $message_box = "You cannot view anybody's list yet.\nGo to Update Your Account to request access to lists.";
+    echo "<div class='home-empty-notice'>You cannot view anybody's list yet.<br>Go to <b>Update Your Account</b> to request access to lists.</div>\n";
 }
-
-$textarea = "<div id='message'><form name='theForm'><textarea cols='32' rows='5' class='contact' name='contact' readonly>" . escapeText($message_box) . "</textarea></form></div>";
-echo "<table width='100%'><tr><td>" . $div_last . "</td><td></td></tr></table>\n";
-echo "</td><td>\n" . $textarea . "\n";
 ?>
   </td></tr>
-  <tr><td colspan="2">
+  <tr><td>
     <div id="options">
       <hr>
       <button class="buttonstyle" style="width:100%;" onclick="location.href='modifyList/modifyList.php'">Modify Your List</button><br>
@@ -377,6 +410,7 @@ echo "</td><td>\n" . $textarea . "\n";
     </div>
   </td></tr>
   </table>
+  <div id="personHoverCard" class="person-hover-card no-print" role="tooltip" aria-hidden="true"></div>
 </center>
 
 <?php
