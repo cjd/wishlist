@@ -193,7 +193,7 @@ function canViewList($link, $pid, $viewer) {
   if ($pid !== '' && $pid === $viewer) {
     return ['allowed' => true, 'readOnly' => 0, 'allowEdit' => 1, 'viewContactInfo' => 1];
   }
-  $stmt = mysqli_prepare($link, "SELECT readOnly, allowEdit, viewContactInfo FROM viewList WHERE pid = ? AND viewer = ?");
+  $stmt = mysqli_prepare($link, "SELECT readOnly, allowEdit FROM viewList WHERE pid = ? AND viewer = ?");
   if ($stmt) {
     mysqli_stmt_bind_param($stmt, "ss", $pid, $viewer);
     mysqli_stmt_execute($stmt);
@@ -201,6 +201,7 @@ function canViewList($link, $pid, $viewer) {
     if ($row = mysqli_fetch_assoc($rs)) {
       $allowEdit = (int)$row['allowEdit'];
       $readOnly = $allowEdit ? 0 : (int)$row['readOnly'];
+      // All authorized list viewers are permitted to see birthday and shipping/contact info
       return [
         'allowed' => true,
         'readOnly' => $readOnly,
@@ -210,6 +211,43 @@ function canViewList($link, $pid, $viewer) {
     }
   }
   return ['allowed' => false, 'readOnly' => 1, 'allowEdit' => 0, 'viewContactInfo' => 0];
+}
+
+function formatPersonName(array $row, string $fallback = ''): string {
+  $full = trim(($row['firstname'] ?? '') . ' ' . ($row['lastname'] ?? '') . ' ' . ($row['suffix'] ?? ''));
+  if ($full !== '') {
+    return $full;
+  }
+  return $fallback !== '' ? $fallback : (string)($row['userid'] ?? '');
+}
+
+function getSvgIcons(): array {
+  return [
+    'admin' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>',
+    'edit' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>',
+    'pwd' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>',
+    'account' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+    'view' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',
+    'delete' => '<svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>',
+  ];
+}
+
+function resolveItemImageFile(string $base_dir, int $iid, string $imageCol): string {
+  if ($imageCol === '') {
+    return '';
+  }
+  $uploadsDir = rtrim($base_dir, '/') . '/uploads/';
+  if ($iid > 0) {
+    $primary = 'image-' . $iid . '.jpg';
+    if (is_file($uploadsDir . $primary)) {
+      return $primary;
+    }
+  }
+  $fallback = basename($imageCol);
+  if ($fallback !== '' && $fallback[0] !== '.' && is_file($uploadsDir . $fallback)) {
+    return $fallback;
+  }
+  return '';
 }
 
 function getClientIp() {
@@ -1281,14 +1319,9 @@ function printItem($row2, $name, $quantity, $bought, $createDateFormatted, $isNe
   }
 
   if (!empty($row2["image"])) {
-    $uploadsDir = rtrim($base_dir, '/') . "/uploads/";
-    $imgFile = "image-" . (int)$row2["iid"] . ".jpg";
-    if (!is_file($uploadsDir . $imgFile)) {
-      $fallback = basename((string)$row2["image"]);
-      $imgFile = ($fallback !== '' && is_file($uploadsDir . $fallback)) ? $fallback : '';
-    }
+    $imgFile = resolveItemImageFile((string)$base_dir, (int)($row2["iid"] ?? 0), (string)$row2["image"]);
     if ($imgFile !== '') {
-      $diskPath = $uploadsDir . $imgFile;
+      $diskPath = rtrim($base_dir, '/') . "/uploads/" . $imgFile;
       $ver = "?v=" . filemtime($diskPath);
       $imgUrl = escapeText(rtrim($base_url, '/') . "/uploads/" . rawurlencode($imgFile) . $ver);
       $imgTitle = escapeText($row2["title"] ?? '');

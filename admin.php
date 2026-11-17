@@ -395,61 +395,6 @@ if ($action === "commitDelete") {
       }
     }
   }
-} elseif ($action === "changeAdmin") {
-  if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    http_response_code(405);
-    die("Method Not Allowed");
-  }
-  verifyCsrfOrDie(true);
-
-  if (!empty($_POST["grantAdmin"]) && is_array($_POST["grantAdmin"])) {
-    $grantAdmin = array_values(array_filter(array_map('strval', $_POST["grantAdmin"]), function ($v) {
-      return $v !== '';
-    }));
-
-    if (empty($grantAdmin)) {
-      $alert_type = "error";
-      $alert_html = "Error: You cannot remove all administrators. At least one admin must remain.";
-    } else {
-      $placeholders = implode(',', array_fill(0, count($grantAdmin), '?'));
-      $types = str_repeat('s', count($grantAdmin));
-
-      // Verify at least one selected user actually exists
-      $stmt_verify = mysqli_prepare($link, "SELECT COUNT(*) AS cnt FROM people WHERE userid IN ($placeholders)");
-      mysqli_stmt_bind_param($stmt_verify, $types, ...$grantAdmin);
-      mysqli_stmt_execute($stmt_verify);
-      $valid_cnt = (int)(mysqli_fetch_assoc(mysqli_stmt_get_result($stmt_verify))['cnt'] ?? 0);
-
-      if ($valid_cnt < 1) {
-        $alert_type = "error";
-        $alert_html = "Error: At least one valid administrator must remain selected.";
-      } else {
-        mysqli_begin_transaction($link);
-        try {
-          $stmt = mysqli_prepare($link, "UPDATE people SET admin = 1 WHERE userid IN ($placeholders)");
-          mysqli_stmt_bind_param($stmt, $types, ...$grantAdmin);
-          mysqli_stmt_execute($stmt);
-
-          $stmt = mysqli_prepare($link, "UPDATE people SET admin = 0 WHERE userid NOT IN ($placeholders)");
-          mysqli_stmt_bind_param($stmt, $types, ...$grantAdmin);
-          mysqli_stmt_execute($stmt);
-
-          mysqli_commit($link);
-          $_SESSION['admin'] = in_array($_SESSION['userid'], $grantAdmin, true) ? 1 : 0;
-          $alert_type = "success";
-          $alert_html = "Administrator privileges updated.";
-        } catch (mysqli_sql_exception $e) {
-          mysqli_rollback($link);
-          error_log("Admin privilege update failed: " . $e->getMessage());
-          $alert_type = "error";
-          $alert_html = "Error updating admin privileges.";
-        }
-      }
-    }
-  } else {
-    $alert_type = "error";
-    $alert_html = "Error: You cannot remove all administrators. At least one admin must remain.";
-  }
 } elseif ($action === "deleteOrphanImages") {
   if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -480,6 +425,11 @@ if ($action === "commitDelete") {
       }
       $fullPath = $uploadsDir . $safeName;
       if (is_file($fullPath)) {
+        $mtime = (int)@filemtime($fullPath);
+        if (strpos($safeName, 'autofill-') === 0 && (time() - $mtime) < 7200) {
+          $skippedCount++;
+          continue;
+        }
         $fsize = (int)@filesize($fullPath);
         if (@unlink($fullPath)) {
           $deletedCount++;
@@ -539,11 +489,16 @@ function findOrphanUploadFiles($link, $base_dir) {
         if (!is_file($fullPath)) {
           continue;
         }
+        $mtime = (int)@filemtime($fullPath);
+        // Skip recently staged URL auto-fill thumbnails (< 2 hours old)
+        if (strpos($entry, 'autofill-') === 0 && (time() - $mtime) < 7200) {
+          continue;
+        }
         if (!isset($referenced[$entry])) {
           $orphans[] = [
             'filename' => $entry,
             'size' => (int)@filesize($fullPath),
-            'mtime' => (int)@filemtime($fullPath),
+            'mtime' => $mtime,
           ];
         }
       }
@@ -611,12 +566,12 @@ if ($res_pending && ($prow = mysqli_fetch_assoc($res_pending))) {
 
 $csrf_token_escaped = escapeText(getCsrfToken());
 
-// Reusable crisp inline SVG icons
-$svg_admin = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>';
-$svg_edit = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>';
-$svg_pwd = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>';
-$svg_account = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
-$svg_delete = '<svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>';
+$svgIcons = getSvgIcons();
+$svg_admin = $svgIcons['admin'];
+$svg_edit = $svgIcons['edit'];
+$svg_pwd = $svgIcons['pwd'];
+$svg_account = $svgIcons['account'];
+$svg_delete = $svgIcons['delete'];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -816,10 +771,7 @@ $svg_delete = '<svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="3 6
                 $uid = (string)$row['userid'];
                 $u_escaped = escapeText($uid);
                 $u_encoded = urlencode($uid);
-                $fullName = trim($row['firstname'] . ' ' . $row['lastname'] . ' ' . ($row['suffix'] ?? ''));
-                if ($fullName === '') {
-                  $fullName = $uid;
-                }
+                $fullName = formatPersonName($row, $uid);
                 $fullNameEsc = escapeText($fullName);
                 $isSelf = ($uid === ($_SESSION['userid'] ?? ''));
                 $isAdmin = ((int)$row['admin'] === 1);
@@ -987,7 +939,7 @@ $svg_delete = '<svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="3 6
   var searchInput = document.getElementById('adminUserSearch');
   var clearBtn = document.getElementById('adminSearchClear');
   var toggleAllBtn = document.getElementById('toggleAllFamiliesBtn');
-  var familyCards = Array.prototype.slice.call(document.querySelectorAll('.admin-family-card'));
+  var familyCards = Array.prototype.slice.call(document.querySelectorAll('#adminFamiliesList details.admin-family-card'));
   var emptyNotice = document.getElementById('adminEmptySearch');
 
   function updateToggleBtnLabel() {

@@ -46,9 +46,10 @@ while ($row_exist = mysqli_fetch_assoc($res_exist)) {
 
 $rawSubdesc = preg_replace('/<br\s*\/?>/i', "\n", (string)($item_row["subdesc"] ?? ''));
 $decodedSubdesc = html_entity_decode($rawSubdesc, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-$safeImgBase = !empty($item_row["image"]) ? basename($item_row["image"]) : '';
-$imgVer = ($safeImgBase !== '' && is_file($base_dir . "/uploads/" . $safeImgBase))
-    ? ('?v=' . filemtime($base_dir . "/uploads/" . $safeImgBase))
+$hasSavedImage = !empty($item_row["image"]);
+$safeImgBase = $hasSavedImage ? resolveItemImageFile((string)$base_dir, (int)$iid, (string)$item_row["image"]) : '';
+$imgVer = ($safeImgBase !== '')
+    ? ('?v=' . filemtime(rtrim($base_dir, '/') . "/uploads/" . $safeImgBase))
     : '';
 ?>
 <!DOCTYPE html>
@@ -182,8 +183,8 @@ $hasLink3 = !empty($item_row["link3url"]);
 <tr>
   <td align="right"><b>Image</b></td>
   <td bgcolor="#eeeeee">
-    <?php if ($safeImgBase !== ''): ?>
-      <?php if ($imgVer !== ''): ?>
+    <?php if ($hasSavedImage): ?>
+      <?php if ($safeImgBase !== '' && $imgVer !== ''): ?>
         <img src="<?php echo escapeText(rtrim($base_url, '/') . "/uploads/" . rawurlencode($safeImgBase) . $imgVer); ?>" alt="" style="max-width:200px; height:auto; display:block; margin-bottom:6px;">
       <?php else: ?>
         <div style="font-size:12.5px; color:#b45309; margin-bottom:6px;">(Saved image file is missing from server)</div>

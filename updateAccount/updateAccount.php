@@ -269,10 +269,7 @@ mysqli_stmt_bind_param($stmt_info, "s", $userid);
 mysqli_stmt_execute($stmt_info);
 $row = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt_info)) ?? [];
 
-$fullName = trim(($row['firstname'] ?? '') . ' ' . ($row['lastname'] ?? '') . ' ' . ($row['suffix'] ?? ''));
-if ($fullName === '') {
-    $fullName = $userid;
-}
+$fullName = formatPersonName($row, $userid);
 $bdayDisplay = (!empty($row['bmonth']) && !empty($row['bday'])) ? ($row['bmonth'] . ' ' . $row['bday']) : 'Not set';
 $csrf_token = getCsrfToken();
 
@@ -319,10 +316,7 @@ if ($can_manage_permissions) {
     while ($pr = mysqli_fetch_assoc($res_all_p)) {
         $fam = trim((string)($pr['lastname'] ?? ''));
         $famLabel = ($fam !== '' ? ($fam . ' Family') : 'Other');
-        $dispName = trim(($pr['firstname'] ?? '') . ' ' . ($pr['lastname'] ?? '') . ' ' . ($pr['suffix'] ?? ''));
-        if ($dispName === '') {
-            $dispName = $pr['userid'];
-        }
+        $dispName = formatPersonName($pr);
         $uidKey = $pr['userid'];
 
         if (empty($currentViewersMap[$uidKey])) {
@@ -378,10 +372,11 @@ if ($can_manage_permissions) {
     }
 }
 
-$svg_edit = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>';
-$svg_pwd = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>';
-$svg_view = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
-$svg_delete = '<svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>';
+$svgIcons = getSvgIcons();
+$svg_edit = $svgIcons['edit'];
+$svg_pwd = $svgIcons['pwd'];
+$svg_view = $svgIcons['view'];
+$svg_delete = $svgIcons['delete'];
 
 $pwd_href = ($userid !== $_SESSION['userid']) ? ("changePassword.php?userid=" . urlencode($userid)) : "changePassword.php";
 $edit_info_href = "editInfo.php?target_userid=" . urlencode($userid);
@@ -523,10 +518,7 @@ $edit_info_href = "editInfo.php?target_userid=" . urlencode($userid);
                       <tbody>
                         <?php foreach ($fam['members'] as $vrow): ?>
                           <?php
-                            $vName = trim($vrow["firstname"] . " " . $vrow["lastname"] . " " . ($vrow["suffix"] ?? ""));
-                            if ($vName === '') {
-                                $vName = $vrow["userid"];
-                            }
+                            $vName = formatPersonName($vrow);
                             $vNameEsc = escapeText($vName);
                             $vu = escapeText($vrow["userid"]);
                             $isSelfRow = ($vrow["userid"] === $userid);
@@ -660,10 +652,7 @@ $edit_info_href = "editInfo.php?target_userid=" . urlencode($userid);
                     <tbody>
                       <?php foreach ($fam['members'] as $orow): ?>
                         <?php
-                          $oName = trim($orow["firstname"] . " " . $orow["lastname"] . " " . ($orow["suffix"] ?? ""));
-                          if ($oName === '') {
-                              $oName = $orow["userid"];
-                          }
+                          $oName = formatPersonName($orow);
                           $oNameEsc = escapeText($oName);
                           $ou = escapeText($orow["userid"]);
                           $isSelfOther = ($orow["userid"] === $userid);

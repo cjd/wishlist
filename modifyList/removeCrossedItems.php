@@ -274,10 +274,10 @@ if ($reveal) {
               $defaultAction = $isPartial ? 'reset_remaining' : 'delete';
               $imgHtml = '';
               if (!empty($pItem['image'])) {
-                  $imgFile = 'image-' . $iid . '.jpg';
-                  $diskPath = $base_dir . '/uploads/' . $imgFile;
-                  if (is_file($diskPath)) {
-                      $imgSrc = escapeText($base_url . '/uploads/' . $imgFile . '?v=' . filemtime($diskPath));
+                  $imgFile = resolveItemImageFile((string)$base_dir, $iid, (string)$pItem['image']);
+                  if ($imgFile !== '') {
+                      $diskPath = rtrim($base_dir, '/') . '/uploads/' . $imgFile;
+                      $imgSrc = escapeText(rtrim($base_url, '/') . '/uploads/' . rawurlencode($imgFile) . '?v=' . filemtime($diskPath));
                       $imgHtml = '<img src="' . $imgSrc . '" alt="" class="cleanup-thumb" loading="lazy" decoding="async">';
                   }
               }

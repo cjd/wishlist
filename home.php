@@ -136,35 +136,33 @@ $todayStart = strtotime('today');
 $currentYear = (int)date('Y');
 
 foreach ($people_rows as $row) {
-    if (true) {
-        $name = trim($row["firstname"] . ' ' . $row["lastname"] . ' ' . ($row["suffix"] ?? ''));
-        $bmonthRaw = trim((string)($row['bmonth'] ?? ''));
-        $bdayInt = (int)($row['bday'] ?? 0);
-        if ($bmonthRaw !== '' && $bdayInt >= 1 && $bdayInt <= 31) {
-            $birthday_map[$row['userid']] = "🎂 Birthday: " . $bmonthRaw . " " . $bdayInt;
+    $name = formatPersonName($row);
+    $bmonthRaw = trim((string)($row['bmonth'] ?? ''));
+    $bdayInt = (int)($row['bday'] ?? 0);
+    if ($bmonthRaw !== '' && $bdayInt >= 1 && $bdayInt <= 31) {
+        $birthday_map[$row['userid']] = "🎂 Birthday: " . $bmonthRaw . " " . $bdayInt;
 
-            $mNum = $month_lookup[strtolower($bmonthRaw)] ?? 0;
-            if ($mNum >= 1 && $mNum <= 12) {
-                $targetYear = $currentYear;
+        $mNum = $month_lookup[strtolower($bmonthRaw)] ?? 0;
+        if ($mNum >= 1 && $mNum <= 12) {
+            $targetYear = $currentYear;
+            $dayForYear = ($mNum === 2 && $bdayInt === 29 && !checkdate(2, 29, $targetYear)) ? 28 : $bdayInt;
+            $bdayTs = mktime(0, 0, 0, $mNum, $dayForYear, $targetYear);
+            if ($bdayTs < $todayStart) {
+                $targetYear = $currentYear + 1;
                 $dayForYear = ($mNum === 2 && $bdayInt === 29 && !checkdate(2, 29, $targetYear)) ? 28 : $bdayInt;
                 $bdayTs = mktime(0, 0, 0, $mNum, $dayForYear, $targetYear);
-                if ($bdayTs < $todayStart) {
-                    $targetYear = $currentYear + 1;
-                    $dayForYear = ($mNum === 2 && $bdayInt === 29 && !checkdate(2, 29, $targetYear)) ? 28 : $bdayInt;
-                    $bdayTs = mktime(0, 0, 0, $mNum, $dayForYear, $targetYear);
-                }
-                $daysAway = (int)round(($bdayTs - $todayStart) / 86400);
-                if ($daysAway >= 0 && $daysAway <= 45) {
-                    $upcoming_events[] = [
-                        'days' => $daysAway,
-                        'icon' => '🎂',
-                        'name' => $name,
-                        'date_label' => substr(ucfirst(strtolower($bmonthRaw)), 0, 3) . ' ' . $bdayInt,
-                        'url' => ($row['userid'] === $userid)
-                            ? 'modifyList/modifyList.php'
-                            : ('viewList/viewList.php?recip=' . urlencode($row['userid']) . '&name=' . urlencode($name))
-                    ];
-                }
+            }
+            $daysAway = (int)round(($bdayTs - $todayStart) / 86400);
+            if ($daysAway >= 0 && $daysAway <= 45) {
+                $upcoming_events[] = [
+                    'days' => $daysAway,
+                    'icon' => '🎂',
+                    'name' => $name,
+                    'date_label' => substr(ucfirst(strtolower($bmonthRaw)), 0, 3) . ' ' . $bdayInt,
+                    'url' => ($row['userid'] === $userid)
+                        ? 'modifyList/modifyList.php'
+                        : ('viewList/viewList.php?recip=' . urlencode($row['userid']) . '&name=' . urlencode($name))
+                ];
             }
         }
     }
@@ -482,7 +480,7 @@ if ($unread_messages_result && mysqli_num_rows($unread_messages_result) > 0) {
           <?php if ($canAskBack): ?>
             <button type="submit" name="decision" value="approve_reciprocal" class="buttonstyle">🔄 Approve &amp; Request Their List Back</button>
           <?php endif; ?>
-          <button type="submit" name="decision" value="approve_contact" class="buttonstyle">Approve (Full Purchasing + Contact)</button>
+          <button type="submit" name="decision" value="approve_contact" class="buttonstyle">Approve (Full Purchasing)</button>
           <button type="submit" name="decision" value="approve_readonly" class="lightbutton">Approve (Read-Only)</button>
           <button type="submit" name="decision" value="deny" class="lightbutton">Deny</button>
         </form>
