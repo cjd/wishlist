@@ -1,5 +1,5 @@
 --
--- WishList Database Schema (Baseline V5 - InnoDB / utf8mb4)
+-- WishList Database Schema (Baseline V6 - InnoDB / utf8mb4)
 --
 
 DROP TABLE IF EXISTS `accessRequests`;
@@ -49,24 +49,6 @@ CREATE TABLE `comments` (
   KEY `idx_claimed_by` (`claimed_by`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-DROP TABLE IF EXISTS `favorites`;
-CREATE TABLE `favorites` (
-  `userid` varchar(50) NOT NULL DEFAULT '',
-  `description` varchar(100) NOT NULL DEFAULT '',
-  `location` varchar(255) NOT NULL DEFAULT '',
-  PRIMARY KEY (`userid`, `description`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-DROP TABLE IF EXISTS `itemPriceHistory`;
-CREATE TABLE `itemPriceHistory` (
-  `id` int unsigned NOT NULL AUTO_INCREMENT,
-  `dateChanged` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `iid` int unsigned NOT NULL DEFAULT '0',
-  `price` decimal(10,2) NOT NULL DEFAULT '0.00',
-  PRIMARY KEY (`id`),
-  KEY `idx_iid` (`iid`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 DROP TABLE IF EXISTS `items`;
 CREATE TABLE `items` (
   `iid` int unsigned NOT NULL AUTO_INCREMENT,
@@ -111,7 +93,6 @@ DROP TABLE IF EXISTS `people`;
 CREATE TABLE `people` (
   `userid` varchar(50) NOT NULL DEFAULT '',
   `admin` char(1) NOT NULL DEFAULT '0',
-  `registered` char(1) NOT NULL DEFAULT '0',
   `lastLoginDate` datetime DEFAULT NULL,
   `whatsNewSeenVersion` int unsigned NOT NULL DEFAULT '0',
   `lastModDate` datetime DEFAULT NULL,
@@ -127,7 +108,6 @@ CREATE TABLE `people` (
   `mobilephone` varchar(100) DEFAULT '',
   `bmonth` varchar(15) DEFAULT '',
   `bday` tinyint DEFAULT '0',
-  `url` varchar(255) DEFAULT '',
   `password` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`userid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -149,7 +129,6 @@ CREATE TABLE `purchaseHistory` (
 DROP TABLE IF EXISTS `viewList`;
 CREATE TABLE `viewList` (
   `lastViewDate` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `viewContactInfo` char(1) NOT NULL DEFAULT '0',
   `readOnly` char(1) NOT NULL DEFAULT '1',
   `pid` varchar(50) NOT NULL DEFAULT '',
   `viewer` varchar(50) NOT NULL DEFAULT '',
@@ -191,4 +170,4 @@ CREATE TABLE `schema_version` (
   PRIMARY KEY (`version`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO `schema_version` (`version`) VALUES (5);
+INSERT INTO `schema_version` (`version`) VALUES (6);

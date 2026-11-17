@@ -32,7 +32,7 @@ $parseLinkPair = function($nameKey, $urlKey) {
         if (!preg_match('#^https?://#i', $urlIn)) {
             $urlIn = 'https://' . $urlIn;
         }
-        $cleanUrl = sanitizeHttpUrl($urlIn, false);
+        $cleanUrl = sanitizeHttpUrl($urlIn);
     }
     if ($cleanUrl === '') {
         return ['', ''];
@@ -85,14 +85,6 @@ $stmt = mysqli_prepare($link, "INSERT INTO items (cid, addStar, title, descripti
 mysqli_stmt_bind_param($stmt, "isssdissssssssi", $cid, $addStar, $title, $description, $price, $quantity, $link1, $link1url, $link2, $link2url, $link3, $link3url, $subdesc, $allowCheck, $iso);
 mysqli_stmt_execute($stmt);
 $new_iid = (int)mysqli_insert_id($link);
-
-if ($new_iid > 0 && $price > 0) {
-    $stmt_ph = mysqli_prepare($link, "INSERT INTO itemPriceHistory (iid, price) VALUES (?, ?)");
-    if ($stmt_ph) {
-        mysqli_stmt_bind_param($stmt_ph, "id", $new_iid, $price);
-        mysqli_stmt_execute($stmt_ph);
-    }
-}
 
 if ($new_iid > 0) {
     $uploadDir = $base_dir . '/uploads/';

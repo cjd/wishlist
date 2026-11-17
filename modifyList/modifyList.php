@@ -179,12 +179,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 group: 'shared',
                 animation: 150,
                 handle: '.drag-handle',
-                onAdd: function (evt) {
-                    var placeholder = evt.to.querySelector('.empty-category-placeholder');
-                    if (placeholder) {
-                        placeholder.remove();
-                    }
-                },
                 onEnd: function (evt) {
                     var itemEl = evt.item;
                     var itemId = itemEl.dataset.itemId;

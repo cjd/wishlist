@@ -57,7 +57,7 @@ try {
     }
 
     if ($decision === 'approve_readonly') {
-        $stmt = mysqli_prepare($link, "INSERT INTO viewList (pid, viewer, readOnly, viewContactInfo, allowEdit, lastViewDate) VALUES (?, ?, 1, 1, 0, NOW()) ON DUPLICATE KEY UPDATE readOnly = 1, viewContactInfo = 1, lastViewDate = NOW()");
+        $stmt = mysqli_prepare($link, "INSERT INTO viewList (pid, viewer, readOnly, allowEdit, lastViewDate) VALUES (?, ?, 1, 0, NOW()) ON DUPLICATE KEY UPDATE readOnly = 1, lastViewDate = NOW()");
         mysqli_stmt_bind_param($stmt, "ss", $targetId, $requesterId);
         mysqli_stmt_execute($stmt);
 
@@ -65,7 +65,7 @@ try {
         mysqli_stmt_bind_param($stmt_update, "i", $requestId);
         mysqli_stmt_execute($stmt_update);
     } elseif ($decision === 'approve_contact' || $decision === 'approve_reciprocal') {
-        $stmt = mysqli_prepare($link, "INSERT INTO viewList (pid, viewer, readOnly, viewContactInfo, allowEdit, lastViewDate) VALUES (?, ?, 0, 1, 0, NOW()) ON DUPLICATE KEY UPDATE readOnly = 0, viewContactInfo = 1, lastViewDate = NOW()");
+        $stmt = mysqli_prepare($link, "INSERT INTO viewList (pid, viewer, readOnly, allowEdit, lastViewDate) VALUES (?, ?, 0, 0, NOW()) ON DUPLICATE KEY UPDATE readOnly = 0, lastViewDate = NOW()");
         mysqli_stmt_bind_param($stmt, "ss", $targetId, $requesterId);
         mysqli_stmt_execute($stmt);
 

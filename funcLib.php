@@ -191,7 +191,7 @@ function canViewList($link, $pid, $viewer) {
   $pid = (string)$pid;
   $viewer = (string)$viewer;
   if ($pid !== '' && $pid === $viewer) {
-    return ['allowed' => true, 'readOnly' => 0, 'allowEdit' => 1, 'viewContactInfo' => 1];
+    return ['allowed' => true, 'readOnly' => 0, 'allowEdit' => 1];
   }
   $stmt = mysqli_prepare($link, "SELECT readOnly, allowEdit FROM viewList WHERE pid = ? AND viewer = ?");
   if ($stmt) {
@@ -201,16 +201,14 @@ function canViewList($link, $pid, $viewer) {
     if ($row = mysqli_fetch_assoc($rs)) {
       $allowEdit = (int)$row['allowEdit'];
       $readOnly = $allowEdit ? 0 : (int)$row['readOnly'];
-      // All authorized list viewers are permitted to see birthday and shipping/contact info
       return [
         'allowed' => true,
         'readOnly' => $readOnly,
-        'allowEdit' => $allowEdit,
-        'viewContactInfo' => 1
+        'allowEdit' => $allowEdit
       ];
     }
   }
-  return ['allowed' => false, 'readOnly' => 1, 'allowEdit' => 0, 'viewContactInfo' => 0];
+  return ['allowed' => false, 'readOnly' => 1, 'allowEdit' => 0];
 }
 
 function formatPersonName(array $row, string $fallback = ''): string {
@@ -516,7 +514,7 @@ function getFullPath($url) {
 /* $date is assumed to be a date obtained from mysql so it's of the form
  * YYYY-MM-DD hh:mm:ss
  */
-function parseDate($date, $shortMonth = 0, $clientLoc = 3) {
+function parseDate($date, $shortMonth = 0) {
   if (empty($date) || $date == '0000-00-00 00:00:00' || $date == '0000-00-00') {
     return "";
   }
@@ -566,20 +564,6 @@ function sendEmail($to, $from, $subject, $message, $debug) {
     }
   }
   return 1;
-}
-
-function cleanString($str) {
-  if ($str === null) return "";
-  return str_replace("\\'", "'", str_replace("\\\\", "\\", str_replace("\\\"", "\"", (string)$str)));
-}
-
-/* convertString - normalize strings for storage. */
-function convertString($str) {
-  if ($str === null) return "";
-  $str = cleanString($str);
-  $str = str_replace(array("\r\n", "\r", "\n"), "<br>", (string)$str);
-  $str = str_replace(chr(34), "&quot;", $str);
-  return trim($str);
 }
 
 function formatMessage($body) {
@@ -1453,12 +1437,6 @@ function deleteItem($iid, $userid, $fullname, $base_dir, $suppressNotify = false
   $stmt = mysqli_prepare($link, "DELETE FROM purchaseHistory WHERE iid = ?");
   mysqli_stmt_bind_param($stmt, "i", $iid);
   mysqli_stmt_execute($stmt);
-
-  $stmt = mysqli_prepare($link, "DELETE FROM itemPriceHistory WHERE iid = ?");
-  if ($stmt) {
-    mysqli_stmt_bind_param($stmt, "i", $iid);
-    mysqli_stmt_execute($stmt);
-  }
 
   $stmt = mysqli_prepare($link, "DELETE FROM items WHERE iid = ?");
   mysqli_stmt_bind_param($stmt, "i", $iid);

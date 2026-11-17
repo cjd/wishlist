@@ -44,7 +44,6 @@ $phone = trim((string)($_POST["phone"] ?? ''));
 $mobilephone = trim((string)($_POST["mobilephone"] ?? ''));
 $bmonth_in = trim((string)($_POST["bmonth"] ?? ''));
 $bday_in = trim((string)($_POST["bday"] ?? ''));
-$url_in = trim((string)($_POST["url"] ?? ''));
 
 if ($firstname === '' || $lastname === '') {
     header("Location: editInfo.php?target_userid=" . urlencode($actual_userid) . "&error=missing_name");
@@ -71,17 +70,8 @@ if ($bmonth_in === '' && $bday_in === '') {
 // Validate optional email (preserve blank if cleared, or valid email)
 $email = ($email_in !== '' && filter_var($email_in, FILTER_VALIDATE_EMAIL)) ? $email_in : '';
 
-// Validate optional URL
-$url = '';
-if ($url_in !== '') {
-    if (!preg_match('#^https?://#i', $url_in)) {
-        $url_in = 'https://' . $url_in;
-    }
-    $url = sanitizeHttpUrl($url_in, false);
-}
-
-$stmt = mysqli_prepare($link, "UPDATE people SET firstname = ?, lastname = ?, suffix = ?, street = ?, city = ?, state = ?, zip = ?, email = ?, phone = ?, mobilephone = ?, url = ?, bmonth = ?, bday = ?, lastModDate = NOW() WHERE userid = ?");
-mysqli_stmt_bind_param($stmt, "ssssssssssssis", $firstname, $lastname, $suffix, $street, $city, $state, $zip, $email, $phone, $mobilephone, $url, $bmonth, $bday, $actual_userid);
+$stmt = mysqli_prepare($link, "UPDATE people SET firstname = ?, lastname = ?, suffix = ?, street = ?, city = ?, state = ?, zip = ?, email = ?, phone = ?, mobilephone = ?, bmonth = ?, bday = ?, lastModDate = NOW() WHERE userid = ?");
+mysqli_stmt_bind_param($stmt, "sssssssssssis", $firstname, $lastname, $suffix, $street, $city, $state, $zip, $email, $phone, $mobilephone, $bmonth, $bday, $actual_userid);
 mysqli_stmt_execute($stmt);
 
 if ($actual_userid === $_SESSION["userid"]) {

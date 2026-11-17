@@ -75,7 +75,7 @@ if (!empty($_GET['reciprocal_sent'])) {
     ];
 }
 
-$query = "SELECT people.*, MAX(viewList.allowEdit) AS allowEdit, MAX(viewList.viewContactInfo) AS viewContactInfo FROM people JOIN viewList ON viewList.pid = people.userid WHERE viewList.viewer = ? GROUP BY people.userid ORDER BY people.lastname, people.firstname";
+$query = "SELECT people.*, MAX(viewList.allowEdit) AS allowEdit FROM people JOIN viewList ON viewList.pid = people.userid WHERE viewList.viewer = ? GROUP BY people.userid ORDER BY people.lastname, people.firstname";
 $stmt_people = mysqli_prepare($link, $query);
 mysqli_stmt_bind_param($stmt_people, "s", $userid);
 mysqli_stmt_execute($stmt_people);

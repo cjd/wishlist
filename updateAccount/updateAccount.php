@@ -61,7 +61,7 @@ $userid = $target_userid;
 $can_manage_permissions = ($userid === $_SESSION["userid"] || $is_admin);
 
 $action = $_REQUEST["action"] ?? "";
-$permission_actions = ["stopViewOther", "stopViewMine", "startViewOther", "startViewMine", "hideContactInfo"];
+$permission_actions = ["stopViewOther", "stopViewMine", "startViewOther", "startViewMine", "updatePermissions", "hideContactInfo"];
 
 if (in_array($action, $permission_actions, true)) {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -201,8 +201,8 @@ if (in_array($action, $permission_actions, true)) {
 
             $stmt_p = mysqli_prepare($link, "SELECT userid FROM people WHERE userid = ?");
             $stmt_chk = mysqli_prepare($link, "SELECT viewer FROM viewList WHERE viewer = ? AND pid = ?");
-            // Default readOnly = 0 (Full Purchasing) and viewContactInfo = 1 for all viewers
-            $stmt_ins = mysqli_prepare($link, "INSERT INTO viewList (viewContactInfo, readOnly, allowEdit, pid, viewer, lastViewDate) VALUES (1, 0, 0, ?, ?, NOW())");
+            // Default readOnly = 0 (Full Purchasing)
+            $stmt_ins = mysqli_prepare($link, "INSERT INTO viewList (readOnly, allowEdit, pid, viewer, lastViewDate) VALUES (0, 0, ?, ?, NOW())");
 
             foreach (array_keys($selectedIds) as $adduserid) {
                 mysqli_stmt_bind_param($stmt_p, "s", $adduserid);
@@ -235,7 +235,7 @@ if (in_array($action, $permission_actions, true)) {
                 $alert_html = "Selected user does not exist.";
             }
         }
-    } elseif ($action === "hideContactInfo") {
+    } elseif ($action === "updatePermissions" || $action === "hideContactInfo") {
         $stmt_viewers = mysqli_prepare($link, "SELECT viewer FROM viewList WHERE pid = ?");
         mysqli_stmt_bind_param($stmt_viewers, "s", $userid);
         mysqli_stmt_execute($stmt_viewers);
@@ -244,7 +244,7 @@ if (in_array($action, $permission_actions, true)) {
         $readOnlyArr = isset($_POST['readOnly']) && is_array($_POST['readOnly']) ? $_POST['readOnly'] : [];
         $allowEditArr = isset($_POST['allowEdit']) && is_array($_POST['allowEdit']) ? $_POST['allowEdit'] : [];
 
-        $stmt_upd = mysqli_prepare($link, "UPDATE viewList SET viewContactInfo = 1, readOnly = ?, allowEdit = ? WHERE viewer = ? AND pid = ?");
+        $stmt_upd = mysqli_prepare($link, "UPDATE viewList SET readOnly = ?, allowEdit = ? WHERE viewer = ? AND pid = ?");
 
         while ($row_v = mysqli_fetch_assoc($result)) {
             $viewerId = $row_v['viewer'];
@@ -335,7 +335,7 @@ if ($can_manage_permissions) {
     }
 
     // Load people who can view this user's list, grouped into families
-    $stmt_viewers_list = mysqli_prepare($link, "SELECT viewList.viewer, people.firstname, people.lastname, people.suffix, people.userid, viewList.viewContactInfo, viewList.readOnly, viewList.allowEdit FROM viewList JOIN people ON viewList.viewer = people.userid WHERE viewList.pid = ? ORDER BY people.lastname, people.firstname");
+    $stmt_viewers_list = mysqli_prepare($link, "SELECT viewList.viewer, people.firstname, people.lastname, people.suffix, people.userid, viewList.readOnly, viewList.allowEdit FROM viewList JOIN people ON viewList.viewer = people.userid WHERE viewList.pid = ? ORDER BY people.lastname, people.firstname");
     mysqli_stmt_bind_param($stmt_viewers_list, "s", $userid);
     mysqli_stmt_execute($stmt_viewers_list);
     $res_vl = mysqli_stmt_get_result($stmt_viewers_list);
@@ -492,7 +492,7 @@ $edit_info_href = "editInfo.php?target_userid=" . urlencode($userid);
         </div>
 
         <form action="updateAccount.php" method="post" id="privForm">
-          <input type="hidden" name="action" value="hideContactInfo">
+          <input type="hidden" name="action" value="updatePermissions">
           <input type="hidden" name="csrf_token" value="<?php echo escapeText($csrf_token); ?>">
           <input type="hidden" name="target_userid" value="<?php echo escapeText($userid); ?>">
 

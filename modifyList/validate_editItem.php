@@ -17,7 +17,7 @@ $iid = (int)($_POST["iid"] ?? 0);
 $movecid = (int)($_POST["movecid"] ?? 0);
 
 // Fetch authoritative item state from DB
-$check_item = mysqli_prepare($link, "SELECT items.iid, items.cid, items.itemSortOrder, items.price, items.image FROM items JOIN categories ON items.cid = categories.cid WHERE items.iid = ? AND categories.userid = ?");
+$check_item = mysqli_prepare($link, "SELECT items.iid, items.cid, items.itemSortOrder, items.image FROM items JOIN categories ON items.cid = categories.cid WHERE items.iid = ? AND categories.userid = ?");
 mysqli_stmt_bind_param($check_item, "is", $iid, $userid);
 mysqli_stmt_execute($check_item);
 $cur_item = mysqli_fetch_assoc(mysqli_stmt_get_result($check_item));
@@ -28,7 +28,6 @@ if (!$cur_item) {
 
 $cid = (int)$cur_item["cid"];
 $iso = (int)$cur_item["itemSortOrder"];
-$oldPrice = (float)($cur_item["price"] ?? 0);
 $oldImage = !empty($cur_item["image"]) ? basename($cur_item["image"]) : "";
 
 $check_move = mysqli_prepare($link, "SELECT cid FROM categories WHERE cid = ? AND userid = ? AND catSortOrder != -1000");
@@ -62,7 +61,7 @@ $parseLinkPair = function($nameKey, $urlKey) {
         if (!preg_match('#^https?://#i', $urlIn)) {
             $urlIn = 'https://' . $urlIn;
         }
-        $cleanUrl = sanitizeHttpUrl($urlIn, false);
+        $cleanUrl = sanitizeHttpUrl($urlIn);
     }
     if ($cleanUrl === '') {
         return ['', ''];
@@ -109,14 +108,6 @@ try {
     $stmt = mysqli_prepare($link, "UPDATE items SET title = ?, description = ?, quantity = ?, subdesc = ?, price = ?, allowCheck = ?, addStar = ?, link1 = ?, link1url = ?, link2 = ?, link2url = ?, link3 = ?, link3url = ?, itemSortOrder = ?, cid = ? WHERE iid = ?");
     mysqli_stmt_bind_param($stmt, "ssisdssssssssiii", $title, $description, $quantity, $subdesc, $price, $allowCheck, $addStar, $link1, $link1url, $link2, $link2url, $link3, $link3url, $iso, $movecid, $iid);
     mysqli_stmt_execute($stmt);
-
-    if (abs($price - $oldPrice) >= 0.005) {
-        $stmt_ph = mysqli_prepare($link, "INSERT INTO itemPriceHistory (iid, price) VALUES (?, ?)");
-        if ($stmt_ph) {
-            mysqli_stmt_bind_param($stmt_ph, "id", $iid, $price);
-            mysqli_stmt_execute($stmt_ph);
-        }
-    }
 
     mysqli_commit($link);
 } catch (mysqli_sql_exception $e) {

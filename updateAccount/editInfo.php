@@ -137,19 +137,14 @@ $error_code = $_GET['error'] ?? '';
       </div>
 
       <div class="account-form-grid-2">
-        <div class="admin-form-row">
+        <div class="admin-form-row" style="margin-bottom:0;">
           <label for="ei_phone">Home Phone</label>
           <input type="text" id="ei_phone" name="phone" value="<?php echo escapeText($rs['phone'] ?? ''); ?>">
         </div>
-        <div class="admin-form-row">
+        <div class="admin-form-row" style="margin-bottom:0;">
           <label for="ei_mobilephone">Mobile Phone</label>
           <input type="text" id="ei_mobilephone" name="mobilephone" value="<?php echo escapeText($rs['mobilephone'] ?? ''); ?>">
         </div>
-      </div>
-
-      <div class="admin-form-row" style="margin-bottom:0;">
-        <label for="ei_url">Homepage URL</label>
-        <input type="text" id="ei_url" name="url" value="<?php echo escapeText($rs['url'] ?? ''); ?>" placeholder="https://...">
       </div>
     </div>
 

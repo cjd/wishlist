@@ -11,7 +11,7 @@ $recip = trim((string)($_REQUEST["recip"] ?? ""));
 $name = trim((string)($_REQUEST["name"] ?? ""));
 $confirm = $_REQUEST["confirm"] ?? "";
 
-if ($confirm === "Go Home" || $confirm === "Ho Home") {
+if ($confirm === "Go Home") {
     unset($_SESSION["euserid"]);
     header("Location: " . getFullPath("../home.php"));
     exit;
@@ -42,7 +42,7 @@ $access = canViewList($link, $recip, $viewerUserid);
 $recipientBirthdayText = "";
 $recipientAddressLines = [];
 $recipientPhones = [];
-if ($access['allowed'] && !empty($access['viewContactInfo'])) {
+if ($access['allowed']) {
     $bmonthVal = trim((string)($person_row['bmonth'] ?? ''));
     $bdayVal = (int)($person_row['bday'] ?? 0);
     if ($bmonthVal !== '' && $bdayVal >= 1 && $bdayVal <= 31) {

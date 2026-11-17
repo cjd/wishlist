@@ -11,8 +11,3 @@ table.pagetable {
 td {
     background-color: transparent !important;
 }
-
-/* If there are other specific classes that might set background, add them here */
-td.goldenRod {
-    background-color: transparent !important;
-}

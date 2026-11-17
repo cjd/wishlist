@@ -129,10 +129,6 @@ if ($action === "commitDelete") {
             mysqli_stmt_bind_param($stmt, "ss", $delUserid, $delUserid);
             mysqli_stmt_execute($stmt);
 
-            $stmt = mysqli_prepare($link, "DELETE FROM favorites WHERE userid = ?");
-            mysqli_stmt_bind_param($stmt, "s", $delUserid);
-            mysqli_stmt_execute($stmt);
-
             $stmt = mysqli_prepare($link, "DELETE FROM passwordResetRequests WHERE target_userid = ? OR approver_userid = ?");
             mysqli_stmt_bind_param($stmt, "ss", $delUserid, $delUserid);
             mysqli_stmt_execute($stmt);
@@ -245,7 +241,6 @@ if ($action === "commitDelete") {
               ["UPDATE messages SET recipient_id = ? WHERE recipient_id = ?", "ss", [$newUserid, $oldUserid]],
               ["UPDATE accessRequests SET requesterId = ? WHERE requesterId = ?", "ss", [$newUserid, $oldUserid]],
               ["UPDATE accessRequests SET targetId = ? WHERE targetId = ?", "ss", [$newUserid, $oldUserid]],
-              ["UPDATE favorites SET userid = ? WHERE userid = ?", "ss", [$newUserid, $oldUserid]],
               ["UPDATE passwordResetRequests SET target_userid = ? WHERE target_userid = ?", "ss", [$newUserid, $oldUserid]],
               ["UPDATE passwordResetRequests SET approver_userid = ? WHERE approver_userid = ?", "ss", [$newUserid, $oldUserid]],
               ["UPDATE categories SET userid = ? WHERE userid = ?", "ss", [$newUserid, $oldUserid]],
@@ -376,7 +371,7 @@ if ($action === "commitDelete") {
         mysqli_stmt_bind_param($stmt, "s", $desiredUserid);
         mysqli_stmt_execute($stmt);
 
-        $stmt = mysqli_prepare($link, "INSERT INTO viewList (viewContactInfo, readOnly, allowEdit, pid, viewer, lastViewDate) VALUES (1, 0, 0, ?, ?, NOW())");
+        $stmt = mysqli_prepare($link, "INSERT INTO viewList (readOnly, allowEdit, pid, viewer, lastViewDate) VALUES (0, 0, ?, ?, NOW())");
         mysqli_stmt_bind_param($stmt, "ss", $desiredUserid, $desiredUserid);
         mysqli_stmt_execute($stmt);
 

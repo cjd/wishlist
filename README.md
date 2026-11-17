@@ -10,7 +10,7 @@ A modern, responsive PHP-based web application designed to manage gift lists for
 * **Modern Cryptography & Timing Safety:** Passwords hashed and verified with PHP's `password_hash()` and `password_verify()` (bcrypt), with automatic on-the-fly migration from legacy hashes and dummy-hash verification to prevent username timing enumeration.
 * **DB-Backed Brute-Force Protection:** Login, bookmarklet sign-in, registration, and password reset endpoints enforce IP and account rate limiting via the `loginAttempts` table.
 * **Approval-Based Password Recovery:** Submitting `forgotPassword.php` dispatches a single-use SHA-256 hashed approval token (`passwordResetRequests`, 24-hour expiry) via internal message to a verified mutual family contact or administrator, generating a temporary password only after authenticated approval in `approvePasswordReset.php`.
-* **Live Session & Authorization Gate:** Every request re-validates user existence, administrator role, delegated `allowEdit` context, and `viewList` permissions (`readOnly`, `allowEdit`, `viewContactInfo`) against live database state. Sessions use 7-day `HttpOnly`, `SameSite=Lax`, proxy-aware `Secure` cookies, `session_regenerate_id(true)`, and `Clear-Site-Data` on logout.
+* **Live Session & Authorization Gate:** Every request re-validates user existence, administrator role, delegated `allowEdit` context, and `viewList` permissions (`readOnly`, `allowEdit`) against live database state. Sessions use 7-day `HttpOnly`, `SameSite=Lax`, proxy-aware `Secure` cookies, `session_regenerate_id(true)`, and `Clear-Site-Data` on logout.
 * **SQL Injection, XSS & CSRF Defense:** Parameterized `mysqli` prepared statements throughout, context-aware HTML/URL sanitization (`escapeText()`, `sanitizeHttpUrl()`, `formatMessage()` without quote double-encoding), and strict POST CSRF validation (`verifyCsrfOrDie(true)`).
 * **Runtime & Header Hardening:** Enforced PHP-FPM runtime settings in `.user.ini`, `0640` permissions on `config.php`, and `X-Frame-Options: SAMEORIGIN`, `X-Content-Type-Options: nosniff`, and `Referrer-Policy: strict-origin-when-cross-origin` headers.
 
@@ -47,7 +47,7 @@ A modern, responsive PHP-based web application designed to manage gift lists for
 
 ### 6. 🌙 Modern UI & Mobile Experience
 * **Seamless Dark Mode:** Complete dark theme with system preference auto-detection and persistent toggle control in the navigation bar.
-* **Privacy-Safe Progressive Web App (PWA):** Installable on iOS, Android, and Desktop via `manifest.json` (with `share_target`) and `service-worker.js` (`wishlist-v10`), using network-first caching for CSS/JS and never caching authenticated HTML pages or private `/uploads/` images. All frontend libraries are 100% self-hosted.
+* **Privacy-Safe Progressive Web App (PWA):** Installable on iOS, Android, and Desktop via `manifest.json` (with `share_target`) and `service-worker.js` (`wishlist-v12`), using network-first caching for CSS/JS and never caching authenticated HTML pages or private `/uploads/` images. All frontend libraries are 100% self-hosted.
 * **What's New Onboarding & Interactive Help Center:** First-login **✨ What's New** feature overview dialog (tracked per user in `people.whatsNewSeenVersion`) with deep-links into the searchable FAQ in [help.php](help.php) and a button on the Help page to re-read anytime.
 
 ### 7. 💬 Internal Messaging & Administration
@@ -60,7 +60,7 @@ A modern, responsive PHP-based web application designed to manage gift lists for
 ## 🛠️ Technology Stack
 
 * **Server:** PHP 8.x (`mysqli` prepared statements, `.user.ini` hardening)
-* **Database:** MySQL 8.x / MariaDB (`InnoDB`, `utf8mb4_unicode_ci`, versioned migrations `db/V1_schema.sql` – `db/V5_schema.sql`)
+* **Database:** MySQL 8.x / MariaDB (`InnoDB`, `utf8mb4_unicode_ci`, versioned migrations `db/V1_schema.sql` – `db/V6_schema.sql`)
 * **Frontend:** HTML5, CSS3 (Light, Dark, and Print stylesheets), Vanilla JS
 * **Libraries (100% Self-Hosted):** jQuery 3.7.1, SortableJS 1.15.6, Select2 4.1, Native `<dialog>` Lightbox (`js/lightbox.js`)
 * **Deployment:** Docker / Nginx / PHP-FPM / Syncthing (`.stignore` configured)
@@ -72,5 +72,5 @@ A modern, responsive PHP-based web application designed to manage gift lists for
 1. **Clone or Extract:** Place the files in your web server's document root (e.g., `/var/www/lists/`).
 2. **Access Setup:** Open the web application in your browser (e.g., `https://your-domain.com/`). If unconfigured, it routes to the setup wizard (`admin.php?setup=true`).
 3. **Database Configuration:** Provide database credentials (host, database name, user, password).
-4. **Create Administrator:** Complete the setup form to generate `config.php` (`0640` permissions), apply `db/V1_schema.sql` – `db/V5_schema.sql`, and create the primary administrator account.
+4. **Create Administrator:** Complete the setup form to generate `config.php` (`0640` permissions), apply `db/V1_schema.sql` – `db/V6_schema.sql`, and create the primary administrator account.
 5. **Permissions & Uploads:** Ensure the `uploads/` directory is writable by the PHP-FPM user (`www-data`) and excluded from public PHP execution.

@@ -209,7 +209,7 @@ function createPage() {
         if (!preg_match('#^https?://#i', $rawUrl)) {
             $rawUrl = 'https://' . $rawUrl;
         }
-        $url = sanitizeHttpUrl($rawUrl, false);
+        $url = sanitizeHttpUrl($rawUrl);
     }
     $parsed_host = $url !== '' ? parse_url($url, PHP_URL_HOST) : '';
     if ($urlName === '' && $parsed_host) {
