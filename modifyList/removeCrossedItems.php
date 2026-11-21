@@ -292,7 +292,7 @@ if ($reveal) {
                       <span class="price-badge">$<?php echo escapeText($pItem['price']); ?></span>
                     <?php endif; ?>
                     <?php if (!empty($pItem['description'])): ?>
-                      <div style="font-size:12.5px; color:#64748b; margin-top:2px;"><?php echo formatMultilineText($pItem['description']); ?></div>
+                      <div style="font-size: 0.78125rem; color:#64748b; margin-top:2px;"><?php echo formatMultilineText($pItem['description']); ?></div>
                     <?php endif; ?>
                   </div>
                 </div>

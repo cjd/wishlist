@@ -707,7 +707,7 @@ $svg_delete = $svgIcons['delete'];
         <span>Confirm Account Deletion</span>
       </div>
       <div class="admin-modal-card-body">
-        <p style="margin:0 0 10px 0; font-size:14.5px;">
+        <p style="margin:0 0 10px 0; font-size: 0.90625rem;">
           Are you sure you want to delete
           <?php if ($delFullName !== ''): ?>
             <b><?php echo escapeText($delFullName); ?></b> (<span class="admin-userid-pill"><?php echo escapeText($deleteUserid); ?></span>)?
@@ -715,7 +715,7 @@ $svg_delete = $svgIcons['delete'];
             <b><?php echo escapeText($deleteUserid); ?></b>?
           <?php endif; ?>
         </p>
-        <p style="margin:0; font-size:13.5px; color:#b91c1c;">
+        <p style="margin:0; font-size: 0.84375rem; color:#b91c1c;">
           Everything relating to this user (wishlist categories, items, uploaded images, comments, messages, and purchase history) will be permanently deleted.
         </p>
       </div>
@@ -739,7 +739,7 @@ $svg_delete = $svgIcons['delete'];
         <span class="admin-legend-item"><?php echo $svg_account; ?> Account</span>
         <span class="admin-legend-item"><?php echo $svg_delete; ?> Delete</span>
       </div>
-      <button type="button" id="toggleAllFamiliesBtn" class="admin-nav-btn" style="padding:6px 11px; font-size:12.5px;">Collapse All</button>
+      <button type="button" id="toggleAllFamiliesBtn" class="admin-nav-btn" style="padding:6px 11px; font-size: 0.78125rem;">Collapse All</button>
     </div>
   </div>
 
@@ -862,7 +862,7 @@ $svg_delete = $svgIcons['delete'];
               <input type="hidden" name="csrf_token" value="<?php echo $csrf_token_escaped; ?>">
 
               <div class="admin-toolbar" style="margin-bottom:8px;">
-                <label class="admin-checkbox-row" style="font-size:13px; padding:4px 8px;">
+                <label class="admin-checkbox-row" style="font-size: 0.8125rem; padding:4px 8px;">
                   <input type="checkbox" id="orphanSelectAll" class="admin-role-checkbox">
                   <span><b>Select All</b> (<?php echo (int)$orphan_count; ?> <?php echo $orphan_count === 1 ? 'file' : 'files'; ?> &middot; <?php echo escapeText(formatAdminBytes($orphan_total_bytes)); ?>)</span>
                 </label>

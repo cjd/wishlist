@@ -89,7 +89,23 @@ if (!isset($doingSetup)) {
 
     // Re-validate active user session and proxy edit permissions against live DB state
     if (isset($_SESSION["userid"])) {
-      $stmt_auth = mysqli_prepare($link, "SELECT admin, firstname, lastname, suffix FROM people WHERE userid = ?");
+      $stmt_auth = null;
+      $hasTextSizeCol = true;
+      try {
+        $stmt_auth = mysqli_prepare($link, "SELECT admin, firstname, lastname, suffix, textSize FROM people WHERE userid = ?");
+      } catch (mysqli_sql_exception $ex) {
+        if ((int)$ex->getCode() === 1054) {
+          applyPendingSchemaMigrations($link, (string)$base_dir);
+          try {
+            $stmt_auth = mysqli_prepare($link, "SELECT admin, firstname, lastname, suffix, textSize FROM people WHERE userid = ?");
+          } catch (Throwable $ex2) {
+            $hasTextSizeCol = false;
+            $stmt_auth = mysqli_prepare($link, "SELECT admin, firstname, lastname, suffix FROM people WHERE userid = ?");
+          }
+        } else {
+          throw $ex;
+        }
+      }
       if ($stmt_auth) {
         mysqli_stmt_bind_param($stmt_auth, "s", $_SESSION["userid"]);
         mysqli_stmt_execute($stmt_auth);
@@ -97,6 +113,7 @@ if (!isset($doingSetup)) {
         if ($auth_row = mysqli_fetch_assoc($res_auth)) {
           $_SESSION["admin"] = (int)$auth_row["admin"];
           $_SESSION["fullname"] = trim($auth_row["firstname"] . " " . $auth_row["lastname"] . " " . ($auth_row["suffix"] ?? ""));
+          $_SESSION["textSize"] = $hasTextSizeCol ? normalizeTextSize($auth_row["textSize"] ?? 'normal') : 'normal';
           $activeOwnerFullname = $_SESSION["fullname"];
         } else {
           // Account was deleted or renamed; invalidate session
@@ -145,6 +162,72 @@ if (!isset($doingSetup)) {
         }
       }
     }
+  }
+}
+
+/**
+ * Text Size & Schema Helpers
+ */
+function normalizeTextSize($value): string {
+  $val = strtolower(trim((string)($value ?? '')));
+  if ($val === 'large' || $val === 'xlarge') {
+    return $val;
+  }
+  return 'normal';
+}
+
+function getHtmlTextSizeAttr(): string {
+  $size = normalizeTextSize($_SESSION['textSize'] ?? 'normal');
+  if ($size === 'large' || $size === 'xlarge') {
+    return ' data-text-size="' . escapeText($size) . '"';
+  }
+  return '';
+}
+
+function applyPendingSchemaMigrations($link, string $baseDir): void {
+  if (!$link || $baseDir === '') {
+    return;
+  }
+  try {
+    $current_version = 0;
+    $res_ver = @mysqli_query($link, "SELECT version FROM schema_version LIMIT 1");
+    if ($res_ver && mysqli_num_rows($res_ver) > 0) {
+      $vrow = mysqli_fetch_assoc($res_ver);
+      $current_version = (int)$vrow['version'];
+    }
+
+    $schema_files = glob(rtrim($baseDir, '/') . '/db/V*_schema.sql') ?: [];
+    $highest_version = 0;
+    foreach ($schema_files as $file) {
+      if (preg_match('/V(\d+)_schema\.sql$/', basename($file), $matches)) {
+        $version = (int)$matches[1];
+        if ($version > $highest_version) {
+          $highest_version = $version;
+        }
+      }
+    }
+
+    if ($current_version > 0 && $current_version < $highest_version) {
+      for ($i = $current_version + 1; $i <= $highest_version; $i++) {
+        $schema_file = rtrim($baseDir, '/') . '/db/V' . $i . '_schema.sql';
+        if (is_file($schema_file)) {
+          $sql = preg_replace('/^--.*$/m', '', (string)file_get_contents($schema_file));
+          $statements = array_filter(array_map('trim', explode(';', $sql)));
+          foreach ($statements as $statement) {
+            try {
+              mysqli_query($link, $statement);
+            } catch (mysqli_sql_exception $ex) {
+              if (!in_array((int)$ex->getCode(), [1060, 1061, 1068, 1091], true)) {
+                error_log("Error applying schema update V{$i}: " . $ex->getMessage());
+              }
+            }
+          }
+          mysqli_query($link, "UPDATE schema_version SET version = " . (int)$i);
+        }
+      }
+    }
+  } catch (Throwable $e) {
+    error_log("Schema check warning: " . $e->getMessage());
   }
 }
 
@@ -487,7 +570,11 @@ function createNavBar($data, $displayGreeting = false, $helpLink = '') {
   $themeVer = (int)@filemtime(__DIR__ . '/js/theme.js');
   $toastVer = (int)@filemtime(__DIR__ . '/js/toast.js');
   $bttVer = (int)@filemtime(__DIR__ . '/js/back-to-top.js');
-  print "<script type=\"text/javascript\">window.WISHLIST_BASE_URL = " . json_encode($base_url, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) . ";</script>";
+  $userTextSize = normalizeTextSize($_SESSION['textSize'] ?? 'normal');
+  print "<script type=\"text/javascript\">window.WISHLIST_BASE_URL = " . json_encode($base_url, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) . ";";
+  print "window.WISHLIST_TEXT_SIZE = " . json_encode($userTextSize, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) . ";";
+  print "(function(ts){if(ts==='large'||ts==='xlarge'){document.documentElement.setAttribute('data-text-size',ts);}else{document.documentElement.removeAttribute('data-text-size');}})(window.WISHLIST_TEXT_SIZE);";
+  print "</script>";
   print "<script type=\"text/javascript\" src=\"{$safeBase}/js/theme.js?v={$themeVer}\"></script>";
   print "<script type=\"text/javascript\" src=\"{$safeBase}/js/toast.js?v={$toastVer}\"></script>";
   print "<script type=\"text/javascript\" src=\"{$safeBase}/js/back-to-top.js?v={$bttVer}\"></script>";
@@ -1207,7 +1294,7 @@ function printCategory($row, $name, $displayPurchases, $readOnly, $modifyList, $
         print "</select>";
       }
       print "<div style='margin-top: 5px;'>";
-      print "<input type='text' name='split_note_" . $iid . "' class='split-input' placeholder='Additional note or other non-user (optional)' style='font-size: 11px; padding: 4px 6px;'>";
+      print "<input type='text' name='split_note_" . $iid . "' class='split-input' placeholder='Additional note or other non-user (optional)' style='font-size: 0.6875rem; padding: 4px 6px;'>";
       print "</div>";
       print "</div>";
     }
@@ -1561,9 +1648,27 @@ function generate_image_thumbnail($source_image_path, $thumbnail_image_path) {
     case IMAGETYPE_PNG:
       $source_gd_image = @imagecreatefrompng($source_image_path);
       break;
-    case IMAGETYPE_WEBP:
+    case (defined('IMAGETYPE_WEBP') ? IMAGETYPE_WEBP : 18):
       if (function_exists('imagecreatefromwebp')) {
         $source_gd_image = @imagecreatefromwebp($source_image_path);
+      }
+      if (!$source_gd_image && class_exists('Imagick')) {
+        try {
+          $im = new Imagick($source_image_path);
+          if ($im->getNumberImages() > 1) {
+            $im = $im->coalesceImages();
+            $im->setIteratorIndex(0);
+          }
+          $im->setImageFormat('png');
+          $blob = $im->getImageBlob();
+          $im->clear();
+          $im->destroy();
+          if (is_string($blob) && $blob !== '') {
+            $source_gd_image = @imagecreatefromstring($blob);
+          }
+        } catch (Throwable $e) {
+          $source_gd_image = false;
+        }
       }
       break;
   }
@@ -1665,47 +1770,51 @@ function isPublicIpAddress($ip) {
 }
 
 function resolveSafePublicHostIps($host) {
+  static $hostIpCache = [];
   $cleanHost = strtolower(trim((string)$host, "[] \t\n\r\0\x0B."));
   if ($cleanHost === '' || $cleanHost === 'localhost' || preg_match('/\.(?:local|internal|localhost|arpa|lan|home)$/i', $cleanHost)) {
     return [];
   }
 
-  if (filter_var($cleanHost, FILTER_VALIDATE_IP) !== false) {
-    return isPublicIpAddress($cleanHost) ? [$cleanHost] : [];
+  if (isset($hostIpCache[$cleanHost])) {
+    return $hostIpCache[$cleanHost];
   }
 
-  $ips = [];
-  if (function_exists('dns_get_record')) {
+  if (filter_var($cleanHost, FILTER_VALIDATE_IP) !== false) {
+    return $hostIpCache[$cleanHost] = (isPublicIpAddress($cleanHost) ? [$cleanHost] : []);
+  }
+
+  $v4Ips = [];
+  $v6Ips = [];
+  $v4 = @gethostbynamel($cleanHost);
+  if (is_array($v4)) {
+    $v4Ips = array_merge($v4Ips, $v4);
+  }
+  if (empty($v4Ips) && function_exists('dns_get_record')) {
     $records = @dns_get_record($cleanHost, DNS_A + DNS_AAAA);
     if (is_array($records)) {
       foreach ($records as $rec) {
         if (!empty($rec['ip'])) {
-          $ips[] = $rec['ip'];
+          $v4Ips[] = $rec['ip'];
         }
         if (!empty($rec['ipv6'])) {
-          $ips[] = $rec['ipv6'];
+          $v6Ips[] = $rec['ipv6'];
         }
       }
     }
   }
-  if (empty($ips)) {
-    $v4 = @gethostbynamel($cleanHost);
-    if (is_array($v4)) {
-      $ips = array_merge($ips, $v4);
-    }
-  }
 
-  $ips = array_values(array_unique($ips));
+  $ips = array_values(array_unique(array_merge($v4Ips, $v6Ips)));
   if (empty($ips)) {
-    return [];
+    return $hostIpCache[$cleanHost] = [];
   }
   // Reject if ANY resolved address is private, loopback, link-local, or reserved
   foreach ($ips as $ip) {
     if (!isPublicIpAddress($ip)) {
-      return [];
+      return $hostIpCache[$cleanHost] = [];
     }
   }
-  return $ips;
+  return $hostIpCache[$cleanHost] = $ips;
 }
 
 function resolveRelativeHttpUrl($baseUrl, $relativeUrl) {
@@ -1737,19 +1846,42 @@ function resolveRelativeHttpUrl($baseUrl, $relativeUrl) {
   return $origin . $dir . $rel;
 }
 
-function fetchSafePublicUrl($rawUrl, $maxBytes = 1572864, $timeoutSec = 4, $abortOnOverflow = false) {
+function fetchSafePublicUrl($rawUrl, $maxBytes = 1572864, $timeoutSec = 4, $abortOnOverflow = false, $customAccept = '', $overrideUa = '', $useEncoding = true) {
   if (!function_exists('curl_init')) {
     return ['ok' => false, 'error' => 'HTTP client unavailable.'];
   }
-  $currentUrl = trim((string)$rawUrl);
-  if ($currentUrl === '') {
+  $startUrl = trim((string)$rawUrl);
+  if ($startUrl === '') {
     return ['ok' => false, 'error' => 'Missing URL.'];
   }
-  if (!preg_match('#^https?://#i', $currentUrl)) {
-    $currentUrl = 'https://' . $currentUrl;
+  if (!preg_match('#^https?://#i', $startUrl)) {
+    $startUrl = 'https://' . $startUrl;
   }
 
+  $defaultPreviewUa = 'Mozilla/5.0 (compatible; WishListMetadataPreview/1.0)';
+  if ($overrideUa !== '') {
+    $clientUa = $overrideUa;
+  } else {
+    $clientUa = trim((string)($_SERVER['HTTP_USER_AGENT'] ?? ''));
+    $clientUa = preg_replace('/[\r\n\x00-\x1F\x7F]+/', ' ', $clientUa);
+    if ($clientUa === '') {
+      $clientUa = $defaultPreviewUa;
+    } elseif (strlen($clientUa) > 512) {
+      $clientUa = substr($clientUa, 0, 512);
+    }
+  }
+
+  $acceptLang = trim((string)($_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? ''));
+  $acceptLang = preg_replace('/[^a-zA-Z0-9,\-;=. *]/', '', $acceptLang);
+  if ($acceptLang === '' || strlen($acceptLang) > 128) {
+    $acceptLang = 'en-US,en;q=0.9';
+  }
+
+  $currentUrl = $startUrl;
+  $ch = curl_init();
+  $resolveEntries = [];
   $maxRedirects = 4;
+
   for ($hop = 0; $hop <= $maxRedirects; $hop++) {
     $parts = @parse_url($currentUrl);
     if (!$parts || empty($parts['scheme']) || empty($parts['host'])) {
@@ -1775,27 +1907,42 @@ function fetchSafePublicUrl($rawUrl, $maxBytes = 1572864, $timeoutSec = 4, $abor
     }
     $pinnedIp = $safeIps[0];
     $resolveHost = trim($host, '[]');
-    $resolveEntry = $resolveHost . ':' . $port . ':' . (strpos($pinnedIp, ':') !== false ? '[' . $pinnedIp . ']' : $pinnedIp);
+    $resolveEntries[] = $resolveHost . ':' . $port . ':' . (strpos($pinnedIp, ':') !== false ? '[' . $pinnedIp . ']' : $pinnedIp);
 
     $body = '';
     $overflowed = false;
     $redirectLocation = '';
     $contentType = '';
 
-    $ch = curl_init($currentUrl);
-    curl_setopt_array($ch, [
+    if ($customAccept !== '') {
+      $reqHeaders = [
+        'Accept: ' . $customAccept
+      ];
+    } elseif ($abortOnOverflow) {
+      $reqHeaders = [
+        'Accept: ' . ((function_exists('imagecreatefromwebp') || class_exists('Imagick'))
+          ? 'image/webp,image/png,image/jpeg,image/gif,*/*;q=0.8'
+          : 'image/png,image/jpeg,image/gif,*/*;q=0.8'),
+        'Accept-Language: ' . $acceptLang
+      ];
+    } else {
+      $reqHeaders = [
+        'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'Accept-Language: ' . $acceptLang
+      ];
+    }
+
+    $curlOpts = [
+      CURLOPT_URL => $currentUrl,
       CURLOPT_RETURNTRANSFER => false,
       CURLOPT_FOLLOWLOCATION => false,
       CURLOPT_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
       CURLOPT_CONNECTTIMEOUT => 3,
       CURLOPT_TIMEOUT => max(2, (int)$timeoutSec),
-      CURLOPT_ENCODING => '',
-      CURLOPT_RESOLVE => [$resolveEntry],
-      CURLOPT_USERAGENT => 'Mozilla/5.0 (compatible; WishListMetadataPreview/1.0)',
-      CURLOPT_HTTPHEADER => [
-        'Accept: text/html,application/xhtml+xml,image/avif,image/webp,image/apng,image/*;q=0.8,*/*;q=0.5',
-        'Accept-Language: en-US,en;q=0.9'
-      ],
+      CURLOPT_COOKIEFILE => '',
+      CURLOPT_RESOLVE => array_values(array_unique($resolveEntries)),
+      CURLOPT_USERAGENT => $clientUa,
+      CURLOPT_HTTPHEADER => $reqHeaders,
       CURLOPT_HEADERFUNCTION => function($ch, $headerLine) use (&$redirectLocation, &$contentType) {
         $len = strlen($headerLine);
         $colonPos = strpos($headerLine, ':');
@@ -1827,25 +1974,35 @@ function fetchSafePublicUrl($rawUrl, $maxBytes = 1572864, $timeoutSec = 4, $abor
         $body .= $chunk;
         return $chunkLen;
       }
-    ]);
+    ];
+    if ($useEncoding) {
+      $curlOpts[CURLOPT_ENCODING] = 'gzip, deflate';
+    }
+    if (defined('CURL_HTTP_VERSION_2TLS')) {
+      $curlOpts[CURLOPT_HTTP_VERSION] = CURL_HTTP_VERSION_2TLS;
+    }
+    curl_setopt_array($ch, $curlOpts);
 
     $execOk = @curl_exec($ch);
     $curlErrNo = curl_errno($ch);
     $statusCode = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
-    if (PHP_VERSION_ID < 80000) {
-      curl_close($ch);
-    }
 
     if (in_array($statusCode, [301, 302, 303, 307, 308], true) && $redirectLocation !== '') {
       if ($hop === $maxRedirects) {
+        if (PHP_VERSION_ID < 80000) curl_close($ch);
         return ['ok' => false, 'error' => 'Too many redirects.'];
       }
       $nextUrl = resolveRelativeHttpUrl($currentUrl, $redirectLocation);
       if ($nextUrl === '') {
+        if (PHP_VERSION_ID < 80000) curl_close($ch);
         return ['ok' => false, 'error' => 'Invalid redirect target.'];
       }
       $currentUrl = $nextUrl;
       continue;
+    }
+
+    if (PHP_VERSION_ID < 80000) {
+      curl_close($ch);
     }
 
     // CURLE_WRITE_ERROR (23) occurs intentionally when we stop early after reaching $maxBytes on large HTML pages
@@ -1856,7 +2013,16 @@ function fetchSafePublicUrl($rawUrl, $maxBytes = 1572864, $timeoutSec = 4, $abor
       return ['ok' => false, 'error' => 'Could not connect to store page.'];
     }
     if ($statusCode < 200 || $statusCode >= 300) {
-      return ['ok' => false, 'error' => 'Store page blocked automated preview (HTTP ' . $statusCode . ').', 'status' => $statusCode];
+      if ($statusCode === 403 && $useEncoding) {
+        return fetchSafePublicUrl($currentUrl, $maxBytes, $timeoutSec, $abortOnOverflow, $customAccept, $overrideUa, false);
+      }
+      return [
+        'ok' => false,
+        'error' => 'Store page blocked automated preview (HTTP ' . $statusCode . ').',
+        'status' => $statusCode,
+        'final_url' => $currentUrl,
+        'body' => $body
+      ];
     }
 
     return [

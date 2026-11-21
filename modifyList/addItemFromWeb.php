@@ -286,8 +286,8 @@ function createPage() {
     <div id="fetchedImagePreviewBox" class="autofill-img-preview" style="display:none;">
       <img id="fetchedImagePreview" src="" alt="Product preview" referrerpolicy="no-referrer">
       <div>
-        <div style="font-size:12px; font-weight:bold;">Auto-detected product photo</div>
-        <button type="button" id="clearFetchedImageBtn" class="actionButton" style="font-size:11px; padding:2px 6px; margin-top:4px;">✕ Remove photo</button>
+        <div style="font-size: 0.75rem; font-weight:bold;">Auto-detected product photo</div>
+        <button type="button" id="clearFetchedImageBtn" class="actionButton" style="font-size: 0.6875rem; padding:2px 6px; margin-top:4px;">✕ Remove photo</button>
       </div>
     </div>
     <input type="file" style="width:100%;" name="image" accept="image/jpeg,image/png,image/gif,image/webp">
@@ -308,7 +308,7 @@ function createPage() {
     </div>
     <div id="autofillStatus" class="autofill-status" style="display:none;"></div>
     <div id="addMoreStoreBtnRow" style="margin-top:4px;">
-      <button type="button" class="actionButton" style="font-size:12px;" onclick="revealNextStoreRow()">➕ Add another store option (up to 3)</button>
+      <button type="button" class="actionButton" style="font-size: 0.75rem;" onclick="revealNextStoreRow()">➕ Add another store option (up to 3)</button>
     </div>
   </td>
 </tr>

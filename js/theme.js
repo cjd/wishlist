@@ -28,7 +28,18 @@
             mq.addEventListener('change', onSystemChange);
         }
     }
+    if (typeof window.WISHLIST_TEXT_SIZE === 'string') {
+        applyTextSize(window.WISHLIST_TEXT_SIZE);
+    }
 })();
+
+function applyTextSize(size) {
+    if (size === 'large' || size === 'xlarge') {
+        document.documentElement.setAttribute('data-text-size', size);
+    } else {
+        document.documentElement.removeAttribute('data-text-size');
+    }
+}
 
 function toggleTheme() {
     var isDark = document.documentElement.getAttribute('data-theme') === 'dark';

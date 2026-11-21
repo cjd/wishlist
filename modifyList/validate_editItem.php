@@ -117,18 +117,23 @@ try {
     exit;
 }
 
-// Non-destructive image upload / removal handling
+// Non-destructive image upload / remote auto-fill / removal handling
 $uploadDir = $base_dir . '/uploads/';
 $hasNewUpload = (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK);
+$fetchedImgUrl = trim((string)($_POST['fetched_image_url'] ?? ''));
 
-if ($hasNewUpload) {
+if ($hasNewUpload || $fetchedImgUrl !== '') {
     $finalFile = "image-" . $iid . ".jpg";
     $tempBase = "image-" . $iid . "-tmp-" . bin2hex(random_bytes(4));
     $tempFile = $tempBase . ".jpg";
     $tempThumb = $tempBase . "_thumb.jpg";
     $finalThumb = "image-" . $iid . "_thumb.jpg";
 
-    if (process_image_upload('image', $uploadDir . $tempFile)) {
+    $processedOk = $hasNewUpload
+        ? process_image_upload('image', $uploadDir . $tempFile)
+        : import_remote_image_to_thumbnail($fetchedImgUrl, $uploadDir . $tempFile);
+
+    if ($processedOk) {
         // Remove legacy differently-named image if any
         if ($oldImage !== "" && $oldImage !== $finalFile && is_file($uploadDir . $oldImage)) {
             @unlink($uploadDir . $oldImage);

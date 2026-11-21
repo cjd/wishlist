@@ -69,8 +69,8 @@ while ($row_exist = mysqli_fetch_assoc($res_exist)) {
 
 <tr id="dupWarningRow" style="display:none;">
   <td colspan="2" bgcolor="#fffbeb" style="padding: 8px 12px; border: 2px solid #f59e0b;">
-    <div style="color: #b45309; font-family: arial, sans-serif; font-size: 13px; display: flex; align-items: center; gap: 8px;">
-      <span style="font-size: 18px;">⚠️</span>
+    <div style="color: #b45309; font-family: arial, sans-serif; font-size: 0.8125rem; display: flex; align-items: center; gap: 8px;">
+      <span style="font-size: 1.125rem;">⚠️</span>
       <div>
         <b>Possible Duplicate Detected:</b> You already have an item <i id="dupItemTitle"></i> in category <b id="dupItemCat"></b>.
       </div>
@@ -98,7 +98,7 @@ while ($row_exist = mysqli_fetch_assoc($res_exist)) {
         <input type="text" style="width:100%;box-sizing:border-box;" name="link1" id="link1" placeholder="Auto-detected from URL, or type store name" value="">
       </td></tr>
       <tr id="addMoreStoreBtnRow"><td>
-        <button type="button" class="actionButton" style="font-size:12px; margin-top:2px;" onclick="revealNextStoreRow()">➕ Add another store option (up to 3)</button>
+        <button type="button" class="actionButton" style="font-size: 0.75rem; margin-top:2px;" onclick="revealNextStoreRow()">➕ Add another store option (up to 3)</button>
       </td></tr>
     </table>
   </td>
@@ -162,8 +162,8 @@ while ($row_exist = mysqli_fetch_assoc($res_exist)) {
     <div id="fetchedImagePreviewBox" class="autofill-img-preview" style="display:none;">
       <img id="fetchedImagePreview" src="" alt="Product preview" referrerpolicy="no-referrer">
       <div>
-        <div style="font-size:12px; font-weight:bold;">Auto-detected product photo</div>
-        <button type="button" id="clearFetchedImageBtn" class="actionButton" style="font-size:11px; padding:2px 6px; margin-top:4px;">✕ Remove photo</button>
+        <div style="font-size: 0.75rem; font-weight:bold;">Auto-detected product photo</div>
+        <button type="button" id="clearFetchedImageBtn" class="actionButton" style="font-size: 0.6875rem; padding:2px 6px; margin-top:4px;">✕ Remove photo</button>
       </div>
     </div>
     <input type="file" style="width:100%;" name="image" accept="image/jpeg,image/png,image/gif,image/webp">

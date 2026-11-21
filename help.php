@@ -345,6 +345,13 @@ if (isset($_SESSION["userid"])) {
     <p>Go to <b>Update Your Account</b> to manage sharing. Use the searchable family-grouped multi-select pickers to grant access to your list (defaulting to <b>Full Purchasing</b> so family members can check off gifts right away) or request access to multiple relatives' lists at once. When someone requests access to your list on your Home page, you can also click <b>🔄 Approve &amp; Request Their List Back</b> in a single step.</p>
   </div>
 </details>
+
+<details class="faq-item" id="textSize">
+  <summary class="faq-question"><span>How do I make the text larger on the site?</span><span class="faq-icon">▾</span></summary>
+  <div class="faq-answer">
+    <p>Go to <b>Update Your Account</b> and use the <b>🔠 Display &amp; Text Size</b> card at the top to choose between <b>Standard</b>, <b>Large</b>, and <b>I forgot my glasses</b> text sizes. Click <b>Save Text Size</b> to save your preference to your account so it applies across all pages and devices whenever you sign in.</p>
+  </div>
+</details>
 </div>
 
 </td></tr>

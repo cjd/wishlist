@@ -10,7 +10,7 @@ $recip = $userid;
 $name = $activeOwnerFullname;
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en"<?php echo getHtmlTextSizeAttr(); ?>>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">

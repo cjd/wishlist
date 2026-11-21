@@ -27,7 +27,7 @@ if ($prow = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt_p))) {
 $displayPurchases = ($recip === $viewerUserid) ? 0 : 1;
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en"<?php echo getHtmlTextSizeAttr(); ?>>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">

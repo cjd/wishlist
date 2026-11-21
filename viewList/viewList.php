@@ -406,7 +406,7 @@ if (($recip === $viewerUserid || $access['allowEdit']) && $confirm !== "View Lis
   <input type="button" id="wishlistSearchClear" class="actionButton" value="Clear" onclick="clearWishlistFilter()" style="display:none;">
   <span id="wishlistSearchCount" class="wishlist-search-count"></span>
   <?php if ($access['readOnly'] && $recip !== $viewerUserid): ?>
-    <span style="margin-left:auto; font-size:12px; color:#666; font-weight:bold;">🔒 Read-Only Access</span>
+    <span style="margin-left:auto; font-size: 0.75rem; color:#666; font-weight:bold;">🔒 Read-Only Access</span>
   <?php endif; ?>
 </div>
 <input type="hidden" name="csrf_token" value="<?php echo escapeText($csrf_token); ?>">
@@ -431,7 +431,7 @@ printList2($recip, $viewerUserid, $name, 1, $prevViewDate);
 </p>
 
 <?php if (!$isReadOnlyView): ?>
-<div id="unsavedPurchaseBar" class="no-print" style="display:none; position:fixed; bottom:16px; left:50%; transform:translateX(-50%); background:#1e293b; color:#fff; padding:10px 18px; border-radius:8px; box-shadow:0 4px 14px rgba(0,0,0,0.3); z-index:9998; font-size:14px;">
+<div id="unsavedPurchaseBar" class="no-print" style="display:none; position:fixed; bottom:16px; left:50%; transform:translateX(-50%); background:#1e293b; color:#fff; padding:10px 18px; border-radius:8px; box-shadow:0 4px 14px rgba(0,0,0,0.3); z-index:9998; font-size: 0.875rem;">
   <span id="unsavedCountText" style="margin-right:12px;">Unsaved selections</span>
   <button type="submit" class="buttonstyle" style="margin:0;">Save Changes</button>
 </div>
@@ -523,7 +523,7 @@ if ($recip !== $viewerUserid) {
                     echo '<input type="hidden" name="action" value="unclaim">';
                     echo '<input type="hidden" name="recip" value="' . escapeText($recip) . '">';
                     echo '<input type="hidden" name="name" value="' . escapeText($name) . '">';
-                    echo '<button type="submit" class="actionButton" style="font-size:11.5px; padding:2px 8px;">Undo Claim</button>';
+                    echo '<button type="submit" class="actionButton" style="font-size: 0.71875rem; padding:2px 8px;">Undo Claim</button>';
                     echo '</form>';
                 }
             } elseif (!$isReadOnlyView) {
@@ -535,7 +535,7 @@ if ($recip !== $viewerUserid) {
                 echo '<input type="hidden" name="name" value="' . escapeText($name) . '">';
                 echo '<div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px;">';
                 echo '<button type="submit" class="actionButton suggestion-claim-btn">🎁 Claim / Mark Bought</button>';
-                echo '<button type="button" class="actionButton" style="font-size:12px;" onclick="toggleSuggestionSplit(' . $cidInt . ')">👥 Split with co-buyers ▾</button>';
+                echo '<button type="button" class="actionButton" style="font-size: 0.75rem;" onclick="toggleSuggestionSplit(' . $cidInt . ')">👥 Split with co-buyers ▾</button>';
                 echo '</div>';
                 echo '<div id="sugg_split_box_' . $cidInt . '" class="split-input-box" style="display:none; margin-top:8px;">';
                 if (!empty($suggCoBuyers)) {
@@ -546,7 +546,7 @@ if ($recip !== $viewerUserid) {
                     }
                     echo '</select>';
                 }
-                echo '<div style="margin-top:5px;"><input type="text" name="split_note" class="split-input" placeholder="Additional note or other non-user (optional)" style="font-size:11px; padding:4px 6px;"></div>';
+                echo '<div style="margin-top:5px;"><input type="text" name="split_note" class="split-input" placeholder="Additional note or other non-user (optional)" style="font-size: 0.6875rem; padding:4px 6px;"></div>';
                 echo '</div>';
                 echo '</form>';
             }

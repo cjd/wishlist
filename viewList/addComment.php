@@ -208,7 +208,7 @@ createNavBar("../home.php:Home|viewList.php?recip=" . urlencode($recip) . "&name
 
 <div id="suggestionArea" style="display:<?php echo $initialType === 'suggestion' ? 'block' : 'none'; ?>; background: #faf5ff; border: 1px solid #d8b4fe; border-left: 4px solid #9333ea; border-radius: 6px; padding: 12px 16px; margin-bottom: 12px; max-width:650px;">
   <input type="hidden" name="is_suggestion" id="isSuggestionFlag" value="<?php echo $initialType === 'suggestion' ? '1' : '0'; ?>">
-  <div style="color:#6b21a8; font-weight:bold; font-size:14px; margin-bottom: 10px;">💡 Secret Gift Suggestion (Hidden from <?php echo escapeText($name); ?>)</div>
+  <div style="color:#6b21a8; font-weight:bold; font-size: 0.875rem; margin-bottom: 10px;">💡 Secret Gift Suggestion (Hidden from <?php echo escapeText($name); ?>)</div>
   <label><b>Gift Title / Item Name:</b></label><br>
   <input type="text" name="suggest_title" id="suggestTitle" value="<?php echo escapeText($_POST['suggest_title'] ?? ''); ?>" style="width:100%; padding:6px; box-sizing:border-box; margin: 4px 0 10px 0;" placeholder="e.g. Leather Travel Duffel Bag"><br>
 
@@ -221,7 +221,7 @@ createNavBar("../home.php:Home|viewList.php?recip=" . urlencode($recip) . "&name
   <label><b>Notes / Comments for other viewers:</b></label><br>
   <textarea name="suggest_notes" id="suggestNotes" rows="3" style="width:100%; padding:6px; box-sizing:border-box; margin: 4px 0 8px 0;" placeholder="e.g. Found this on sale, thought it would be perfect for their upcoming trip!"><?php echo escapeText($_POST['suggest_notes'] ?? ''); ?></textarea>
   <?php if (!$access['readOnly']): ?>
-  <label style="display:block; margin-top:4px; cursor:pointer; font-size:13.5px; color:#4c1d95;">
+  <label style="display:block; margin-top:4px; cursor:pointer; font-size: 0.84375rem; color:#4c1d95;">
     <input type="checkbox" name="claim_immediately" value="1" <?php echo !empty($_POST['claim_immediately']) ? 'checked' : ''; ?>>
     🎁 <b>I am buying this gift</b> (mark as Claimed right away so others don't buy it)
   </label>

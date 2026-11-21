@@ -1,5 +1,5 @@
 --
--- WishList Database Schema (Baseline V6 - InnoDB / utf8mb4)
+-- WishList Database Schema (Baseline V7 - InnoDB / utf8mb4)
 --
 
 DROP TABLE IF EXISTS `accessRequests`;
@@ -95,6 +95,7 @@ CREATE TABLE `people` (
   `admin` char(1) NOT NULL DEFAULT '0',
   `lastLoginDate` datetime DEFAULT NULL,
   `whatsNewSeenVersion` int unsigned NOT NULL DEFAULT '0',
+  `textSize` varchar(16) NOT NULL DEFAULT 'normal',
   `lastModDate` datetime DEFAULT NULL,
   `lastname` varchar(100) DEFAULT '',
   `firstname` varchar(100) DEFAULT '',
@@ -170,4 +171,4 @@ CREATE TABLE `schema_version` (
   PRIMARY KEY (`version`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO `schema_version` (`version`) VALUES (6);
+INSERT INTO `schema_version` (`version`) VALUES (7);

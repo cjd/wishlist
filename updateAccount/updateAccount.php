@@ -61,7 +61,7 @@ $userid = $target_userid;
 $can_manage_permissions = ($userid === $_SESSION["userid"] || $is_admin);
 
 $action = $_REQUEST["action"] ?? "";
-$permission_actions = ["stopViewOther", "stopViewMine", "startViewOther", "startViewMine", "updatePermissions", "hideContactInfo"];
+$permission_actions = ["stopViewOther", "stopViewMine", "startViewOther", "startViewMine", "updatePermissions", "hideContactInfo", "updateTextSize"];
 
 if (in_array($action, $permission_actions, true)) {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -261,6 +261,33 @@ if (in_array($action, $permission_actions, true)) {
 
         $alert_type = "success";
         $alert_html = "Sharing privileges updated.";
+    } elseif ($action === "updateTextSize") {
+        $newTextSize = normalizeTextSize($_POST["textSize"] ?? "normal");
+        $stmt_ts = null;
+        try {
+            $stmt_ts = mysqli_prepare($link, "UPDATE people SET textSize = ?, lastModDate = NOW() WHERE userid = ?");
+        } catch (mysqli_sql_exception $ex) {
+            if ((int)$ex->getCode() === 1054) {
+                applyPendingSchemaMigrations($link, (string)$base_dir);
+                $stmt_ts = mysqli_prepare($link, "UPDATE people SET textSize = ?, lastModDate = NOW() WHERE userid = ?");
+            } else {
+                throw $ex;
+            }
+        }
+        if ($stmt_ts) {
+            mysqli_stmt_bind_param($stmt_ts, "ss", $newTextSize, $userid);
+            mysqli_stmt_execute($stmt_ts);
+        }
+        if ($userid === $_SESSION["userid"]) {
+            $_SESSION["textSize"] = $newTextSize;
+        }
+        $textSizeLabels = [
+            'normal' => 'Standard (Default)',
+            'large' => 'Large',
+            'xlarge' => 'I forgot my glasses',
+        ];
+        $alert_type = "success";
+        $alert_html = "Text size updated to <b>" . escapeText($textSizeLabels[$newTextSize]) . "</b>.";
     }
 }
 
@@ -271,6 +298,8 @@ $row = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt_info)) ?? [];
 
 $fullName = formatPersonName($row, $userid);
 $bdayDisplay = (!empty($row['bmonth']) && !empty($row['bday'])) ? ($row['bmonth'] . ' ' . $row['bday']) : 'Not set';
+$currentTextSize = normalizeTextSize($row['textSize'] ?? 'normal');
+$isOwnAccount = ($userid === $_SESSION['userid']);
 $csrf_token = getCsrfToken();
 
 $addViewerGroups = [];
@@ -461,6 +490,57 @@ $edit_info_href = "editInfo.php?target_userid=" . urlencode($userid);
   <?php endif; ?>
 
   <?php if ($can_manage_permissions): ?>
+    <?php
+      $textSizeOptions = [
+        'normal' => ['title' => 'Standard', 'desc' => 'Default site size', 'previewPx' => '16px'],
+        'large'  => ['title' => 'Large', 'desc' => 'Easier to read (~120%)', 'previewPx' => '19px'],
+        'xlarge' => ['title' => 'I forgot my glasses', 'desc' => 'Maximum readability (~138%)', 'previewPx' => '22px'],
+      ];
+      $activeSizeLabel = $textSizeOptions[$currentTextSize]['title'];
+    ?>
+    <div class="account-section-card account-display-card">
+      <div class="account-section-header">
+        <span>🔠 Display &amp; Text Size</span>
+        <span class="admin-family-count"><?php echo escapeText($activeSizeLabel); ?></span>
+      </div>
+      <div class="account-section-body">
+        <form method="post" action="updateAccount.php" id="textSizeForm" style="margin:0;">
+          <input type="hidden" name="csrf_token" value="<?php echo escapeText($csrf_token); ?>">
+          <input type="hidden" name="target_userid" value="<?php echo escapeText($userid); ?>">
+          <input type="hidden" name="action" value="updateTextSize">
+          <p class="account-picker-help">
+            Choose your preferred text size across the WishList site<?php echo $isOwnAccount ? ' (saved to your account across all devices).' : (' for <b>' . escapeText($fullName) . '</b>.'); ?>
+          </p>
+          <div class="text-size-options" role="radiogroup" aria-label="Site text size">
+            <?php foreach ($textSizeOptions as $tsKey => $tsMeta): ?>
+              <?php $isChecked = ($currentTextSize === $tsKey); ?>
+              <label class="text-size-option<?php echo $isChecked ? ' is-selected' : ''; ?>">
+                <input
+                  type="radio"
+                  name="textSize"
+                  value="<?php echo escapeText($tsKey); ?>"
+                  class="text-size-radio"
+                  data-initial="<?php echo escapeText($currentTextSize); ?>"
+                  <?php echo $isChecked ? 'checked' : ''; ?>
+                >
+                <span class="text-size-sample" style="font-size: <?php echo escapeText($tsMeta['previewPx']); ?>;" aria-hidden="true">Aa</span>
+                <span class="text-size-meta">
+                  <span class="text-size-title"><?php echo escapeText($tsMeta['title']); ?></span>
+                  <span class="text-size-desc"><?php echo escapeText($tsMeta['desc']); ?></span>
+                </span>
+              </label>
+            <?php endforeach; ?>
+          </div>
+          <div class="admin-save-bar" id="textSizeSaveBar" style="margin-top:10px;">
+            <span class="admin-save-hint" id="textSizeSaveHint">
+              <?php echo $isOwnAccount ? 'Select a size to preview it, then save to keep your preference.' : 'Select a text size and save to update this user\'s preference.'; ?>
+            </span>
+            <button type="submit" class="admin-nav-btn admin-nav-btn-primary">Save Text Size</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <div class="account-sharing-grid">
 
       <!-- LEFT COLUMN: People Who Can View/Edit Your List -->
@@ -736,6 +816,45 @@ $edit_info_href = "editInfo.php?target_userid=" . urlencode($userid);
 
   permCheckboxes.forEach(function(cb) {
     cb.addEventListener('change', updatePermDirty);
+  });
+
+  var textSizeRadios = Array.prototype.slice.call(document.querySelectorAll('.text-size-radio'));
+  var textSizeSaveBar = document.getElementById('textSizeSaveBar');
+  var textSizeSaveHint = document.getElementById('textSizeSaveHint');
+  var canPreviewTextSize = <?php echo $isOwnAccount ? 'true' : 'false'; ?>;
+  var initialTextSize = <?php echo json_encode($currentTextSize); ?>;
+
+  function updateTextSizeSelection() {
+    var selectedVal = initialTextSize;
+    textSizeRadios.forEach(function(radio) {
+      var label = radio.closest('.text-size-option');
+      if (radio.checked) {
+        selectedVal = radio.value;
+        if (label) label.classList.add('is-selected');
+      } else {
+        if (label) label.classList.remove('is-selected');
+      }
+    });
+
+    if (canPreviewTextSize && typeof applyTextSize === 'function') {
+      applyTextSize(selectedVal);
+    }
+
+    if (textSizeSaveBar && textSizeSaveHint) {
+      if (selectedVal !== initialTextSize) {
+        textSizeSaveBar.classList.add('is-dirty');
+        textSizeSaveHint.textContent = 'Previewing unsaved text size. Click "Save Text Size" to keep it.';
+      } else {
+        textSizeSaveBar.classList.remove('is-dirty');
+        textSizeSaveHint.textContent = canPreviewTextSize
+          ? 'Select a size to preview it, then save to keep your preference.'
+          : 'Select a text size and save to update this user\'s preference.';
+      }
+    }
+  }
+
+  textSizeRadios.forEach(function(radio) {
+    radio.addEventListener('change', updateTextSizeSelection);
   });
 })();
 </script>

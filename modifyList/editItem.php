@@ -85,8 +85,8 @@ $imgVer = ($safeImgBase !== '')
 
 <tr id="dupWarningRow" style="display:none;">
   <td colspan="2" bgcolor="#fffbeb" style="padding: 8px 12px; border: 2px solid #f59e0b;">
-    <div style="color: #b45309; font-family: arial, sans-serif; font-size: 13px; display: flex; align-items: center; gap: 8px;">
-      <span style="font-size: 18px;">⚠️</span>
+    <div style="color: #b45309; font-family: arial, sans-serif; font-size: 0.8125rem; display: flex; align-items: center; gap: 8px;">
+      <span style="font-size: 1.125rem;">⚠️</span>
       <div>
         <b>Possible Duplicate Detected:</b> You already have another item <i id="dupItemTitle"></i> in category <b id="dupItemCat"></b>.
       </div>
@@ -148,10 +148,14 @@ $hasLink3 = !empty($item_row["link3url"]);
     </table>
   </td>
   <td bgcolor="#eeeeee">
-    <input type="text" size="50" name="link1" id="link1" placeholder="Auto-detected from URL, or type store name" value="<?php echo escapeText($item_row["link1"] ?? ''); ?>"><br>
-    <input type="text" size="80" style="width:100%;box-sizing:border-box;" name="link1url" id="link1url" placeholder="Paste item link (https://...)" value="<?php echo escapeText($item_row["link1url"] ?? ''); ?>">
+    <input type="text" size="50" style="width:100%;box-sizing:border-box;margin-bottom:4px;" name="link1" id="link1" placeholder="Auto-detected from URL, or type store name" value="<?php echo escapeText($item_row["link1"] ?? ''); ?>">
+    <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+      <input type="text" size="80" style="flex:1 1 240px; min-width:180px; box-sizing:border-box;" name="link1url" id="link1url" placeholder="Paste item link (https://...) to auto-fill!" value="<?php echo escapeText($item_row["link1url"] ?? ''); ?>">
+      <button type="button" id="autofillUrlBtn" class="actionButton autofill-btn" data-confirm-changes="1">✨ Auto-Fill from Link</button>
+    </div>
+    <div id="autofillStatus" class="autofill-status" style="display:none;"></div>
     <div id="addMoreStoreBtnRow" style="<?php echo ($hasLink2 && $hasLink3) ? 'display:none;' : 'margin-top:4px;'; ?>">
-      <button type="button" class="actionButton" style="font-size:12px;" onclick="revealNextStoreRow()">➕ Add another store option (up to 3)</button>
+      <button type="button" class="actionButton" style="font-size: 0.75rem;" onclick="revealNextStoreRow()">➕ Add another store option (up to 3)</button>
     </div>
   </td>
 </tr>
@@ -184,13 +188,23 @@ $hasLink3 = !empty($item_row["link3url"]);
   <td align="right"><b>Image</b></td>
   <td bgcolor="#eeeeee">
     <?php if ($hasSavedImage): ?>
+      <div id="existingSavedImageBlock">
       <?php if ($safeImgBase !== '' && $imgVer !== ''): ?>
-        <img src="<?php echo escapeText(rtrim($base_url, '/') . "/uploads/" . rawurlencode($safeImgBase) . $imgVer); ?>" alt="" style="max-width:200px; height:auto; display:block; margin-bottom:6px;">
+        <img id="existingSavedImageEl" src="<?php echo escapeText(rtrim($base_url, '/') . "/uploads/" . rawurlencode($safeImgBase) . $imgVer); ?>" alt="" style="max-width:200px; height:auto; display:block; margin-bottom:6px;">
       <?php else: ?>
-        <div style="font-size:12.5px; color:#b45309; margin-bottom:6px;">(Saved image file is missing from server)</div>
+        <div style="font-size: 0.78125rem; color:#b45309; margin-bottom:6px;">(Saved image file is missing from server)</div>
       <?php endif; ?>
-      <label style="font-size:13px;"><input type="checkbox" name="remove_image" value="1"> Remove current image</label><br><br>
+      <label style="font-size: 0.8125rem;"><input type="checkbox" name="remove_image" id="removeImageCheckbox" value="1"> Remove current image</label><br><br>
+      </div>
     <?php endif; ?>
+    <input type="hidden" name="fetched_image_url" id="fetchedImageUrl" value="">
+    <div id="fetchedImagePreviewBox" class="autofill-img-preview" style="display:none;">
+      <img id="fetchedImagePreview" src="" alt="Product preview" referrerpolicy="no-referrer">
+      <div>
+        <div id="fetchedImagePreviewLabel" style="font-size: 0.75rem; font-weight:bold;"><?php echo $hasSavedImage ? 'New auto-detected photo (will replace current image on save)' : 'Auto-detected product photo'; ?></div>
+        <button type="button" id="clearFetchedImageBtn" class="actionButton" style="font-size: 0.6875rem; padding:2px 6px; margin-top:4px;">✕ Remove photo</button>
+      </div>
+    </div>
     <input type="file" style="width:100%;" name="image" accept="image/jpeg,image/png,image/gif,image/webp">
   </td>
 </tr>
@@ -259,5 +273,6 @@ function revealNextStoreRow() {
 </script>
 <script src="../js/store-detector.js?v=<?php echo (int)@filemtime(__DIR__ . '/../js/store-detector.js'); ?>"></script>
 <script src="../js/duplicate-detector.js?v=<?php echo (int)@filemtime(__DIR__ . '/../js/duplicate-detector.js'); ?>"></script>
+<script src="../js/url-autofill.js?v=<?php echo (int)@filemtime(__DIR__ . '/../js/url-autofill.js'); ?>"></script>
 </body>
 </html>
